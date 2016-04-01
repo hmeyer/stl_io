@@ -1,0 +1,17 @@
+[package]
+name = "xplicit"
+version = "0.0.1"
+authors = ["Xplicit CAD"]
+
+[dependencies]
+libc = "0.1"
+glib = { git = "https://github.com/gtk-rs/glib.git" }#"^0"
+gdk = { git = "https://github.com/gtk-rs/gdk.git" }#"^0"
+gtk = { git = "https://github.com/gtk-rs/gtk.git" }#"^0"
+cairo-rs = { git = "https://github.com/gtk-rs/cairo.git" }#"^0"
+cgmath = "^0"
+peg = "0.3.10"
+
+[features]
+gtk_3_10 = []
+gtk_3_14 = ["gtk_3_10"]
