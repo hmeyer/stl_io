@@ -1,267 +1,7 @@
-use std::collections::HashMap;
-//use std::cmp;
-use std::fmt::Debug;
-
-pub trait Expression : ExpressionClone + Debug {
-    fn eval(&self, vars: &mut HashMap<String, Value>) -> Value;
-}
-
-pub trait ExpressionClone {
-    fn clone_box(&self) -> Box<Expression>;
-}
-
-impl<T> ExpressionClone for T where T: 'static + Expression + Clone {
-    fn clone_box(&self) -> Box<Expression> {
-        Box::new(self.clone())
-    }
-}
-
-// We can now implement Clone manually by forwarding to clone_box.
-impl Clone for Box<Expression> {
-    fn clone(&self) -> Box<Expression> {
-        self.clone_box()
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
-pub enum Value {
-	Undef,
-	Bool(bool),
-	Number(f64),
-	String(String),
-	Vector(Vec<Value>),
-	Range(f64, f64, f64),
-}
-
-impl Value {
-	fn as_bool(&self) -> bool {
-		match self {
-			&Value::Bool(b) => b,
-			&Value::Undef => false,
-			&Value::Number(n) => n != 0.,
-			&Value::Vector(ref v) => v.len() != 0,
-			_ => true,
-		}
-	}
-}
-
-impl Expression for Value {
-	fn eval(&self, _: &mut HashMap<String, Value>) -> Value {
-		self.clone()
-	}
-}
-
-impl ::std::ops::Add for Value {
-	type Output = Value;
-
-    fn add(self, _rhs: Value) -> Value {
-		if let Value::Number(sn) = self {
-			if let Value::Number(rn) = _rhs {
-				return Value::Number(sn + rn);
-			}
-		}
-		Value::Undef
-    }
-}
-
-impl ::std::ops::Sub for Value {
-	type Output = Value;
-
-    fn sub(self, _rhs: Value) -> Value {
-		if let Value::Number(sn) = self {
-			if let Value::Number(rn) = _rhs {
-				return Value::Number(sn - rn);
-			}
-		}
-		Value::Undef
-    }
-}
-
-impl ::std::ops::Mul for Value {
-	type Output = Value;
-
-    fn mul(self, _rhs: Value) -> Value {
-		if let Value::Number(sn) = self {
-			if let Value::Number(rn) = _rhs {
-				return Value::Number(sn * rn);
-			}
-		}
-		Value::Undef
-    }
-}
-
-impl ::std::ops::Div for Value {
-	type Output = Value;
-
-    fn div(self, _rhs: Value) -> Value {
-		if let Value::Number(sn) = self {
-			if let Value::Number(rn) = _rhs {
-				return Value::Number(sn / rn);
-			}
-		}
-		Value::Undef
-    }
-}
-
-impl ::std::ops::Rem for Value {
-	type Output = Value;
-
-    fn rem(self, _rhs: Value) -> Value {
-		if let Value::Number(sn) = self {
-			if let Value::Number(rn) = _rhs {
-				return Value::Number(sn % rn);
-			}
-		}
-		Value::Undef
-    }
-}
-
-#[derive(Clone, Debug)]
-struct AssignmentExpression {
-	i: String,
-	e: Box<Expression>,
-}
-
-impl Expression for AssignmentExpression {
-	fn eval(&self, hm: &mut HashMap<String, Value>) -> Value {
-		let v = self.e.eval(hm);
-		hm.insert(self.i.clone(), v.clone());
-		v
-	}
-}
-
-#[derive(Clone, Debug)]
-struct IdentifierExpression {
-	i: String,
-}
-
-impl Expression for IdentifierExpression {
-	fn eval(&self, hm: &mut HashMap<String, Value>) -> Value {
-		match hm.get(&self.i) {
-			Some(x) => x.clone(),
-			None => Value::Undef,
-		}
-	}
-}
-
-#[derive(Clone, Debug)]
-struct NotExpression {
-	e: Box<Expression>,
-}
-
-impl Expression for NotExpression {
-	fn eval(&self, hm: &mut HashMap<String, Value>) -> Value {
-		Value::Bool(!self.e.eval(hm).as_bool())
-	}
-}
-
-
-#[derive(Clone, Debug)]
-struct NegExpression {
-	e: Box<Expression>,
-}
-
-impl Expression for NegExpression {
-	fn eval(&self, hm: &mut HashMap<String, Value>) -> Value {
-		match self.e.eval(hm) {
-			Value::Number(v) => Value::Number(-v),
-			_ => Value::Undef,
-		}
-	}
-}
-
-#[derive(Clone, Debug)]
-struct ConditionalExpression {
-	cond: Box<Expression>,
-	ex: Box<Expression>,
-	alt_ex: Box<Expression>,
-}
-
-impl Expression for ConditionalExpression {
-	fn eval(&self, hm: &mut HashMap<String, Value>) -> Value {
-		if self.cond.eval(hm).as_bool() {
-			self.ex.eval(hm)
-		} else {
-			self.alt_ex.eval(hm)
-
-		}
-	}
-}
-
-#[allow(dead_code)]
-#[derive(Clone, Debug)]
-enum BinaryOp { AND, OR, EQ, NE, GT, LT, GE, LE, ADD, SUB, MUL, DIV, MOD }
-
-#[derive(Clone, Debug)]
-struct BinaryExpression {
-	o: BinaryOp,
-	a: Box<Expression>,
-	b: Box<Expression>,
-}
-
-impl Expression for BinaryExpression {
-	fn eval(&self, hm: &mut HashMap<String, Value>) -> Value {
-		let va = self.a.eval(hm);
-		let vb = self.b.eval(hm);
-		match self.o {
-			BinaryOp::AND => Value::Bool(va.as_bool() && va.as_bool()),
-			BinaryOp::OR => Value::Bool(va.as_bool() || va.as_bool()),
-			BinaryOp::EQ => Value::Bool(va == vb),
-			BinaryOp::NE => Value::Bool(va != vb),
-			BinaryOp::GT => Value::Bool(va > vb),
-			BinaryOp::LT => Value::Bool(va < vb),
-			BinaryOp::GE => Value::Bool(va >= vb),
-			BinaryOp::LE => Value::Bool(va <= vb),
-			BinaryOp::ADD => va + vb,
-			BinaryOp::SUB => va - vb,
-			BinaryOp::MUL => va * vb,
-			BinaryOp::DIV => va / vb,
-			BinaryOp::MOD => va % vb,
-		}
-	}
-}
-
-#[derive(Clone, Debug)]
-struct VectorExpression {
-	l: Vec<Box<Expression>>,
-}
-
-impl Expression for VectorExpression {
-	fn eval(&self, hm: &mut HashMap<String, Value>) -> Value {
-		Value::Vector(self.l.iter().map(|x| x.eval(hm)).collect())
-	}
-}
-
-#[derive(Clone, Debug)]
-struct RangeExpression {
-	start: Box<Expression>,
-	increment: Box<Expression>,
-	end: Box<Expression>,
-}
-
-impl Expression for RangeExpression {
-	fn eval(&self, hm: &mut HashMap<String, Value>) -> Value {
-		if let Value::Number(s) = self.start.eval(hm) {
-			if let Value::Number(i) = self.increment.eval(hm) {
-				if let Value::Number(e) = self.end.eval(hm) {
-			   		return Value::Range(s, i, e)
-				}
-			}
-		}
-	   	Value::Undef
-	}
-}
-
-pub struct Statement {
-
-}
-
-
-
-
+pub mod ast;
 
 peg! grammar(r#"
-use super::{Value, Expression, AssignmentExpression, BinaryOp, BinaryExpression,
+use super::ast::{Value, Expression, AssignmentExpression, BinaryOp, BinaryExpression,
 			ConditionalExpression, NegExpression, NotExpression, RangeExpression,
 			VectorExpression, IdentifierExpression };
 
@@ -323,7 +63,7 @@ range -> Box<Expression>
 	}
 
 vector -> Box<Expression>
-	= "[" v:expression ** "," "]"  { Box::new(VectorExpression{l: v}) }
+	= "[" v:expression ** "," "]"  { Box::new(VectorExpression{v: v}) }
 
 postfix_expression -> Box<Expression>
 	= primary_expression //( '[' expression ']'
@@ -336,7 +76,7 @@ postfix_expression -> Box<Expression>
 
 #[pub]
 primary_expression -> Box<Expression>
-	= i:identifier { Box::new(IdentifierExpression{i: i}) }
+	= i:identifier { Box::new(IdentifierExpression{id: i}) }
 	/ s:string_literal { Box::new(Value::String(s)) }
 	/ f:float_literal { Box::new(Value::Number(f)) }
 	/ b:bool_literal { Box::new(Value::Bool(b)) }
@@ -354,9 +94,9 @@ expression_statement
 
 unary_expression -> Box<Expression>
 	= postfix_expression
-	/ "!" e:unary_expression { Box::new(NotExpression{e: e}) }
+	/ "!" e:unary_expression { Box::new(NotExpression{ex: e}) }
 	/ "+" unary_expression
-	/ "-" e:unary_expression { Box::new(NegExpression{e: e}) }
+	/ "-" e:unary_expression { Box::new(NegExpression{ex: e}) }
 
 statement
 	= compound_statement
@@ -370,7 +110,7 @@ compound_statement
 
 assignment_expression -> Box<Expression>
  	= id:identifier "=" ce:conditional_expression {
-		Box::new(AssignmentExpression{ i: id, e: ce})
+		Box::new(AssignmentExpression{ id: id, ex: ce})
 	}
     / conditional_expression
 
@@ -389,7 +129,7 @@ multiplicative_expression -> Box<Expression>
 	= s:unary_expression r:mul_op* {
 		let mut c = s;
 		for (o, e) in r {
-			c = Box::new(BinaryExpression{o: o, a: c, b: e})
+			c = Box::new(BinaryExpression{op: o, a: c, b: e})
 		}
 		c
 	}
@@ -402,7 +142,7 @@ additive_expression -> Box<Expression>
 	= s:multiplicative_expression r:add_op* {
 		let mut c = s;
 		for (o, e) in r {
-			c = Box::new(BinaryExpression{o: o, a: c, b: e})
+			c = Box::new(BinaryExpression{op: o, a: c, b: e})
 		}
 		c
 	}
@@ -417,7 +157,7 @@ relational_expression -> Box<Expression>
 	= s:additive_expression r:rel_op* {
 		let mut c = s;
 		for (o, e) in r {
-			c = Box::new(BinaryExpression{o: o, a: c, b: e})
+			c = Box::new(BinaryExpression{op: o, a: c, b: e})
 		}
 		c
 	}
@@ -429,7 +169,7 @@ equality_expression -> Box<Expression>
 	= s:relational_expression r:eq_op* {
 		let mut c = s;
 		for (o, e) in r {
-			c = Box::new(BinaryExpression{o: o, a: c, b: e})
+			c = Box::new(BinaryExpression{op: o, a: c, b: e})
 		}
 		c
 	}
@@ -437,7 +177,7 @@ logical_and_expression -> Box<Expression>
 	= s:equality_expression r:("&&" logical_and_expression)* {
 		let mut c = s;
 		for e in r {
-			c = Box::new(BinaryExpression{o: BinaryOp::AND, a: c, b: e})
+			c = Box::new(BinaryExpression{op: BinaryOp::AND, a: c, b: e})
 		}
 		c
 	}
@@ -445,7 +185,7 @@ logical_or_expression -> Box<Expression>
 	= s:logical_and_expression r:("||" logical_or_expression)* {
 		let mut c = s;
 		for e in r {
-			c = Box::new(BinaryExpression{o: BinaryOp::OR, a: c, b: e})
+			c = Box::new(BinaryExpression{op: BinaryOp::OR, a: c, b: e})
 		}
 		c
 	}
@@ -461,7 +201,7 @@ logical_or_expression -> Box<Expression>
 
 #[cfg(test)]
 mod tests {
-	use super::*;
+	use super::ast::*;
 	use super::grammar::*;
 	use std::collections::HashMap;
 
