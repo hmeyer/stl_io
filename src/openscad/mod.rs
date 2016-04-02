@@ -82,13 +82,13 @@ argument -> (String, Box<Expression>)
 	= id:identifier spacing '=' e:assignment_expression { (id, e) }
 	/ e:assignment_expression { (String::new(), e) }
 
-call_expression -> Box<Expression>
+call_expression -> Box<CallExpression>
 	= i:identifier '(' a:argument ** (spacing ',') spacing ')' {
 		Box::new(CallExpression{id:i, arguments: a})
 	}
 
 primary_expression -> Box<Expression>
-	= call_expression
+	= ce:call_expression { ce as Box<Expression> }
 	/ i:identifier { Box::new(IdentifierExpression{id: i}) }
 	/ s:string_literal { Box::new(Value::String(s)) }
 	/ f:float_literal { Box::new(Value::Number(f)) }
@@ -195,7 +195,8 @@ program -> Box<Statement>
 	= l:statement_list { Box::new(Statement::CompoundStatement(l)) }
 
 statement -> Box<Statement>
-	= compound_statement
+	= ce:call_expression ';' { Box::new(Statement::ModCall(ce)) }
+	/ compound_statement
     / expression_statement
 	/ function_statement
 
@@ -222,7 +223,7 @@ parameter_list -> Vec<(String, Option<Box<Expression>>)>
 function_statement -> Box<Statement>
 	= "function" spacing id:identifier p:parameter_list spacing "=" spacing st:statement {
 		let fm = FunctionMod {params: p, body: st};
-		Box::new(Statement::FuncModDefinitionStatement(id, fm))
+		Box::new(Statement::FuncModDefinition(id, fm))
 	}
 
 statement_list -> Vec<Box<Statement>>

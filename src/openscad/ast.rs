@@ -371,13 +371,13 @@ pub struct CallExpression {
 
 impl Expression for CallExpression {
     fn eval(&self, vars: &mut BindMap, msg: &mut Write) -> Value {
-        let (val, _) = self.execute(vars, msg);
+        let (val, _) = self.execute_impl(vars, msg);
         val
     }
 }
 
 impl CallExpression {
-	fn execute(&self, vars: &mut BindMap, msg: &mut Write) -> (Value, OptObject) {
+	fn execute_impl(&self, vars: &mut BindMap, msg: &mut Write) -> (Value, OptObject) {
         match vars.get(&self.id) {
             Some(&Binding::Func(FunctionMod{ref params, ref body })) => {
                 let mut vars_copy = vars.clone();
@@ -466,7 +466,8 @@ impl Expression for RangeExpression {
 pub enum Statement {
     ExpressionStatement(Box<Expression>),
     CompoundStatement(Vec<Box<Statement>>),
-    FuncModDefinitionStatement(String, FunctionMod),
+    FuncModDefinition(String, FunctionMod),
+    ModCall(Box<CallExpression>),
 }
 
 impl Statement {
@@ -490,7 +491,7 @@ impl Statement {
                 }
                 (v, o)
             },
-            &Statement::FuncModDefinitionStatement(ref name, ref func) => {
+            &Statement::FuncModDefinition(ref name, ref func) => {
                 let expanded_params = func.params.iter().map(
                     |&(ref name, ref opt_ex)| {
                         (name.clone(), match opt_ex {
@@ -509,6 +510,7 @@ impl Statement {
                 }
                 (Value::Undef, Option::None)
             },
+            &Statement::ModCall(ref call_ex) => call_ex.execute_impl(vars, msg),
 		}
 	}
 }
