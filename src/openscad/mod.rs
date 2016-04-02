@@ -212,6 +212,7 @@ compound_statement -> Box<Statement>
 statement_list -> Vec<Box<Statement>>
 	= s:statement ++ spacing { s }
 
+
 "#);
 
 
@@ -233,8 +234,9 @@ mod tests {
 		let pex = expression(ex);
 		assert!(pex.is_ok(), format!("{:?} while parsing {:?}", pex, ex));
 		let pex = pex.unwrap();
-		assert!(v == pex.eval(&mut hm), format!("{:?} == {:?} [{:?}]",
-		                                        v, pex.eval(&mut hm), pex));
+		let mut out = ::std::io::stdout();
+		let result = pex.eval(&mut hm, &mut out);
+		assert!(v == result, format!("{:?} == {:?} [{:?}]", v, result, pex));
 	}
 
     #[test]
@@ -244,7 +246,7 @@ mod tests {
 		assert_ex_eq("false", Value::Bool(false));
 		assert_ex_eq("!false", Value::Bool(true));
 		assert_ex_eq("-12345.6e-2", Value::Number(-123.456));
-		assert_ex_eq("UnkownIdentifier", Value::Undef);
+		assert_ex_eq("UnknownIdentifier", Value::Undef);
 		assert_ex_eq("[1,undef,\"foo\" , bar]", Value::Vector(vec![Value::Number(1.), Value::Undef, Value::String("foo".to_string()), Value::Undef]));
 		assert_ex_eq("[1:10]", Value::Range(1., 1., 10.));
 		assert_ex_eq("[1 : 10:30]", Value::Range(1., 10., 30.));
@@ -259,12 +261,15 @@ mod tests {
 	fn assert_pgm_eq(pgm: &'static str, v: Value) {
 		let ppgm = program(pgm);
 		assert!(ppgm.is_ok(), format!("{:?} while parsing {:?}", ppgm, pgm));
-		assert_eq!(v, ppgm.unwrap().execute());
+		let ppgm = ppgm.unwrap();
+		let mut out = ::std::io::stdout();
+		let (result, _) = ppgm.execute(&mut out);
+		assert!(v == result, format!("{:?} == {:?} [{:?}]", v, result, ppgm));
 	}
 
 	#[test]
     fn programs() {
-		assert_pgm_eq("Unkown;", Value::Undef);
+		assert_pgm_eq("Unknown;", Value::Undef);
 		assert_pgm_eq("1;", Value::Number(1.));
 		assert_pgm_eq("27*3+17;", Value::Number(27.*3.+17.));
 		assert_pgm_eq("foo=17;bar = 3.5; { bar = 100; }foo+bar;", Value::Number(20.5));

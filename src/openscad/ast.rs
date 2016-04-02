@@ -1,8 +1,24 @@
-use std::collections::HashMap;
 use std::fmt::Debug;
+use std::io::Write;
+
+pub type OptObject = Option<Box<::primitive::Object>>;
+pub type Identifiers = ::std::collections::HashMap<String, Value>;
+
+fn unify(a: OptObject, b: OptObject) -> OptObject {
+        match a {
+            Some(x) => match b {
+                Some(y) => Some(Box::new(::primitive::Union::new(x, y))),
+                None => Some(x),
+            },
+            None => match b {
+                Some(y) => Some(y),
+                None => None,
+            }
+        }
+}
 
 pub trait Expression : ExpressionClone + Debug {
-    fn eval(&self, vars: &mut HashMap<String, Value>) -> Value;
+    fn eval(&self, vars: &mut Identifiers, msg: &mut Write) -> Value;
 }
 
 pub trait ExpressionClone {
@@ -46,7 +62,7 @@ impl Value {
 }
 
 impl Expression for Value {
-	fn eval(&self, _: &mut HashMap<String, Value>) -> Value {
+	fn eval(&self, _: &mut Identifiers, _: &mut Write) -> Value {
 		self.clone()
 	}
 }
@@ -163,8 +179,8 @@ pub struct AssignmentExpression {
 }
 
 impl Expression for AssignmentExpression {
-	fn eval(&self, hm: &mut HashMap<String, Value>) -> Value {
-		let v = self.ex.eval(hm);
+	fn eval(&self, hm: &mut Identifiers, msg: &mut Write) -> Value {
+		let v = self.ex.eval(hm, msg);
 		hm.insert(self.id.clone(), v.clone());
 		v
 	}
@@ -176,10 +192,14 @@ pub struct IdentifierExpression {
 }
 
 impl Expression for IdentifierExpression {
-	fn eval(&self, hm: &mut HashMap<String, Value>) -> Value {
+	fn eval(&self, hm: &mut Identifiers, msg: &mut Write) -> Value {
 		match hm.get(&self.id) {
 			Some(x) => x.clone(),
-			None => Value::Undef,
+			None => {
+                writeln!(msg,
+                         "Warning: unknown {:?}, using undef.", self.id).unwrap();
+                Value::Undef
+            },
 		}
 	}
 }
@@ -190,8 +210,8 @@ pub struct NotExpression {
 }
 
 impl Expression for NotExpression {
-	fn eval(&self, hm: &mut HashMap<String, Value>) -> Value {
-		Value::Bool(!self.ex.eval(hm).as_bool())
+	fn eval(&self, hm: &mut Identifiers, msg: &mut Write) -> Value {
+		Value::Bool(!self.ex.eval(hm, msg).as_bool())
 	}
 }
 
@@ -202,10 +222,15 @@ pub struct NegExpression {
 }
 
 impl Expression for NegExpression {
-	fn eval(&self, hm: &mut HashMap<String, Value>) -> Value {
-		match self.ex.eval(hm) {
+	fn eval(&self, hm: &mut Identifiers, msg: &mut Write) -> Value {
+        let val = self.ex.eval(hm, msg);
+		match val {
 			Value::Number(v) => Value::Number(-v),
-			_ => Value::Undef,
+			_ => {
+                writeln!(msg, "Warning: cannot negate {:?}, using undef.",
+                         val).unwrap();
+                Value::Undef
+            },
 		}
 	}
 }
@@ -218,12 +243,11 @@ pub struct ConditionalExpression {
 }
 
 impl Expression for ConditionalExpression {
-	fn eval(&self, hm: &mut HashMap<String, Value>) -> Value {
-		if self.cond.eval(hm).as_bool() {
-			self.ex.eval(hm)
+	fn eval(&self, hm: &mut Identifiers, msg: &mut Write) -> Value {
+		if self.cond.eval(hm, msg).as_bool() {
+			self.ex.eval(hm, msg)
 		} else {
-			self.alt_ex.eval(hm)
-
+			self.alt_ex.eval(hm, msg)
 		}
 	}
 }
@@ -240,9 +264,9 @@ pub struct BinaryExpression {
 }
 
 impl Expression for BinaryExpression {
-	fn eval(&self, hm: &mut HashMap<String, Value>) -> Value {
-		let va = self.a.eval(hm);
-		let vb = self.b.eval(hm);
+	fn eval(&self, hm: &mut Identifiers, msg: &mut Write) -> Value {
+		let va = self.a.eval(hm, msg);
+		let vb = self.b.eval(hm, msg);
 		match self.op {
 			BinaryOp::AND => Value::Bool(va.as_bool() && va.as_bool()),
 			BinaryOp::OR => Value::Bool(va.as_bool() || va.as_bool()),
@@ -267,8 +291,8 @@ pub struct VectorExpression {
 }
 
 impl Expression for VectorExpression {
-	fn eval(&self, hm: &mut HashMap<String, Value>) -> Value {
-		Value::Vector(self.v.iter().map(|x| x.eval(hm)).collect())
+	fn eval(&self, hm: &mut Identifiers, msg: &mut Write) -> Value {
+		Value::Vector(self.v.iter().map(|x| x.eval(hm, msg)).collect())
 	}
 }
 
@@ -284,23 +308,36 @@ pub struct IndexExpression {
 }
 
 impl Expression for IndexExpression {
-	fn eval(&self, hm: &mut HashMap<String, Value>) -> Value {
+	fn eval(&self, hm: &mut Identifiers, msg: &mut Write) -> Value {
         let i: usize;
-        match self.index.eval(hm) {
+        let val = self.index.eval(hm, msg);
+        match val {
             Value::Number(n) => i = n as usize,
-            _ => return Value::Undef,
+            _ => {
+                writeln!(msg, "Warning: invalid index: {:?}, using undef.",
+                         val).unwrap();
+                return Value::Undef
+            },
         }
-        match self.ex.eval(hm) {
+        match self.ex.eval(hm, msg) {
             Value::Vector(ref v) => {
                 match v.get(i) {
                     Some(x) => x.clone(),
-                    None => Value::Undef,
+                    None => {
+                        writeln!(msg, "Warning: index: out of bounds ({:?} vs \
+                                {:?}), using undef.", i, v.len()).unwrap();
+                        Value::Undef
+                    },
                 }
             },
             Value::String(ref s) => {
                 match s.chars().nth(i) {
                     Some(x) => Value::String(x.to_string()),
-                    None => Value::Undef,
+                    None => {
+                        writeln!(msg, "Warning: index: out of bounds ({:?} vs \
+                                 {:?}), using undef.", i, s.len()).unwrap();
+                        Value::Undef
+                    },
                 }
             },
             _ => Value::Undef,
@@ -316,14 +353,28 @@ pub struct RangeExpression {
 }
 
 impl Expression for RangeExpression {
-	fn eval(&self, hm: &mut HashMap<String, Value>) -> Value {
-		if let Value::Number(s) = self.start.eval(hm) {
-			if let Value::Number(i) = self.increment.eval(hm) {
-				if let Value::Number(e) = self.end.eval(hm) {
+	fn eval(&self, hm: &mut Identifiers, msg: &mut Write) -> Value {
+        let sv = self.start.eval(hm, msg);
+		if let Value::Number(s) = sv {
+            let iv = self.increment.eval(hm, msg);
+			if let Value::Number(i) = iv {
+                let ev  = self.end.eval(hm, msg);
+				if let Value::Number(e) = ev {
 			   		return Value::Range(s, i, e)
-				}
-			}
-		}
+				} else {
+                    writeln!(msg,
+                             "Warning: non-number range end {:?}, using undef.",
+                             ev).unwrap();
+                }
+			} else {
+                writeln!(msg,
+                         "Warning: non-number range increment {:?}, using undef.",
+                         iv).unwrap();
+            }
+		} else {
+            writeln!(msg, "Warning: non-number range start {:?}, using undef.",
+                     sv).unwrap();
+        }
 	   	Value::Undef
 	}
 }
@@ -335,21 +386,24 @@ pub enum Statement {
 }
 
 impl Statement {
-	pub fn execute(&self) -> Value {
-        let mut hm = HashMap::new();
-        self.execute_impl(&mut hm)
+	pub fn execute(&self, msg: &mut Write) -> (Value, OptObject) {
+        let mut hm = Identifiers::new();
+        self.execute_impl(&mut hm, msg)
     }
 
-    pub fn execute_impl(&self, hm: &mut HashMap<String, Value>) -> Value {
+    pub fn execute_impl(&self, hm: &mut Identifiers, msg: &mut Write) -> (Value, OptObject) {
 		match self {
-            &Statement::ExpressionStatement(ref ex) => ex.eval(hm),
+            &Statement::ExpressionStatement(ref ex) => (ex.eval(hm, msg), None),
 			&Statement::CompoundStatement(ref b) => {
                 let mut v = Value::Undef;
+                let mut o = Option::None;
                 let mut hm_copy = hm.clone();
                 for ex in b {
-                    v = ex.execute_impl(&mut hm_copy);
+                    let (tmp_v, tmp_o)  = ex.execute_impl(&mut hm_copy, msg);
+                    v = tmp_v;
+                    o = unify(o, tmp_o);
                 }
-                v
+                (v, o)
             },
 		}
 	}
@@ -396,39 +450,40 @@ mod tests {
 	#[test]
 	fn binary_ops() {
         let mut hm = HashMap::new();
+        let mut out = ::std::io::stdout();
         assert_eq!(BinaryExpression{ op: BinaryOp::ADD,
                                      a: Box::new(Value::Undef),
-			                         b: Box::new(Value::Undef)}.eval(&mut hm),
+			                         b: Box::new(Value::Undef)}.eval(&mut hm, &mut out),
 				   Value::Undef);
         assert_eq!(BinaryExpression{ op: BinaryOp::ADD,
                                      a: Box::new(Value::Number(1.)),
-			                         b: Box::new(Value::Number(3.))}.eval(&mut hm),
+			                         b: Box::new(Value::Number(3.))}.eval(&mut hm, &mut out),
 				   Value::Number(4.));
         assert_eq!(BinaryExpression{ op: BinaryOp::ADD,
                                      a: Box::new(Value::String("foo".to_string())),
-			                         b: Box::new(Value::String("bar".to_string()))}.eval(&mut hm),
+			                         b: Box::new(Value::String("bar".to_string()))}.eval(&mut hm, &mut out),
 				   Value::Undef);
         assert_eq!(BinaryExpression{ op: BinaryOp::ADD,
                                      a: Box::new(Value::Vector(vec![Value::Number(1.)])),
-			                         b: Box::new(Value::Vector(vec![Value::Number(3.)]))}.eval(&mut hm),
+			                         b: Box::new(Value::Vector(vec![Value::Number(3.)]))}.eval(&mut hm, &mut out),
 				   Value::Vector(vec![Value::Number(4.)]));
 
         assert_eq!(BinaryExpression{ op: BinaryOp::SUB,
                                      a: Box::new(Value::Vector(vec![Value::Number(1.), Value::Number(1.)])),
-			                         b: Box::new(Value::Vector(vec![Value::String("foo".to_string()), Value::Number(3.)]))}.eval(&mut hm),
+			                         b: Box::new(Value::Vector(vec![Value::String("foo".to_string()), Value::Number(3.)]))}.eval(&mut hm, &mut out),
 				   Value::Vector(vec![Value::Undef, Value::Number(-2.)]));
 
         assert_eq!(BinaryExpression{ op: BinaryOp::MUL,
                                      a: Box::new(Value::Vector(vec![Value::Number(1.), Value::Number(2.)])),
-			                         b: Box::new(Value::Vector(vec![Value::Number(3.), Value::Number(4.)]))}.eval(&mut hm),
+			                         b: Box::new(Value::Vector(vec![Value::Number(3.), Value::Number(4.)]))}.eval(&mut hm, &mut out),
 				   Value::Number(1. * 3. + 2. * 4.));
         assert_eq!(BinaryExpression{ op: BinaryOp::MUL,
                                      a: Box::new(Value::Vector(vec![Value::Number(1.), Value::Vector(vec![])])),
-			                         b: Box::new(Value::Vector(vec![Value::Number(3.), Value::Number(4.)]))}.eval(&mut hm),
+			                         b: Box::new(Value::Vector(vec![Value::Number(3.), Value::Number(4.)]))}.eval(&mut hm, &mut out),
 				   Value::Undef);
         assert_eq!(BinaryExpression{ op: BinaryOp::MOD,
                                      a: Box::new(Value::Number(17.)),
-		   	                         b: Box::new(Value::Number(3.))}.eval(&mut hm),
+		   	                         b: Box::new(Value::Number(3.))}.eval(&mut hm, &mut out),
 				   Value::Number(2.));
 	}
 }

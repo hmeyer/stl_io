@@ -12,7 +12,6 @@ fn main() {
         return;
     }
 
-
     let window = gtk::Window::new(gtk::WindowType::Toplevel);
     let xw = xplicit_widget::XplicitWidget::new();
 
