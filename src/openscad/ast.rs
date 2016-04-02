@@ -2,7 +2,20 @@ use std::fmt::Debug;
 use std::io::Write;
 
 pub type OptObject = Option<Box<::primitive::Object>>;
-pub type Identifiers = ::std::collections::HashMap<String, Value>;
+pub type BindMap = ::std::collections::HashMap<String, Binding>;
+
+#[derive(Clone, Debug)]
+pub struct FunctionMod {
+    pub params: Vec<(String, Option<Box<Expression>>)>,
+    pub body: Box<Statement>,
+}
+
+#[derive(Clone, Debug)]
+pub enum Binding {
+    Val(Value),
+    Func(FunctionMod),
+}
+
 
 fn unify(a: OptObject, b: OptObject) -> OptObject {
         match a {
@@ -18,7 +31,7 @@ fn unify(a: OptObject, b: OptObject) -> OptObject {
 }
 
 pub trait Expression : ExpressionClone + Debug {
-    fn eval(&self, vars: &mut Identifiers, msg: &mut Write) -> Value;
+    fn eval(&self, vars: &mut BindMap, msg: &mut Write) -> Value;
 }
 
 pub trait ExpressionClone {
@@ -62,7 +75,7 @@ impl Value {
 }
 
 impl Expression for Value {
-	fn eval(&self, _: &mut Identifiers, _: &mut Write) -> Value {
+	fn eval(&self, _: &mut BindMap, _: &mut Write) -> Value {
 		self.clone()
 	}
 }
@@ -124,7 +137,7 @@ impl ::std::ops::Mul for Value {
 				return Value::Number(sn * rn);
 			}
 		}
-        // Implement numberical cross product, if both are vectors of numbers of
+        // Implement numerical cross product, if both are vectors of numbers of
         // same length.
         if let Value::Vector(sv) = self {
 			if let Value::Vector(rv) = _rhs {
@@ -179,9 +192,9 @@ pub struct AssignmentExpression {
 }
 
 impl Expression for AssignmentExpression {
-	fn eval(&self, hm: &mut Identifiers, msg: &mut Write) -> Value {
-		let v = self.ex.eval(hm, msg);
-		hm.insert(self.id.clone(), v.clone());
+	fn eval(&self, vars: &mut BindMap, msg: &mut Write) -> Value {
+		let v = self.ex.eval(vars, msg);
+		vars.insert(self.id.clone(), Binding::Val(v.clone()));
 		v
 	}
 }
@@ -192,9 +205,14 @@ pub struct IdentifierExpression {
 }
 
 impl Expression for IdentifierExpression {
-	fn eval(&self, hm: &mut Identifiers, msg: &mut Write) -> Value {
-		match hm.get(&self.id) {
-			Some(x) => x.clone(),
+	fn eval(&self, vars: &mut BindMap, msg: &mut Write) -> Value {
+		match vars.get(&self.id) {
+            Some(&Binding::Val(ref x)) => x.clone(),
+            Some(&Binding::Func(_)) => {
+                writeln!(msg, "Warning: {:?} is a function or mod, using undef.",
+                         self.id).unwrap();
+                Value::Undef
+            },
 			None => {
                 writeln!(msg,
                          "Warning: unknown {:?}, using undef.", self.id).unwrap();
@@ -210,8 +228,8 @@ pub struct NotExpression {
 }
 
 impl Expression for NotExpression {
-	fn eval(&self, hm: &mut Identifiers, msg: &mut Write) -> Value {
-		Value::Bool(!self.ex.eval(hm, msg).as_bool())
+	fn eval(&self, vars: &mut BindMap, msg: &mut Write) -> Value {
+		Value::Bool(!self.ex.eval(vars, msg).as_bool())
 	}
 }
 
@@ -222,8 +240,8 @@ pub struct NegExpression {
 }
 
 impl Expression for NegExpression {
-	fn eval(&self, hm: &mut Identifiers, msg: &mut Write) -> Value {
-        let val = self.ex.eval(hm, msg);
+	fn eval(&self, vars: &mut BindMap, msg: &mut Write) -> Value {
+        let val = self.ex.eval(vars, msg);
 		match val {
 			Value::Number(v) => Value::Number(-v),
 			_ => {
@@ -243,11 +261,11 @@ pub struct ConditionalExpression {
 }
 
 impl Expression for ConditionalExpression {
-	fn eval(&self, hm: &mut Identifiers, msg: &mut Write) -> Value {
-		if self.cond.eval(hm, msg).as_bool() {
-			self.ex.eval(hm, msg)
+	fn eval(&self, vars: &mut BindMap, msg: &mut Write) -> Value {
+		if self.cond.eval(vars, msg).as_bool() {
+			self.ex.eval(vars, msg)
 		} else {
-			self.alt_ex.eval(hm, msg)
+			self.alt_ex.eval(vars, msg)
 		}
 	}
 }
@@ -264,9 +282,9 @@ pub struct BinaryExpression {
 }
 
 impl Expression for BinaryExpression {
-	fn eval(&self, hm: &mut Identifiers, msg: &mut Write) -> Value {
-		let va = self.a.eval(hm, msg);
-		let vb = self.b.eval(hm, msg);
+	fn eval(&self, vars: &mut BindMap, msg: &mut Write) -> Value {
+		let va = self.a.eval(vars, msg);
+		let vb = self.b.eval(vars, msg);
 		match self.op {
 			BinaryOp::AND => Value::Bool(va.as_bool() && va.as_bool()),
 			BinaryOp::OR => Value::Bool(va.as_bool() || va.as_bool()),
@@ -291,8 +309,8 @@ pub struct VectorExpression {
 }
 
 impl Expression for VectorExpression {
-	fn eval(&self, hm: &mut Identifiers, msg: &mut Write) -> Value {
-		Value::Vector(self.v.iter().map(|x| x.eval(hm, msg)).collect())
+	fn eval(&self, vars: &mut BindMap, msg: &mut Write) -> Value {
+		Value::Vector(self.v.iter().map(|x| x.eval(vars, msg)).collect())
 	}
 }
 
@@ -308,9 +326,9 @@ pub struct IndexExpression {
 }
 
 impl Expression for IndexExpression {
-	fn eval(&self, hm: &mut Identifiers, msg: &mut Write) -> Value {
+	fn eval(&self, vars: &mut BindMap, msg: &mut Write) -> Value {
         let i: usize;
-        let val = self.index.eval(hm, msg);
+        let val = self.index.eval(vars, msg);
         match val {
             Value::Number(n) => i = n as usize,
             _ => {
@@ -319,7 +337,7 @@ impl Expression for IndexExpression {
                 return Value::Undef
             },
         }
-        match self.ex.eval(hm, msg) {
+        match self.ex.eval(vars, msg) {
             Value::Vector(ref v) => {
                 match v.get(i) {
                     Some(x) => x.clone(),
@@ -346,6 +364,71 @@ impl Expression for IndexExpression {
 }
 
 #[derive(Clone, Debug)]
+pub struct CallExpression {
+    pub id: String,
+    pub arguments: Vec<(String, Box<Expression>)>,
+}
+
+impl Expression for CallExpression {
+    fn eval(&self, vars: &mut BindMap, msg: &mut Write) -> Value {
+        let (val, _) = self.execute(vars, msg);
+        val
+    }
+}
+
+impl CallExpression {
+	fn execute(&self, vars: &mut BindMap, msg: &mut Write) -> (Value, OptObject) {
+        match vars.get(&self.id) {
+            Some(&Binding::Func(FunctionMod{ref params, ref body })) => {
+                let mut vars_copy = vars.clone();
+                let mut args = self.arguments.clone();
+                for &(ref p_name, ref opt_def_ex) in params {
+                    let mut found = false;
+                    // try to find parameter as named parameter
+                    for &mut (ref a_name, ref ex) in &mut args {
+                        if p_name == a_name {
+                            let v = ex.eval(&mut vars_copy, msg);
+                            vars_copy.insert(a_name.clone(), Binding::Val(v));
+                            found = true;
+                            break;
+                        }
+                    }
+                    if !found {
+                        // take first anonymous parameter
+                        for &mut (ref mut a_name, ref ex) in &mut args {
+                            if a_name.is_empty() {
+                                let v = ex.eval(&mut vars_copy, msg);
+                                vars_copy.insert(p_name.clone(), Binding::Val(v));
+                                *a_name = "0".to_string();  // de-anonymize
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                    if !found {
+                        // take default, if any. return undef else.
+                        if let &Some(ref def_ex) = opt_def_ex {
+                            let v = def_ex.eval(&mut vars_copy, msg);
+                            vars_copy.insert(p_name.clone(), Binding::Val(v));
+                        } else {
+                            writeln!(msg, "parameter {:?} not found for {:?}",
+                                     p_name, self.id).unwrap();
+                            return (Value::Undef, None);
+                        }
+                    }
+                }
+                return body.execute_impl(&mut vars_copy, msg);
+            },
+            Some(&Binding::Val(_)) => writeln!(
+                 msg, "Warning: non callable {:?}, using undef.", self.id).unwrap(),
+			None => writeln!(msg, "Warning: unknown {:?}, using undef.",
+                             self.id).unwrap(),
+        }
+        (Value::Undef, None)
+	}
+}
+
+#[derive(Clone, Debug)]
 pub struct RangeExpression {
 	pub start: Box<Expression>,
 	pub increment: Box<Expression>,
@@ -353,12 +436,12 @@ pub struct RangeExpression {
 }
 
 impl Expression for RangeExpression {
-	fn eval(&self, hm: &mut Identifiers, msg: &mut Write) -> Value {
-        let sv = self.start.eval(hm, msg);
+	fn eval(&self, vars: &mut BindMap, msg: &mut Write) -> Value {
+        let sv = self.start.eval(vars, msg);
 		if let Value::Number(s) = sv {
-            let iv = self.increment.eval(hm, msg);
+            let iv = self.increment.eval(vars, msg);
 			if let Value::Number(i) = iv {
-                let ev  = self.end.eval(hm, msg);
+                let ev  = self.end.eval(vars, msg);
 				if let Value::Number(e) = ev {
 			   		return Value::Range(s, i, e)
 				} else {
@@ -379,31 +462,52 @@ impl Expression for RangeExpression {
 	}
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Statement {
     ExpressionStatement(Box<Expression>),
     CompoundStatement(Vec<Box<Statement>>),
+    FuncModDefinitionStatement(String, FunctionMod),
 }
 
 impl Statement {
 	pub fn execute(&self, msg: &mut Write) -> (Value, OptObject) {
-        let mut hm = Identifiers::new();
-        self.execute_impl(&mut hm, msg)
+        let mut vars = BindMap::new();
+        self.execute_impl(&mut vars, msg)
     }
 
-    pub fn execute_impl(&self, hm: &mut Identifiers, msg: &mut Write) -> (Value, OptObject) {
+    pub fn execute_impl(&self, vars: &mut BindMap, msg: &mut Write)
+        -> (Value, OptObject) {
 		match self {
-            &Statement::ExpressionStatement(ref ex) => (ex.eval(hm, msg), None),
+            &Statement::ExpressionStatement(ref ex) => (ex.eval(vars, msg), None),
 			&Statement::CompoundStatement(ref b) => {
                 let mut v = Value::Undef;
                 let mut o = Option::None;
-                let mut hm_copy = hm.clone();
+                let mut vars_copy = vars.clone();
                 for ex in b {
-                    let (tmp_v, tmp_o)  = ex.execute_impl(&mut hm_copy, msg);
+                    let (tmp_v, tmp_o)  = ex.execute_impl(&mut vars_copy, msg);
                     v = tmp_v;
                     o = unify(o, tmp_o);
                 }
                 (v, o)
+            },
+            &Statement::FuncModDefinitionStatement(ref name, ref func) => {
+                let expanded_params = func.params.iter().map(
+                    |&(ref name, ref opt_ex)| {
+                        (name.clone(), match opt_ex {
+                            &Some(ref ex) => Some(Box::new(ex.eval(vars, msg)) as Box<Expression>),
+                            &None => None,
+                        })
+                    }).collect();
+                let expanded_func = FunctionMod {
+                    params: expanded_params,
+                    body: func.body.clone()
+                };
+                if let Some(old) = vars.insert(name.clone(),
+                                               Binding::Func(expanded_func)) {
+                    writeln!(msg, "Warning: overwriting {:?} with function or mod.",
+                             old).unwrap();
+                }
+                (Value::Undef, Option::None)
             },
 		}
 	}

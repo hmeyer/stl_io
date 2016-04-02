@@ -3,7 +3,8 @@ pub mod ast;
 peg! grammar(r#"
 use super::ast::{Value, Expression, AssignmentExpression, BinaryOp, BinaryExpression,
 			ConditionalExpression, NegExpression, NotExpression, RangeExpression,
-			VectorExpression, IndexExpression, Postfix, IdentifierExpression, Statement};
+			VectorExpression, IndexExpression, Postfix, IdentifierExpression, Statement,
+			FunctionMod, CallExpression};
 
 space = ' '
 end_of_line = '\n'
@@ -65,28 +66,30 @@ range -> Box<Expression>
 vector -> Box<Expression>
 	= '[' v:expression ** (spacing ',') ']'  { Box::new(VectorExpression{v: v}) }
 
-postfix -> Postfix
-	= '[' e:expression ']' { Postfix::Index(e) }
-    / '(' e:assignment_expression ** (spacing ',') spacing')' {
-		Postfix::Call(e)
-	}
+index -> Box<Expression>
+	= '[' e:expression ']' { e }
 
-postfix_expression -> Box<Expression>
-	= e:primary_expression p:postfix* {
+index_expression -> Box<Expression>
+	= e:primary_expression i:index* {
 		let mut c = e;
-		for pe in p {
-			match pe {
-				Postfix::Index(ref ind) => {
-					c = Box::new(IndexExpression{index: ind.clone(), ex: c})
-				},
-				Postfix::Call(ref v) => c = Box::new(Value::Undef),
-			}
+		for index_ex in i {
+			c = Box::new(IndexExpression{index: index_ex, ex: c});
 		}
 		c
 	}
 
+argument -> (String, Box<Expression>)
+	= id:identifier spacing '=' e:assignment_expression { (id, e) }
+	/ e:assignment_expression { (String::new(), e) }
+
+call_expression -> Box<Expression>
+	= i:identifier '(' a:argument ** (spacing ',') spacing ')' {
+		Box::new(CallExpression{id:i, arguments: a})
+	}
+
 primary_expression -> Box<Expression>
-	= i:identifier { Box::new(IdentifierExpression{id: i}) }
+	= call_expression
+	/ i:identifier { Box::new(IdentifierExpression{id: i}) }
 	/ s:string_literal { Box::new(Value::String(s)) }
 	/ f:float_literal { Box::new(Value::Number(f)) }
 	/ b:bool_literal { Box::new(Value::Bool(b)) }
@@ -100,7 +103,7 @@ expression -> Box<Expression>
  	= spacing assignment_expression
 
 unary_expression -> Box<Expression>
-	= postfix_expression
+	= index_expression
 	/ "!" e:unary_expression { Box::new(NotExpression{ex: e}) }
 	/ "+" unary_expression
 	/ "-" e:unary_expression { Box::new(NegExpression{ex: e}) }
@@ -194,6 +197,7 @@ program -> Box<Statement>
 statement -> Box<Statement>
 	= compound_statement
     / expression_statement
+	/ function_statement
 
 expression_statement -> Box<Statement>
  	= e:expression? ';' {
@@ -207,6 +211,18 @@ compound_statement -> Box<Statement>
 	= '{' spacing '}' { Box::new(Statement::CompoundStatement(vec![])) }
     / '{' spacing l:statement_list spacing '}' {
 		Box::new(Statement::CompoundStatement(l))
+	}
+
+single_parameter -> (String, Option<Box<Expression>>)
+	= name:identifier default:(spacing '=' expression)? { (name, default) }
+
+parameter_list -> Vec<(String, Option<Box<Expression>>)>
+    = '(' spacing list:single_parameter ** (spacing ',') spacing ')' { list }
+
+function_statement -> Box<Statement>
+	= "function" spacing id:identifier p:parameter_list spacing "=" spacing st:statement {
+		let fm = FunctionMod {params: p, body: st};
+		Box::new(Statement::FuncModDefinitionStatement(id, fm))
 	}
 
 statement_list -> Vec<Box<Statement>>
@@ -227,10 +243,9 @@ statement_list -> Vec<Box<Statement>>
 mod tests {
 	use super::ast::*;
 	use super::grammar::*;
-	use std::collections::HashMap;
 
 	fn assert_ex_eq(ex: &'static str, v: Value) {
-		let mut hm = HashMap::new();
+		let mut hm = BindMap::new();
 		let pex = expression(ex);
 		assert!(pex.is_ok(), format!("{:?} while parsing {:?}", pex, ex));
 		let pex = pex.unwrap();
@@ -273,6 +288,8 @@ mod tests {
 		assert_pgm_eq("1;", Value::Number(1.));
 		assert_pgm_eq("27*3+17;", Value::Number(27.*3.+17.));
 		assert_pgm_eq("foo=17;bar = 3.5; { bar = 100; }foo+bar;", Value::Number(20.5));
+		assert_pgm_eq("foo();", Value::Undef);
+		assert_pgm_eq("baz=3;function foo(x=2+2)=17;bar();baz();foo();", Value::Number(17.));
 	}
 
 }
