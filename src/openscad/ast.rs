@@ -272,6 +272,42 @@ impl Expression for VectorExpression {
 	}
 }
 
+pub enum Postfix {
+    Index(Box<Expression>),
+    Call(Vec<Box<Expression>>),
+}
+
+#[derive(Clone, Debug)]
+pub struct IndexExpression {
+    pub index: Box<Expression>,
+    pub ex: Box<Expression>,
+}
+
+impl Expression for IndexExpression {
+	fn eval(&self, hm: &mut HashMap<String, Value>) -> Value {
+        let i: usize;
+        match self.index.eval(hm) {
+            Value::Number(n) => i = n as usize,
+            _ => return Value::Undef,
+        }
+        match self.ex.eval(hm) {
+            Value::Vector(ref v) => {
+                match v.get(i) {
+                    Some(x) => x.clone(),
+                    None => Value::Undef,
+                }
+            },
+            Value::String(ref s) => {
+                match s.chars().nth(i) {
+                    Some(x) => Value::String(x.to_string()),
+                    None => Value::Undef,
+                }
+            },
+            _ => Value::Undef,
+        }
+	}
+}
+
 #[derive(Clone, Debug)]
 pub struct RangeExpression {
 	pub start: Box<Expression>,

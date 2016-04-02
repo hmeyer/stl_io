@@ -3,7 +3,7 @@ pub mod ast;
 peg! grammar(r#"
 use super::ast::{Value, Expression, AssignmentExpression, BinaryOp, BinaryExpression,
 			ConditionalExpression, NegExpression, NotExpression, RangeExpression,
-			VectorExpression, IdentifierExpression, Statement};
+			VectorExpression, IndexExpression, Postfix, IdentifierExpression, Statement};
 
 space = ' '
 end_of_line = '\n'
@@ -65,14 +65,25 @@ range -> Box<Expression>
 vector -> Box<Expression>
 	= '[' v:expression ** (spacing ',') ']'  { Box::new(VectorExpression{v: v}) }
 
-postfix_expression -> Box<Expression>
-	= primary_expression //( '[' expression ']'
-//    	/ '(' ')'
-//    	/ '(' argument_expressionList ')'
-//	)* { Box::new(Value::Undef) }
+postfix -> Postfix
+	= '[' e:expression ']' { Postfix::Index(e) }
+    / '(' e:assignment_expression ** (spacing ',') spacing')' {
+		Postfix::Call(e)
+	}
 
-//argument_expressionList
-//	= assignment_expression (',' assignment_expression)*
+postfix_expression -> Box<Expression>
+	= e:primary_expression p:postfix* {
+		let mut c = e;
+		for pe in p {
+			match pe {
+				Postfix::Index(ref ind) => {
+					c = Box::new(IndexExpression{index: ind.clone(), ex: c})
+				},
+				Postfix::Call(ref v) => c = Box::new(Value::Undef),
+			}
+		}
+		c
+	}
 
 primary_expression -> Box<Expression>
 	= i:identifier { Box::new(IdentifierExpression{id: i}) }
@@ -221,7 +232,9 @@ mod tests {
 		let mut hm = HashMap::new();
 		let pex = expression(ex);
 		assert!(pex.is_ok(), format!("{:?} while parsing {:?}", pex, ex));
-		assert_eq!(v, pex.unwrap().eval(&mut hm));
+		let pex = pex.unwrap();
+		assert!(v == pex.eval(&mut hm), format!("{:?} == {:?} [{:?}]",
+		                                        v, pex.eval(&mut hm), pex));
 	}
 
     #[test]
@@ -236,6 +249,11 @@ mod tests {
 		assert_ex_eq("[1:10]", Value::Range(1., 1., 10.));
 		assert_ex_eq("[1 : 10:30]", Value::Range(1., 10., 30.));
 		assert_ex_eq("\"bar\"", Value::String("bar".to_owned()));
+		assert_ex_eq("[0,10,20,30][2]", Value::Number(20.));
+		assert_ex_eq("[0,10,20,30][-2]", Value::Undef);
+		assert_ex_eq("[0,10,20,30][22]", Value::Undef);
+		assert_ex_eq("[0,10,20,30][\"foo\"]", Value::Undef);
+		assert_ex_eq("\"foobar\"[1+2*.5+1.2]", Value::String("b".to_owned()));
     }
 
 	fn assert_pgm_eq(pgm: &'static str, v: Value) {
