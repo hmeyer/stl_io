@@ -35,11 +35,12 @@ pub enum Value {
 impl Value {
 	fn as_bool(&self) -> bool {
 		match self {
+            &Value::Undef => false,
 			&Value::Bool(b) => b,
-			&Value::Undef => false,
 			&Value::Number(n) => n != 0.,
-			&Value::Vector(ref v) => v.len() != 0,
-			_ => true,
+            &Value::String(ref s) => s.len() != 0,
+            &Value::Vector(ref v) => v.len() != 0,
+			&Value::Range(_, _, _) => true,
 		}
 	}
 }
@@ -54,9 +55,20 @@ impl ::std::ops::Add for Value {
 	type Output = Value;
 
     fn add(self, _rhs: Value) -> Value {
-		if let Value::Number(sn) = self {
+        if let Value::Number(sn) = self {
 			if let Value::Number(rn) = _rhs {
 				return Value::Number(sn + rn);
+			}
+		}
+        if let Value::Vector(sv) = self {
+			if let Value::Vector(rv) = _rhs {
+                if sv.len() != rv.len() {return Value::Undef;}
+                let mut result = Vec::with_capacity(sv.len());
+                for i in 0..sv.len() {
+                    let sum = sv[i].clone() + rv[i].clone();
+                    result.push(sum);
+                }
+				return Value::Vector(result);
 			}
 		}
 		Value::Undef
@@ -72,6 +84,17 @@ impl ::std::ops::Sub for Value {
 				return Value::Number(sn - rn);
 			}
 		}
+        if let Value::Vector(sv) = self {
+			if let Value::Vector(rv) = _rhs {
+                if sv.len() != rv.len() {return Value::Undef;}
+                let mut result = Vec::with_capacity(sv.len());
+                for i in 0..sv.len() {
+                    let sum = sv[i].clone() - rv[i].clone();
+                    result.push(sum);
+                }
+				return Value::Vector(result);
+			}
+		}
 		Value::Undef
     }
 }
@@ -83,6 +106,24 @@ impl ::std::ops::Mul for Value {
 		if let Value::Number(sn) = self {
 			if let Value::Number(rn) = _rhs {
 				return Value::Number(sn * rn);
+			}
+		}
+        // Implement numberical cross product, if both are vectors of numbers of
+        // same length.
+        if let Value::Vector(sv) = self {
+			if let Value::Vector(rv) = _rhs {
+                if sv.len() != rv.len() {return Value::Undef;}
+                let mut cross_product = 0.;
+                for i in 0..sv.len() {
+                    if let Value::Number(sn) = sv[i] {
+            			if let Value::Number(rn) = rv[i] {
+                            cross_product += sn * rn;
+                            continue;
+                        }
+                    }
+                    return Value::Undef;
+                }
+				return Value::Number(cross_product);
 			}
 		}
 		Value::Undef
@@ -253,4 +294,83 @@ impl Expression for RangeExpression {
 
 pub struct Statement {
 
+}
+
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+    use super::*;
+
+	#[test]
+	fn value() {
+		assert_eq!(Value::Undef, Value::Undef);
+
+		assert_eq!(Value::Bool(true), Value::Bool(true));
+		assert!(Value::Bool(true) != Value::Bool(false));
+
+		assert_eq!(Value::Number(1.), Value::Number(1.));
+		assert!(Value::Number(17.) != Value::Number(1.));
+
+		assert_eq!(Value::Range(1., 2., 3.), Value::Range(1., 2., 3.));
+		assert!(Value::Range(1., 2., 3.) != Value::Range(1., 2., 3.7));
+
+		assert_eq!(Value::Vector(vec![]), Value::Vector(vec![]));
+		assert_eq!(Value::Vector(vec![Value::Bool(true), Value::Number(17.), Value::Range(1., 2., 3.), Value::Vector(vec![])]),
+		           Value::Vector(vec![Value::Bool(true), Value::Number(17.), Value::Range(1., 2., 3.), Value::Vector(vec![])]));
+		assert!(Value::Vector(vec![Value::Bool(true)]) != Value::Vector(vec![Value::Bool(false)]));
+		assert!(Value::Vector(vec![Value::Bool(true)]) != Value::Vector(vec![Value::Bool(true), Value::Bool(true)]));
+
+        assert!(Value::Undef != Value::Vector(vec![]));
+
+        assert!(!Value::Undef.as_bool());
+        assert!(Value::Bool(true).as_bool());
+        assert!(!Value::Bool(false).as_bool());
+        assert!(!Value::Number(0.).as_bool());
+        assert!(Value::Number(-17.).as_bool());
+        assert!(!Value::String("".to_string()).as_bool());
+        assert!(Value::String("foo".to_string()).as_bool());
+        assert!(!Value::Vector(vec![]).as_bool());
+        assert!(Value::Vector(vec![Value::Undef]).as_bool());
+        assert!(Value::Range(1., 2., 3.).as_bool());
+	}
+
+	#[test]
+	fn binary_ops() {
+        let mut hm = HashMap::new();
+        assert_eq!(BinaryExpression{ op: BinaryOp::ADD,
+                                     a: Box::new(Value::Undef),
+			                         b: Box::new(Value::Undef)}.eval(&mut hm),
+				   Value::Undef);
+        assert_eq!(BinaryExpression{ op: BinaryOp::ADD,
+                                     a: Box::new(Value::Number(1.)),
+			                         b: Box::new(Value::Number(3.))}.eval(&mut hm),
+				   Value::Number(4.));
+        assert_eq!(BinaryExpression{ op: BinaryOp::ADD,
+                                     a: Box::new(Value::String("foo".to_string())),
+			                         b: Box::new(Value::String("bar".to_string()))}.eval(&mut hm),
+				   Value::Undef);
+        assert_eq!(BinaryExpression{ op: BinaryOp::ADD,
+                                     a: Box::new(Value::Vector(vec![Value::Number(1.)])),
+			                         b: Box::new(Value::Vector(vec![Value::Number(3.)]))}.eval(&mut hm),
+				   Value::Vector(vec![Value::Number(4.)]));
+
+        assert_eq!(BinaryExpression{ op: BinaryOp::SUB,
+                                     a: Box::new(Value::Vector(vec![Value::Number(1.), Value::Number(1.)])),
+			                         b: Box::new(Value::Vector(vec![Value::String("foo".to_string()), Value::Number(3.)]))}.eval(&mut hm),
+				   Value::Vector(vec![Value::Undef, Value::Number(-2.)]));
+
+        assert_eq!(BinaryExpression{ op: BinaryOp::MUL,
+                                     a: Box::new(Value::Vector(vec![Value::Number(1.), Value::Number(2.)])),
+			                         b: Box::new(Value::Vector(vec![Value::Number(3.), Value::Number(4.)]))}.eval(&mut hm),
+				   Value::Number(1. * 3. + 2. * 4.));
+        assert_eq!(BinaryExpression{ op: BinaryOp::MUL,
+                                     a: Box::new(Value::Vector(vec![Value::Number(1.), Value::Vector(vec![])])),
+			                         b: Box::new(Value::Vector(vec![Value::Number(3.), Value::Number(4.)]))}.eval(&mut hm),
+				   Value::Undef);
+        assert_eq!(BinaryExpression{ op: BinaryOp::MOD,
+                                     a: Box::new(Value::Number(17.)),
+		   	                         b: Box::new(Value::Number(3.))}.eval(&mut hm),
+				   Value::Number(2.));
+	}
 }

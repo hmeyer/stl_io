@@ -55,15 +55,15 @@ bool_literal -> bool
 undef_literal = "undef"
 
 range -> Box<Expression>
-	= "[" s:expression ":" i:expression ":" e:expression "]" {
+	= "[" s:expression spacing ":" i:expression spacing ":" e:expression spacing "]" {
 		Box::new(RangeExpression{start: s, increment: i, end: e})
 	}
-	/ "[" s:expression ":" e:expression "]" {
+	/ "[" s:expression spacing ":" e:expression spacing "]" {
 		Box::new(RangeExpression{start: s, increment: Box::new(Value::Number(1.)), end: e})
 	}
 
 vector -> Box<Expression>
-	= "[" v:expression ** "," "]"  { Box::new(VectorExpression{v: v}) }
+	= "[" v:expression ** (spacing ",") "]"  { Box::new(VectorExpression{v: v}) }
 
 postfix_expression -> Box<Expression>
 	= primary_expression //( '[' expression ']'
@@ -87,7 +87,7 @@ primary_expression -> Box<Expression>
 
 #[pub]
 expression -> Box<Expression>
- 	= assignment_expression
+ 	= spacing assignment_expression
 
 expression_statement
  	= expression? ';'
@@ -205,81 +205,27 @@ mod tests {
 	use super::grammar::*;
 	use std::collections::HashMap;
 
-	#[test]
-	fn value() {
-		assert_eq!(Value::Undef, Value::Undef);
-
-		let t = Value::Bool(true);
-		let f = Value::Bool(false);
-		assert_eq!(t, Value::Bool(true));
-		assert!(t != f);
-
-		let n1 = Value::Number(1.);
-		let n2 = Value::Number(17.);
-		assert_eq!(n1, Value::Number(1.));
-		assert!(n1 != n2);
-/*
-		let r1 = Value::Range(1., 2., 3.);
-		let r2 = Value::Range(4., 5., 6.);
-		assert_eq!(r1.clone(), r1.clone());
-		assert!(r1 != r2);
-
-		assert_eq!(Value::Vector(Vec::new()), Value::Vector(Vec::new()));
-		assert_eq!(Value::Vector(Vec::<Value>::from([t, f, n1, n2, r1, r2])),
-		           Value::Vector(Vec::new(t, f, n1, n2, r1, r2)));
-		assert!(Value::Vector([t, f, n1, n2, r1, r2]) != Value::Vector([t, n1, f, n2, r1, r2]));
-		assert!(Value::Vector([t, f, n1]) != Value::Vector([t, f, n1, n2]));
-
-		assert!(t != Value::Undef);
-		assert!(f != Value::Undef);
-		assert!(r1 != Value::Undef);
-		assert!(Value::Vector(Vec::new()) != Value::Undef);
-*/
-	}
-
-	#[test]
-	fn sums() {
-		/*
+	fn assert_ex_eq(ex: &'static str, v: Value) {
 		let mut hm = HashMap::new();
-		assert_eq!(ExprSum{ a: Box::new(Value::Number(1.)),
-			                b: Box::new(Value::Number(3.))}.eval(&hm),
-				   Value::Number(4.));
-*/
-/*
-	    let mut v1 =
-		    vec![Value::Number(17.), Value::Bool(true), Value::Vector(vec![]), Value::Number(5.)];
-		let mut v2 = v1.clone();
-		v2.push(Value::Undef);
-
-		let mut vs =
-		    vec![Value::Number(34.), Value::Undef, Value::Vector(vec![]), Value::Number(10.)];
-
-		assert_eq!(ExprSum{ a: Box::new(Value::Vector(v1.clone())),
-			                b: Box::new(Value::Vector(v2.clone()))}.eval(&hm),
-				   Value::Vector(vs.clone()));
-
-	   v1.push(Value::Number(1.));
-	   v1.push(Value::Number(1.));
-	   vs.push(Value::Undef);
-
-	   assert_eq!(ExprSum{ a: Box::new(Value::Vector(v1)),
-						   b: Box::new(Value::Vector(v2))}.eval(&hm),
-				  Value::Vector(vs));
-*/
+		let pex = expression(ex);
+		assert!(pex.is_ok(), format!("{:?} while parsing {:?}", pex, ex));
+		assert_eq!(v, pex.unwrap().eval(&mut hm));
 	}
 
     #[test]
     fn parsing() {
 		let mut hm = HashMap::new();
 
-		assert_eq!(primary_expression("undef").unwrap().eval(&mut hm), Value::Undef);
-		assert_eq!(primary_expression("true").unwrap().eval(&mut hm), Value::Bool(true));
-		assert_eq!(primary_expression("false").unwrap().eval(&mut hm), Value::Bool(false));
-//		assert_eq!(primary_expression("!false").unwrap().eval(&hm), Value::Bool(true));
-		assert_eq!(primary_expression("-12345.6e-2").unwrap().eval(&mut hm), Value::Number(-123.456));
-//		assert_eq!(primary_expression("[1:10]"), Ok(Value::Range(1., 10., 1.)));
-//		assert_eq!(primary_expression("[1:10:3]"), Ok(Value::Range(1., 10., 3.)));
-		assert_eq!(primary_expression("\"bar\"").unwrap().eval(&mut hm), Value::String("bar".to_owned()));
+		assert_ex_eq("undef", Value::Undef);
+		assert_ex_eq("true", Value::Bool(true));
+		assert_ex_eq("false", Value::Bool(false));
+		assert_ex_eq("!false", Value::Bool(true));
+		assert_ex_eq("-12345.6e-2", Value::Number(-123.456));
+		assert_ex_eq("UnkownIdentifier", Value::Undef);
+		assert_ex_eq("[1,undef,\"foo\" , bar]", Value::Vector(vec![Value::Number(1.), Value::Undef, Value::String("foo".to_string()), Value::Undef]));
+		assert_ex_eq("[1:10]", Value::Range(1., 1., 10.));
+		assert_ex_eq("[1 : 10:30]", Value::Range(1., 10., 30.));
+		assert_ex_eq("\"bar\"", Value::String("bar".to_owned()));
 
 		let ex = expression("[1:foo]");
 		println!("{:?}", ex);
