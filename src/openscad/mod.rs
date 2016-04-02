@@ -236,32 +236,6 @@ mod tests {
 		assert_ex_eq("[1:10]", Value::Range(1., 1., 10.));
 		assert_ex_eq("[1 : 10:30]", Value::Range(1., 10., 30.));
 		assert_ex_eq("\"bar\"", Value::String("bar".to_owned()));
-
-//		assert_eq!(ex.err(), None);
-//		assert_eq!(ex.unwrap().eval(&mut hm), Value::Number(19.));
-
-
-/*
-		assert_eq!(primary_expression("[]").unwrap().eval(&hm), Ok(Value::Vector(vec![])));
-//		assert_eq!(primary_expression("[undef]"), Ok(Value::Vector(vec![Value::Undef])));
-//		assert_eq!(primary_expression("[undef, undef]"),
-//		           Ok(Value::Vector(vec![Value::Undef, Value::Undef])));
-//	   assert_eq!(primary_expression("[undef, undef, undef]"),
-//		           Ok(Value::Vector(vec![Value::Undef, Value::Undef, Value::Undef])));
-		let mut v = Vec::new();
-//		assert_eq!(primary_expression("[]"), Ok(Value::Vector(v.clone())));
-		v.push(Value::Number(34.));
-//		assert_eq!(primary_expression("[34]"), Ok(Value::Vector(v.clone())));
-		v.push(Value::Undef);
-//		assert_eq!(primary_expression("[34, undef]"), Ok(Value::Vector(v)));
-*/
-/*
-        assert_eq!(float_literal("1+1"), Ok(2.));
-        assert_eq!(float_literal("1-2"), Ok(-1.));
-        assert_eq!(float_literal("-3*4+1"), Ok(-11.));
-        assert_eq!(float_literal("-3*(4+1)"), Ok(-15.));
-        assert!(float_literal("-3*((4+1)").is_err());
-*/
     }
 
 	fn assert_pgm_eq(pgm: &'static str, v: Value) {
