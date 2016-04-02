@@ -292,10 +292,32 @@ impl Expression for RangeExpression {
 	}
 }
 
-pub struct Statement {
-
+#[derive(Debug)]
+pub enum Statement {
+    ExpressionStatement(Box<Expression>),
+    CompoundStatement(Vec<Box<Statement>>),
 }
 
+impl Statement {
+	pub fn execute(&self) -> Value {
+        let mut hm = HashMap::new();
+        self.execute_impl(&mut hm)
+    }
+
+    pub fn execute_impl(&self, hm: &mut HashMap<String, Value>) -> Value {
+		match self {
+            &Statement::ExpressionStatement(ref ex) => ex.eval(hm),
+			&Statement::CompoundStatement(ref b) => {
+                let mut v = Value::Undef;
+                let mut hm_copy = hm.clone();
+                for ex in b {
+                    v = ex.execute_impl(&mut hm_copy);
+                }
+                v
+            },
+		}
+	}
+}
 
 #[cfg(test)]
 mod tests {

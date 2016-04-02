@@ -3,14 +3,14 @@ pub mod ast;
 peg! grammar(r#"
 use super::ast::{Value, Expression, AssignmentExpression, BinaryOp, BinaryExpression,
 			ConditionalExpression, NegExpression, NotExpression, RangeExpression,
-			VectorExpression, IdentifierExpression };
+			VectorExpression, IdentifierExpression, Statement};
 
-space = " "
-end_of_line = "\n"
+space = ' '
+end_of_line = '\n'
 digit = [0-9]
-doublequote = "\""
-backslash = "\\"
-quote = "\'"
+doublequote = '\"'
+backslash = '\\'
+quote = '\''
 
 identifier -> String
     = !keyword [a-zA-Z_] [a-zA-Z0-9_]* { match_str.to_string() }
@@ -42,7 +42,7 @@ integer
     = digit+
 
 sign
-    = "-" / "+"
+    = '-' / '+'
 
 float_literal -> f64
 	= sign? integer ("." integer?)? (("e" / "E") sign? integer)? { match_str.parse().unwrap() }
@@ -55,15 +55,15 @@ bool_literal -> bool
 undef_literal = "undef"
 
 range -> Box<Expression>
-	= "[" s:expression spacing ":" i:expression spacing ":" e:expression spacing "]" {
+	= '[' s:expression spacing ':' i:expression spacing ':' e:expression spacing ']' {
 		Box::new(RangeExpression{start: s, increment: i, end: e})
 	}
-	/ "[" s:expression spacing ":" e:expression spacing "]" {
+	/ '[' s:expression spacing ':' e:expression spacing ']' {
 		Box::new(RangeExpression{start: s, increment: Box::new(Value::Number(1.)), end: e})
 	}
 
 vector -> Box<Expression>
-	= "[" v:expression ** (spacing ",") "]"  { Box::new(VectorExpression{v: v}) }
+	= '[' v:expression ** (spacing ',') ']'  { Box::new(VectorExpression{v: v}) }
 
 postfix_expression -> Box<Expression>
 	= primary_expression //( '[' expression ']'
@@ -74,7 +74,6 @@ postfix_expression -> Box<Expression>
 //argument_expressionList
 //	= assignment_expression (',' assignment_expression)*
 
-#[pub]
 primary_expression -> Box<Expression>
 	= i:identifier { Box::new(IdentifierExpression{id: i}) }
 	/ s:string_literal { Box::new(Value::String(s)) }
@@ -89,27 +88,14 @@ primary_expression -> Box<Expression>
 expression -> Box<Expression>
  	= spacing assignment_expression
 
-expression_statement
- 	= expression? ';'
-
 unary_expression -> Box<Expression>
 	= postfix_expression
 	/ "!" e:unary_expression { Box::new(NotExpression{ex: e}) }
 	/ "+" unary_expression
 	/ "-" e:unary_expression { Box::new(NegExpression{ex: e}) }
 
-statement
-	= compound_statement
-    / expression_statement
-
-statement_list = statement (spacing statement)*
-
-compound_statement
-	= '{' '}'
-    / '{' statement_list '}'
-
 assignment_expression -> Box<Expression>
- 	= id:identifier "=" ce:conditional_expression {
+ 	= id:identifier spacing "=" spacing ce:conditional_expression {
 		Box::new(AssignmentExpression{ id: id, ex: ce})
 	}
     / conditional_expression
@@ -121,9 +107,9 @@ conditional_expression -> Box<Expression>
 	/ logical_or_expression
 
 mul_op -> (BinaryOp, Box<Expression>)
-	= "*" e:multiplicative_expression { (BinaryOp::MUL, e) }
-	/ "/" e:multiplicative_expression { (BinaryOp::DIV, e) }
-	/ "%" e:multiplicative_expression { (BinaryOp::MOD, e) }
+	= '*' e:multiplicative_expression { (BinaryOp::MUL, e) }
+	/ '/' e:multiplicative_expression { (BinaryOp::DIV, e) }
+	/ '%' e:multiplicative_expression { (BinaryOp::MOD, e) }
 
 multiplicative_expression -> Box<Expression>
 	= s:unary_expression r:mul_op* {
@@ -135,8 +121,8 @@ multiplicative_expression -> Box<Expression>
 	}
 
 add_op -> (BinaryOp, Box<Expression>)
-	= "+" e:additive_expression { (BinaryOp::ADD, e) }
-	/ "-" e:additive_expression { (BinaryOp::SUB, e) }
+	= '+' e:additive_expression { (BinaryOp::ADD, e) }
+	/ '-' e:additive_expression { (BinaryOp::SUB, e) }
 
 additive_expression -> Box<Expression>
 	= s:multiplicative_expression r:add_op* {
@@ -150,8 +136,8 @@ additive_expression -> Box<Expression>
 rel_op -> (BinaryOp, Box<Expression>)
 	= ">=" e:relational_expression { (BinaryOp::GE, e) }
 	/ "<=" e:relational_expression { (BinaryOp::LE, e) }
-	/ ">"  e:relational_expression { (BinaryOp::GT, e) }
-	/ "<"  e:relational_expression { (BinaryOp::LT, e) }
+	/ '>'  e:relational_expression { (BinaryOp::GT, e) }
+	/ '<'  e:relational_expression { (BinaryOp::LT, e) }
 
 relational_expression -> Box<Expression>
 	= s:additive_expression r:rel_op* {
@@ -189,6 +175,32 @@ logical_or_expression -> Box<Expression>
 		}
 		c
 	}
+
+#[pub]
+program -> Box<Statement>
+	= l:statement_list { Box::new(Statement::CompoundStatement(l)) }
+
+statement -> Box<Statement>
+	= compound_statement
+    / expression_statement
+
+expression_statement -> Box<Statement>
+ 	= e:expression? ';' {
+		match e {
+			Some(ex) => Box::new(Statement::ExpressionStatement(ex)),
+			None     => Box::new(Statement::CompoundStatement(vec![])),
+		}
+	}
+
+compound_statement -> Box<Statement>
+	= '{' spacing '}' { Box::new(Statement::CompoundStatement(vec![])) }
+    / '{' spacing l:statement_list spacing '}' {
+		Box::new(Statement::CompoundStatement(l))
+	}
+
+statement_list -> Vec<Box<Statement>>
+	= s:statement ++ spacing { s }
+
 "#);
 
 
@@ -213,9 +225,7 @@ mod tests {
 	}
 
     #[test]
-    fn parsing() {
-		let mut hm = HashMap::new();
-
+    fn expressions() {
 		assert_ex_eq("undef", Value::Undef);
 		assert_ex_eq("true", Value::Bool(true));
 		assert_ex_eq("false", Value::Bool(false));
@@ -227,9 +237,6 @@ mod tests {
 		assert_ex_eq("[1 : 10:30]", Value::Range(1., 10., 30.));
 		assert_ex_eq("\"bar\"", Value::String("bar".to_owned()));
 
-		let ex = expression("[1:foo]");
-		println!("{:?}", ex);
-		println!("{:?} {:?}", ex.unwrap().eval(&mut hm), hm);
 //		assert_eq!(ex.err(), None);
 //		assert_eq!(ex.unwrap().eval(&mut hm), Value::Number(19.));
 
@@ -256,5 +263,19 @@ mod tests {
         assert!(float_literal("-3*((4+1)").is_err());
 */
     }
+
+	fn assert_pgm_eq(pgm: &'static str, v: Value) {
+		let ppgm = program(pgm);
+		assert!(ppgm.is_ok(), format!("{:?} while parsing {:?}", ppgm, pgm));
+		assert_eq!(v, ppgm.unwrap().execute());
+	}
+
+	#[test]
+    fn programs() {
+		assert_pgm_eq("Unkown;", Value::Undef);
+		assert_pgm_eq("1;", Value::Number(1.));
+		assert_pgm_eq("27*3+17;", Value::Number(27.*3.+17.));
+		assert_pgm_eq("foo=17;bar = 3.5; { bar = 100; }foo+bar;", Value::Number(20.5));
+	}
 
 }
