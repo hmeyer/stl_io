@@ -19,7 +19,7 @@ identifier -> String
 
 keyword
     = "mod" / "if" / "function" / "for" / "cube" / "sphere"
-      / "cylinder" / "true" / "false" / "undef"
+      / "cylinder" / "true" / "false" / "undef" / "echo"
 
 spacing
     = (space / end_of_line / comment)*
@@ -290,17 +290,7 @@ function_definition_statement -> Box<Statement>
 
 statement_list -> Vec<Box<Statement>>
 	= s:statement ++ spacing { s }
-
-
 "#);
-
-
-
-
-
-
-
-
 
 #[cfg(test)]
 mod tests {
