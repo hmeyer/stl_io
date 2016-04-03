@@ -263,16 +263,10 @@ call_statement -> Box<Statement>
 	}
 
 expression_statement -> Box<Statement>
- 	= e:expression? ';' {
-		match e {
-			Some(ex) => Box::new(Statement::ExpressionStatement(ex)),
-			None     => Box::new(Statement::CompoundStatement(vec![])),
-		}
-	}
+ 	= e:expression ';' { Box::new(Statement::ExpressionStatement(e)) }
 
 compound_statement -> Box<Statement>
-	= '{' spacing '}' { Box::new(Statement::CompoundStatement(vec![])) }
-    / '{' spacing l:statement_list spacing '}' {
+    = '{' spacing l:statement_list spacing '}' {
 		Box::new(Statement::CompoundStatement(l))
 	}
 
