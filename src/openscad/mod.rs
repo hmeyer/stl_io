@@ -1,10 +1,11 @@
 pub mod ast;
 
 peg! grammar(r#"
-use super::ast::{Value, Expression, AssignmentExpression, BinaryOp, BinaryExpression,
-			ConditionalExpression, NegExpression, NotExpression, RangeExpression,
-			VectorExpression, IndexExpression, Postfix, IdentifierExpression, Statement,
-			FunctionMod, CallExpression};
+use std::rc::Rc;
+use super::ast::{Value, Expression, AssignmentExpression, BinaryFn, LambdaExpression,
+			     ConditionalExpression, RangeExpression,
+			     VectorExpression, IndexExpression, IdentifierExpression,
+				 Statement, FunctionMod, CallExpression};
 
 space = ' '
 end_of_line = '\n'
@@ -104,9 +105,22 @@ expression -> Box<Expression>
 
 unary_expression -> Box<Expression>
 	= index_expression
-	/ "!" e:unary_expression { Box::new(NotExpression{ex: e}) }
+	/ "!" e:unary_expression {
+		Box::new(LambdaExpression{op: Rc::new(
+			|a, _, _| Value::Bool(!a.as_bool())), name: "unary !",
+			a: e, b: Box::new(Value::Undef)})
+	}
 	/ "+" unary_expression
-	/ "-" e:unary_expression { Box::new(NegExpression{ex: e}) }
+	/ "-" e:unary_expression {
+		Box::new(LambdaExpression{op: Rc::new(
+			|a, _, msg| match a {
+				Value::Number(v) => Value::Number(-v),
+				_ => {
+					writeln!(msg, "Warning: cannot negate {:?}, using undef.", a).unwrap();
+			        Value::Undef
+			    },
+			}), name: "unary -", a: e, b: Box::new(Value::Undef)})
+	}
 
 assignment_expression -> Box<Expression>
  	= id:identifier spacing "=" spacing ce:conditional_expression {
@@ -120,56 +134,89 @@ conditional_expression -> Box<Expression>
 	}
 	/ logical_or_expression
 
-mul_op -> (BinaryOp, Box<Expression>)
-	= '*' e:multiplicative_expression { (BinaryOp::MUL, e) }
-	/ '/' e:multiplicative_expression { (BinaryOp::DIV, e) }
-	/ '%' e:multiplicative_expression { (BinaryOp::MOD, e) }
+mul_op -> (Rc<BinaryFn>, &'static str, Box<Expression>)
+	= '*' e:multiplicative_expression {
+		let op: Rc<BinaryFn> = Rc::new(|a, b, _| a * b);
+		(op, "*", e)
+	}
+	/ '/' e:multiplicative_expression {
+		let op: Rc<BinaryFn> = Rc::new(|a, b, _| a / b);
+		(op, "/", e)
+	}
+	/ '%' e:multiplicative_expression {
+		let op: Rc<BinaryFn> = Rc::new(|a, b, _| a % b);
+		(op, "%", e)
+	}
 
 multiplicative_expression -> Box<Expression>
 	= s:unary_expression r:mul_op* {
 		let mut c = s;
-		for (o, e) in r {
-			c = Box::new(BinaryExpression{op: o, a: c, b: e})
+		for (op, n, e) in r {
+			c = Box::new(LambdaExpression{op: op, name:n, a: c, b: e})
 		}
 		c
 	}
 
-add_op -> (BinaryOp, Box<Expression>)
-	= '+' e:additive_expression { (BinaryOp::ADD, e) }
-	/ '-' e:additive_expression { (BinaryOp::SUB, e) }
+add_op -> (Rc<BinaryFn>, &'static str, Box<Expression>)
+	= '+' e:additive_expression {
+		let op: Rc<BinaryFn> = Rc::new(|a, b, _| a + b);
+		(op, "+", e)
+	}
+	/ '-' e:additive_expression {
+		let op: Rc<BinaryFn> = Rc::new(|a, b, _| a - b);
+		(op, "-", e)
+	}
 
 additive_expression -> Box<Expression>
 	= s:multiplicative_expression r:add_op* {
 		let mut c = s;
-		for (o, e) in r {
-			c = Box::new(BinaryExpression{op: o, a: c, b: e})
+		for (op, n, e) in r {
+			c = Box::new(LambdaExpression{op: op, name:n, a: c, b: e})
 		}
 		c
 	}
 
-rel_op -> (BinaryOp, Box<Expression>)
-	= ">=" e:relational_expression { (BinaryOp::GE, e) }
-	/ "<=" e:relational_expression { (BinaryOp::LE, e) }
-	/ '>'  e:relational_expression { (BinaryOp::GT, e) }
-	/ '<'  e:relational_expression { (BinaryOp::LT, e) }
+rel_op -> (Rc<BinaryFn>, &'static str, Box<Expression>)
+	= ">=" e:relational_expression {
+		let op: Rc<BinaryFn> = Rc::new(|a, b, _| Value::Bool(a >= b));
+		(op, ">=", e)
+	}
+	/ "<=" e:relational_expression {
+		let op: Rc<BinaryFn> = Rc::new(|a, b, _| Value::Bool(a <= b));
+		(op, "<=", e)
+	}
+	/ '>'  e:relational_expression {
+		let op: Rc<BinaryFn> = Rc::new(|a, b, _| Value::Bool(a > b));
+		(op, ">", e)
+	}
+	/ '<'  e:relational_expression {
+		let op: Rc<BinaryFn> = Rc::new(|a, b, _| Value::Bool(a < b));
+		(op, "<", e)
+	}
 
 relational_expression -> Box<Expression>
 	= s:additive_expression r:rel_op* {
 		let mut c = s;
-		for (o, e) in r {
-			c = Box::new(BinaryExpression{op: o, a: c, b: e})
+		for (op, n, e) in r {
+			c = Box::new(LambdaExpression{op: op, name:n, a: c, b: e})
 		}
 		c
 	}
 
-eq_op -> (BinaryOp, Box<Expression>)
-	= "==" e:equality_expression { (BinaryOp::EQ, e) }
-	/ "!=" e:equality_expression { (BinaryOp::NE, e) }
+eq_op -> (Rc<BinaryFn>, &'static str, Box<Expression>)
+	= "==" e:equality_expression {
+		let op: Rc<BinaryFn> = Rc::new(|a, b, _| Value::Bool(a == b));
+		(op, "==", e)
+	}
+	/ "!=" e:equality_expression {
+		let op: Rc<BinaryFn> = Rc::new(|a, b, _| Value::Bool(a != b));
+		(op, "!=", e)
+	}
 equality_expression -> Box<Expression>
 	= s:relational_expression r:eq_op* {
 		let mut c = s;
-		for (o, e) in r {
-			c = Box::new(BinaryExpression{op: o, a: c, b: e})
+		for (op, n, e) in r {
+			c = Box::new(LambdaExpression{op: op, name:n, a: c, b: e})
 		}
 		c
 	}
@@ -177,7 +224,8 @@ logical_and_expression -> Box<Expression>
 	= s:equality_expression r:("&&" logical_and_expression)* {
 		let mut c = s;
 		for e in r {
-			c = Box::new(BinaryExpression{op: BinaryOp::AND, a: c, b: e})
+			c = Box::new(LambdaExpression{op: Rc::new(
+				|a, b, _| Value::Bool(a.as_bool() && b.as_bool())), name:"&&", a: c, b: e})
 		}
 		c
 	}
@@ -185,7 +233,8 @@ logical_or_expression -> Box<Expression>
 	= s:logical_and_expression r:("||" logical_or_expression)* {
 		let mut c = s;
 		for e in r {
-			c = Box::new(BinaryExpression{op: BinaryOp::OR, a: c, b: e})
+			c = Box::new(LambdaExpression{op: Rc::new(
+				|a, b, _| Value::Bool(a.as_bool() || b.as_bool())), name:"||", a: c, b: e})
 		}
 		c
 	}
@@ -274,6 +323,9 @@ mod tests {
 		assert_ex_eq("true", Value::Bool(true));
 		assert_ex_eq("false", Value::Bool(false));
 		assert_ex_eq("!false", Value::Bool(true));
+		assert_ex_eq("-[]", Value::Undef);
+		assert_ex_eq("false||false", Value::Bool(false));
+		assert_ex_eq("false||true", Value::Bool(true));
 		assert_ex_eq("-12345.6e-2", Value::Number(-123.456));
 		assert_ex_eq("UnknownIdentifier", Value::Undef);
 		assert_ex_eq("[1,undef,\"foo\" , bar]", Value::Vector(vec![Value::Number(1.), Value::Undef, Value::String("foo".to_string()), Value::Undef]));

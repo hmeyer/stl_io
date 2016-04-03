@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 use std::io::Write;
+use std::rc::Rc;
 
 pub type OptObject = Option<Box<::primitive::Object>>;
 pub type BindMap = ::std::collections::HashMap<String, Binding>;
@@ -62,7 +63,7 @@ pub enum Value {
 }
 
 impl Value {
-	fn as_bool(&self) -> bool {
+	pub fn as_bool(&self) -> bool {
 		match self {
             &Value::Undef => false,
 			&Value::Bool(b) => b,
@@ -223,37 +224,6 @@ impl Expression for IdentifierExpression {
 }
 
 #[derive(Clone, Debug)]
-pub struct NotExpression {
-	pub ex: Box<Expression>,
-}
-
-impl Expression for NotExpression {
-	fn eval(&self, vars: &mut BindMap, msg: &mut Write) -> Value {
-		Value::Bool(!self.ex.eval(vars, msg).as_bool())
-	}
-}
-
-
-#[derive(Clone, Debug)]
-pub struct NegExpression {
-	pub ex: Box<Expression>,
-}
-
-impl Expression for NegExpression {
-	fn eval(&self, vars: &mut BindMap, msg: &mut Write) -> Value {
-        let val = self.ex.eval(vars, msg);
-		match val {
-			Value::Number(v) => Value::Number(-v),
-			_ => {
-                writeln!(msg, "Warning: cannot negate {:?}, using undef.",
-                         val).unwrap();
-                Value::Undef
-            },
-		}
-	}
-}
-
-#[derive(Clone, Debug)]
 pub struct ConditionalExpression {
 	pub cond: Box<Expression>,
 	pub ex: Box<Expression>,
@@ -270,37 +240,27 @@ impl Expression for ConditionalExpression {
 	}
 }
 
-#[allow(dead_code)]
-#[derive(Clone, Debug)]
-pub enum BinaryOp { AND, OR, EQ, NE, GT, LT, GE, LE, ADD, SUB, MUL, DIV, MOD }
+pub type BinaryFn = Fn(Value, Value, &mut Write) -> Value;
 
-#[derive(Clone, Debug)]
-pub struct BinaryExpression {
-	pub op: BinaryOp,
-	pub a: Box<Expression>,
+#[derive(Clone)]
+pub struct LambdaExpression {
+    pub op: Rc<BinaryFn>,
+    pub name: &'static str,
+    pub a: Box<Expression>,
 	pub b: Box<Expression>,
 }
 
-impl Expression for BinaryExpression {
-	fn eval(&self, vars: &mut BindMap, msg: &mut Write) -> Value {
-		let va = self.a.eval(vars, msg);
-		let vb = self.b.eval(vars, msg);
-		match self.op {
-			BinaryOp::AND => Value::Bool(va.as_bool() && va.as_bool()),
-			BinaryOp::OR => Value::Bool(va.as_bool() || va.as_bool()),
-			BinaryOp::EQ => Value::Bool(va == vb),
-			BinaryOp::NE => Value::Bool(va != vb),
-			BinaryOp::GT => Value::Bool(va > vb),
-			BinaryOp::LT => Value::Bool(va < vb),
-			BinaryOp::GE => Value::Bool(va >= vb),
-			BinaryOp::LE => Value::Bool(va <= vb),
-			BinaryOp::ADD => va + vb,
-			BinaryOp::SUB => va - vb,
-			BinaryOp::MUL => va * vb,
-			BinaryOp::DIV => va / vb,
-			BinaryOp::MOD => va % vb,
-		}
-	}
+impl ::std::fmt::Debug for LambdaExpression {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "LambdaExpression[{:?}] {{ a:{:?} b:{:?} }}",
+               self.name, self.a, self.b)
+    }
+}
+
+impl Expression for LambdaExpression {
+    fn eval(&self, vars: &mut BindMap, msg: &mut Write) -> Value {
+		(self.op)(self.a.eval(vars, msg), self.b.eval(vars, msg), msg)
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -312,11 +272,6 @@ impl Expression for VectorExpression {
 	fn eval(&self, vars: &mut BindMap, msg: &mut Write) -> Value {
 		Value::Vector(self.v.iter().map(|x| x.eval(vars, msg)).collect())
 	}
-}
-
-pub enum Postfix {
-    Index(Box<Expression>),
-    Call(Vec<Box<Expression>>),
 }
 
 #[derive(Clone, Debug)]
@@ -530,7 +485,6 @@ impl Statement {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
     use super::*;
 
 	#[test]
@@ -568,41 +522,23 @@ mod tests {
 
 	#[test]
 	fn binary_ops() {
-        let mut hm = HashMap::new();
-        let mut out = ::std::io::stdout();
-        assert_eq!(BinaryExpression{ op: BinaryOp::ADD,
-                                     a: Box::new(Value::Undef),
-			                         b: Box::new(Value::Undef)}.eval(&mut hm, &mut out),
-				   Value::Undef);
-        assert_eq!(BinaryExpression{ op: BinaryOp::ADD,
-                                     a: Box::new(Value::Number(1.)),
-			                         b: Box::new(Value::Number(3.))}.eval(&mut hm, &mut out),
-				   Value::Number(4.));
-        assert_eq!(BinaryExpression{ op: BinaryOp::ADD,
-                                     a: Box::new(Value::String("foo".to_string())),
-			                         b: Box::new(Value::String("bar".to_string()))}.eval(&mut hm, &mut out),
-				   Value::Undef);
-        assert_eq!(BinaryExpression{ op: BinaryOp::ADD,
-                                     a: Box::new(Value::Vector(vec![Value::Number(1.)])),
-			                         b: Box::new(Value::Vector(vec![Value::Number(3.)]))}.eval(&mut hm, &mut out),
-				   Value::Vector(vec![Value::Number(4.)]));
+        assert_eq!(Value::Undef, Value::Undef + Value::Undef);
+        assert_eq!(Value::Number(4.), Value::Number(1.) + Value::Number(3.));
+        assert_eq!(Value::Undef,
+                  Value::String("foo".to_string()) + Value::String("bar".to_string()));
+        assert_eq!(Value::Vector(vec![Value::Number(4.)]),
+                   Value::Vector(vec![Value::Number(1.)]) + Value::Vector(vec![Value::Number(3.)]));
 
-        assert_eq!(BinaryExpression{ op: BinaryOp::SUB,
-                                     a: Box::new(Value::Vector(vec![Value::Number(1.), Value::Number(1.)])),
-			                         b: Box::new(Value::Vector(vec![Value::String("foo".to_string()), Value::Number(3.)]))}.eval(&mut hm, &mut out),
-				   Value::Vector(vec![Value::Undef, Value::Number(-2.)]));
+        assert_eq!(Value::Vector(vec![Value::Undef, Value::Number(-2.)]),
+                   Value::Vector(vec![Value::Number(1.), Value::Number(1.)]) -
+			       Value::Vector(vec![Value::String("foo".to_string()), Value::Number(3.)]));
 
-        assert_eq!(BinaryExpression{ op: BinaryOp::MUL,
-                                     a: Box::new(Value::Vector(vec![Value::Number(1.), Value::Number(2.)])),
-			                         b: Box::new(Value::Vector(vec![Value::Number(3.), Value::Number(4.)]))}.eval(&mut hm, &mut out),
-				   Value::Number(1. * 3. + 2. * 4.));
-        assert_eq!(BinaryExpression{ op: BinaryOp::MUL,
-                                     a: Box::new(Value::Vector(vec![Value::Number(1.), Value::Vector(vec![])])),
-			                         b: Box::new(Value::Vector(vec![Value::Number(3.), Value::Number(4.)]))}.eval(&mut hm, &mut out),
-				   Value::Undef);
-        assert_eq!(BinaryExpression{ op: BinaryOp::MOD,
-                                     a: Box::new(Value::Number(17.)),
-		   	                         b: Box::new(Value::Number(3.))}.eval(&mut hm, &mut out),
-				   Value::Number(2.));
+        assert_eq!(Value::Number(1. * 3. + 2. * 4.),
+                   Value::Vector(vec![Value::Number(1.), Value::Number(2.)]) *
+			       Value::Vector(vec![Value::Number(3.), Value::Number(4.)]));
+        assert_eq!(Value::Undef,
+                   Value::Vector(vec![Value::Number(1.), Value::Vector(vec![])]) *
+			       Value::Vector(vec![Value::Number(3.), Value::Number(4.)]));
+        assert_eq!(Value::Number(2.), Value::Number(17.) % Value::Number(3.));
 	}
 }
