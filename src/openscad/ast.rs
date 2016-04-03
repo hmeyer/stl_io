@@ -367,6 +367,7 @@ impl Expression for IndexExpression {
 pub struct CallExpression {
     pub id: String,
     pub arguments: Vec<(String, Box<Expression>)>,
+    pub sub: Option<Box<Statement>>,
 }
 
 impl Expression for CallExpression {
@@ -377,6 +378,9 @@ impl Expression for CallExpression {
 }
 
 impl CallExpression {
+    fn set_sub(&mut self, sub: Option<Box<Statement>>) {
+        self.sub = sub;
+    }
 	fn execute_impl(&self, vars: &mut BindMap, msg: &mut Write) -> (Value, OptObject) {
         match vars.get(&self.id) {
             Some(&Binding::Func(FunctionMod{ref params, ref body })) => {
@@ -471,6 +475,15 @@ pub enum Statement {
 }
 
 impl Statement {
+    pub fn set_sub(&mut self, sub: Option<Box<Statement>>) -> bool {
+        match self {
+            &mut Statement::ModCall(ref mut call_ex) => {
+                call_ex.set_sub(sub);
+                true
+            },
+            &mut _ => false,
+        }
+    }
 	pub fn execute(&self, msg: &mut Write) -> (Value, OptObject) {
         let mut vars = BindMap::new();
         self.execute_impl(&mut vars, msg)

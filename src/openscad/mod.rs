@@ -84,7 +84,7 @@ argument -> (String, Box<Expression>)
 
 call_expression -> Box<CallExpression>
 	= i:identifier '(' a:argument ** (spacing ',') spacing ')' {
-		Box::new(CallExpression{id:i, arguments: a})
+		Box::new(CallExpression{id:i, arguments: a, sub: None})
 	}
 
 primary_expression -> Box<Expression>
@@ -195,10 +195,23 @@ program -> Box<Statement>
 	= l:statement_list { Box::new(Statement::CompoundStatement(l)) }
 
 statement -> Box<Statement>
-	= ce:call_expression ';' { Box::new(Statement::ModCall(ce)) }
+	= call_statement
 	/ compound_statement
     / expression_statement
-	/ function_statement
+	/ function_definition_statement
+
+call_with_sub -> Box<Statement>
+	= e:call_expression { Box::new(Statement::ModCall(e)) }
+
+call_statement -> Box<Statement>
+	= main:call_with_sub sub:statement? ';' {?
+		let mut cp = main.clone();
+		if cp.set_sub(sub) {
+			Ok(cp)
+		} else {
+			Err("This should never happen: Failed to set sub on call_with_sub.")
+		}
+	}
 
 expression_statement -> Box<Statement>
  	= e:expression? ';' {
@@ -220,7 +233,7 @@ single_parameter -> (String, Option<Box<Expression>>)
 parameter_list -> Vec<(String, Option<Box<Expression>>)>
     = '(' spacing list:single_parameter ** (spacing ',') spacing ')' { list }
 
-function_statement -> Box<Statement>
+function_definition_statement -> Box<Statement>
 	= "function" spacing id:identifier p:parameter_list spacing "=" spacing st:statement {
 		let fm = FunctionMod {params: p, body: st};
 		Box::new(Statement::FuncModDefinition(id, fm))
