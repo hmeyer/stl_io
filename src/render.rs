@@ -1,12 +1,12 @@
-//pub use primitive::{Sphere};
+// pub use primitive::{Sphere};
 
 
-//pub type Ray = ray::Ray3<float>;
-//pub type Point = Point<float>;
+// pub type Ray = ray::Ray3<float>;
+// pub type Point = Point<float>;
 use std::cmp;
 use Float;
 use types::{Point, Vector, Ray, Transform};
-use primitive::{Object, Sphere, Union, /*Neg, Intersection, */Subtraction};
+use primitive::{Object, Sphere, Union, /* Neg, Intersection, */ Subtraction};
 
 const EPSILON: Float = 0.001;
 const MAXVAL: Float = 100.;
@@ -15,7 +15,7 @@ const MAXVAL: Float = 100.;
 #[derive(Clone, Copy)]
 pub struct Renderer {
     light_dir: Vector,
-    trans: Transform
+    trans: Transform,
 }
 
 fn create_object() -> Box<Object> {
@@ -27,15 +27,15 @@ fn create_object() -> Box<Object> {
     let mut sphere3 = Box::new(Sphere::new(0.5));
     sphere3.translate(Vector::new(-0.1, -0.1, 0.3));
 
-    return Box::new(Union::new(Box::new(Subtraction::new(sphere1, sphere2)), sphere3))
+    return Box::new(Union::new(Box::new(Subtraction::new(sphere1, sphere2)), sphere3));
 }
 
 impl Renderer {
     pub fn new() -> Renderer {
-        Renderer { light_dir: Vector::new(-0.6666666666666666,
-                                           0.6666666666666666,
-                                          -0.3333333333333333),
-                   trans: Transform::identity() }
+        Renderer {
+            light_dir: Vector::new(-0.6666666666666666, 0.6666666666666666, -0.3333333333333333),
+            trans: Transform::identity(),
+        }
     }
 
     pub fn rotate_from_screen(&mut self, x: f64, y: f64) {
@@ -58,7 +58,7 @@ impl Renderer {
             cr.dir = cr.dir.normalize();
             cr.origin = cr.origin + cr.dir * value;
             value = obj.value(&cr.origin);
-            if value >  MAXVAL {
+            if value > MAXVAL {
                 return 0.;
             }
 
@@ -68,7 +68,9 @@ impl Renderer {
         }
         let norm = obj.normal(&cr.origin);
         let dot = norm.dot(*light_dir);
-        if dot < 0. { return 0.; }
+        if dot < 0. {
+            return 0.;
+        }
         return dot;
     }
 
@@ -99,14 +101,16 @@ impl Renderer {
 
                 let v = self.cast_ray(&*my_obj, &ray, &light_dir, origin_value);
 
-                let b = (255.0 *  v * v) as u8;
+                let b = (255.0 * v * v) as u8;
 
-                buf[index] = b; index += 1;
-                buf[index] = b; index += 1;
-                buf[index] = b; index += 1;
-                index +=1;
+                buf[index] = b;
+                index += 1;
+                buf[index] = b;
+                index += 1;
+                buf[index] = b;
+                index += 1;
+                index += 1;
             }
         }
     }
-
 }

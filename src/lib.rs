@@ -5,7 +5,6 @@ extern crate gtk;
 extern crate gdk;
 extern crate cgmath;
 
-
 pub type Float = f64;
 
 pub mod render;

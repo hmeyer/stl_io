@@ -41,7 +41,10 @@ pub struct Sphere {
 
 impl Sphere {
     pub fn new(r: Float) -> Sphere {
-        Sphere { radius: r, trans: Transform::identity() }
+        Sphere {
+            radius: r,
+            trans: Transform::identity(),
+        }
     }
 }
 
@@ -62,7 +65,7 @@ impl Object for Sphere {
 }
 
 pub struct Neg {
-    a: Box<Object>
+    a: Box<Object>,
 }
 
 impl Neg {
@@ -100,6 +103,18 @@ pub struct Union {
 impl Union {
     pub fn new(a: Box<Object>, b: Box<Object>) -> Union {
         Union { a: a, b: b }
+    }
+    pub fn from_vec(mut v: Vec<Box<Object>>) -> Option<Box<Object>> {
+        match v.len() {
+            0 => None,
+            1 => Some(v.pop().unwrap()),
+            _ => {
+                let l2 = v.len() / 2;
+                let v2 = v.split_off(l2);
+                Some(Box::new(Union::new(Union::from_vec(v).unwrap(),
+                                         Union::from_vec(v2).unwrap())))
+            }
+        }
     }
 }
 
@@ -174,7 +189,7 @@ impl Object for Intersection {
 
 
 pub struct Subtraction {
-    i: Intersection
+    i: Intersection,
 }
 
 impl Subtraction {

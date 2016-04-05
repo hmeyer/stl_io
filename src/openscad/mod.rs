@@ -3,9 +3,9 @@ pub mod ast;
 peg! grammar(r#"
 use std::rc::Rc;
 use super::ast::{Value, Expression, AssignmentExpression, BinaryFn, LambdaExpression,
-			     ConditionalExpression, RangeExpression,
+			     ConditionalExpression, RangeExpression, CompoundExpression,
 			     VectorExpression, IndexExpression, IdentifierExpression,
-				 Statement, FunctionMod, CallExpression};
+				 Callable, CallExpression, CallableDefinitionExpression};
 
 space = ' '
 end_of_line = '\n'
@@ -240,34 +240,31 @@ logical_or_expression -> Box<Expression>
 	}
 
 #[pub]
-program -> Box<Statement>
-	= l:statement_list { Box::new(Statement::CompoundStatement(l)) }
+program -> Box<Expression>
+	= l:statement_list { Box::new(CompoundExpression{v: l}) }
 
-statement -> Box<Statement>
+statement -> Box<Expression>
 	= call_statement
 	/ compound_statement
     / expression_statement
 	/ function_definition_statement
 
-call_with_sub -> Box<Statement>
-	= e:call_expression { Box::new(Statement::ModCall(e)) }
+call_with_sub -> Box<CallExpression>
+	= e:call_expression { e }
 
-call_statement -> Box<Statement>
-	= main:call_with_sub sub:statement? ';' {?
+call_statement -> Box<Expression>
+	= main:call_with_sub sub:statement? ';' {
 		let mut cp = main.clone();
-		if cp.set_sub(sub) {
-			Ok(cp)
-		} else {
-			Err("This should never happen: Failed to set sub on call_with_sub.")
-		}
+		cp.set_sub(sub);
+		cp
 	}
 
-expression_statement -> Box<Statement>
- 	= e:expression ';' { Box::new(Statement::ExpressionStatement(e)) }
+expression_statement -> Box<Expression>
+ 	= e:expression ';' { e }
 
-compound_statement -> Box<Statement>
+compound_statement -> Box<Expression>
     = '{' spacing l:statement_list spacing '}' {
-		Box::new(Statement::CompoundStatement(l))
+		Box::new(CompoundExpression{v: l})
 	}
 
 single_parameter -> (String, Option<Box<Expression>>)
@@ -276,13 +273,13 @@ single_parameter -> (String, Option<Box<Expression>>)
 parameter_list -> Vec<(String, Option<Box<Expression>>)>
     = '(' spacing list:single_parameter ** (spacing ',') spacing ')' { list }
 
-function_definition_statement -> Box<Statement>
+function_definition_statement -> Box<Expression>
 	= "function" spacing id:identifier p:parameter_list spacing "=" spacing st:statement {
-		let fm = FunctionMod {params: p, body: st};
-		Box::new(Statement::FuncModDefinition(id, fm))
+		let callable = Callable {interface: p, ex: st};
+		Box::new(CallableDefinitionExpression{id: id, callable: callable})
 	}
 
-statement_list -> Vec<Box<Statement>>
+statement_list -> Vec<Box<Expression>>
 	= s:statement ++ spacing { s }
 "#);
 
@@ -292,12 +289,12 @@ mod tests {
 	use super::grammar::*;
 
 	fn assert_ex_eq(ex: &'static str, v: Value) {
-		let mut hm = BindMap::new();
+		let mut env = Environment::new();
 		let pex = expression(ex);
 		assert!(pex.is_ok(), format!("{:?} while parsing {:?}", pex, ex));
 		let pex = pex.unwrap();
 		let mut out = ::std::io::stdout();
-		let result = pex.eval(&mut hm, &mut out);
+		let result = pex.eval(&mut env, &mut out);
 		assert!(v == result, format!("{:?} == {:?} [{:?}]", v, result, pex));
 	}
 
@@ -327,8 +324,9 @@ mod tests {
 		let ppgm = program(pgm);
 		assert!(ppgm.is_ok(), format!("{:?} while parsing {:?}", ppgm, pgm));
 		let ppgm = ppgm.unwrap();
+		let mut env = Environment::new();
 		let mut out = ::std::io::stdout();
-		let (result, _) = ppgm.execute(&mut out);
+		let result = ppgm.eval(&mut env, &mut out);
 		assert!(v == result, format!("{:?} == {:?} [{:?}]", v, result, ppgm));
 	}
 

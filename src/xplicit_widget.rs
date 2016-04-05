@@ -12,14 +12,16 @@ use render;
 pub struct XplicitWidget {
     pub drawing_area: DrawingArea,
     renderer: Rc<RefCell<::render::Renderer>>,
-    mouse_pos: Rc<Cell<(f64, f64)>>
+    mouse_pos: Rc<Cell<(f64, f64)>>,
 }
 
 impl XplicitWidget {
     pub fn new() -> XplicitWidget {
-        let xw = XplicitWidget { drawing_area: DrawingArea::new(),
-                                 renderer: Rc::new(RefCell::new(render::Renderer::new())),
-                                 mouse_pos: Rc::new(Cell::new((0., 0.))) };
+        let xw = XplicitWidget {
+            drawing_area: DrawingArea::new(),
+            renderer: Rc::new(RefCell::new(render::Renderer::new())),
+            mouse_pos: Rc::new(Cell::new((0., 0.))),
+        };
         {
             let renderer_clone = xw.renderer.clone();
             xw.drawing_area.connect_draw(move |_: &DrawingArea, cr: &Context| {
@@ -62,7 +64,9 @@ impl XplicitWidget {
         }
         {
             let mouse_pos_clone = xw.mouse_pos.clone();
-            xw.drawing_area.connect_button_press_event(move |_: &DrawingArea, eb: &::gdk::EventButton| -> Inhibit {
+            xw.drawing_area.connect_button_press_event(move |_: &DrawingArea,
+                                                             eb: &::gdk::EventButton|
+                                                             -> Inhibit {
                 mouse_pos_clone.set(eb.get_position());
                 Inhibit(false)
             });
@@ -72,10 +76,15 @@ impl XplicitWidget {
 }
 
 fn draw_on_image(renderer: Rc<RefCell<render::Renderer>>, width: i32, height: i32) -> ImageSurface {
-    let size :usize = (width * height * 4) as usize;
+    let size: usize = (width * height * 4) as usize;
     let mut buf = vec![0; size].into_boxed_slice();
     renderer.borrow().draw_on_buf(&mut *buf, width, height);
-    let image2 = ImageSurface::create_for_data(buf, move |_| { },
-        Format::Rgb24, width, height, width * 4);
+    let image2 = ImageSurface::create_for_data(buf,
+                                               move |_| {
+                                               },
+                                               Format::Rgb24,
+                                               width,
+                                               height,
+                                               width * 4);
     return image2;
 }
