@@ -8,15 +8,28 @@ pub struct Environment {
 }
 
 impl Environment {
-    pub fn new() -> Environment {
-        Environment {
-            vars: ::std::collections::HashMap::new(),
-            objs: vec![],
-        }
-    }
     fn clone_vars(&self) -> Environment {
         Environment {
             vars: self.vars.clone(),
+            objs: vec![],
+        }
+    }
+    pub fn new_with_pritives() -> Environment {
+        let mut basic_bindings = ::std::collections::HashMap::new();
+        let echo_id = "msg";
+        let echo_closure: Rc<ExpressionFn> = Rc::new(|env, msg| {
+            writeln!(msg, "echo: {:?}", env.vars.get("msg").unwrap()).unwrap();
+            Value::Undef
+        });
+        basic_bindings.insert("echo".to_string(),
+                              Binding::Call(Callable {
+                                  interface: vec![(echo_id.to_string(),
+                                                   Some(Box::new(Value::String("".to_string()))))],
+                                  ex: echo_closure,
+                              }));
+
+        Environment {
+            vars: basic_bindings,
             objs: vec![],
         }
     }

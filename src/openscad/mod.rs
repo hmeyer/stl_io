@@ -18,8 +18,7 @@ identifier -> String
     = !keyword [a-zA-Z_] [a-zA-Z0-9_]* { match_str.to_string() }
 
 keyword
-    = "mod" / "if" / "function" / "for" / "cube" / "sphere"
-      / "cylinder" / "true" / "false" / "undef" / "echo"
+    = "mod" / "if" / "function" / "for" / "true" / "false" / "undef"
 
 spacing
     = (space / end_of_line / comment)*
@@ -290,7 +289,7 @@ mod tests {
 	use super::grammar::*;
 
 	fn assert_ex_eq(ex: &'static str, v: Value) {
-		let mut env = Environment::new();
+		let mut env = Environment::new_with_pritives();
 		let pex = expression(ex);
 		assert!(pex.is_ok(), format!("{:?} while parsing {:?}", pex, ex));
 		let pex = pex.unwrap();
@@ -325,7 +324,7 @@ mod tests {
 		let ppgm = program(pgm);
 		assert!(ppgm.is_ok(), format!("{:?} while parsing {:?}", ppgm, pgm));
 		let ppgm = ppgm.unwrap();
-		let mut env = Environment::new();
+		let mut env = Environment::new_with_pritives();
 		let mut out = ::std::io::stdout();
 		let result = ppgm.eval(&mut env, &mut out);
 		assert!(v == result, format!("{:?} == {:?} [{:?}]", v, result, ppgm));
@@ -339,6 +338,7 @@ mod tests {
 		assert_pgm_eq("foo=17;bar = 3.5; { bar = 100; }foo+bar;", Value::Number(20.5));
 		assert_pgm_eq("foo();", Value::Undef);
 		assert_pgm_eq("baz=3;function foo(x=2+2)=17;bar();baz();foo();", Value::Number(17.));
+		assert_pgm_eq("echo(\"foobar\");", Value::Undef);
 	}
 
 }
