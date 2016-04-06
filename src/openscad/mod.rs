@@ -2,7 +2,7 @@ pub mod ast;
 
 peg! grammar(r#"
 use std::rc::Rc;
-use super::ast::{Value, Expression, AssignmentExpression, BinaryFn, LambdaExpression,
+use super::ast::{Value, Expression, AssignmentExpression, ExpressionFn, BinaryFn, LambdaExpression,
 			     ConditionalExpression, RangeExpression, CompoundExpression,
 			     VectorExpression, IndexExpression, IdentifierExpression,
 				 Callable, CallExpression, CallableDefinitionExpression};
@@ -275,7 +275,8 @@ parameter_list -> Vec<(String, Option<Box<Expression>>)>
 
 function_definition_statement -> Box<Expression>
 	= "function" spacing id:identifier p:parameter_list spacing "=" spacing st:statement {
-		let callable = Callable {interface: p, ex: st};
+		let closure: Rc<ExpressionFn> = Rc::new(move |env, msg| st.eval(env, msg));
+		let callable = Callable {interface: p, ex: closure};
 		Box::new(CallableDefinitionExpression{id: id, callable: callable})
 	}
 

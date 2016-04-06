@@ -28,11 +28,20 @@ pub enum Binding {
     Call(Callable),
 }
 
-#[derive(Clone, Debug)]
+pub type ExpressionFn = Fn(&mut Environment, &mut Write) -> Value;
+
+#[derive(Clone)]
 pub struct Callable {
     pub interface: Vec<(String, Option<Box<Expression>>)>,
-    pub ex: Box<Expression>,
+    pub ex: Rc<ExpressionFn>,
 }
+
+impl ::std::fmt::Debug for Callable {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "Callable{{ interface:{:?} }}", self.interface)
+    }
+}
+
 
 pub trait Expression: ExpressionClone + Debug {
     fn eval(&self, env: &mut Environment, msg: &mut Write) -> Value;
@@ -360,9 +369,9 @@ impl Expression for CallExpression {
                 for &(ref p_name, ref opt_def_ex) in interface {
                     let mut found = false;
                     // try to find parameter as named parameter
-                    for &mut (ref a_name, ref ex) in &mut args {
+                    for &mut (ref a_name, ref a_ex) in &mut args {
                         if p_name == a_name {
-                            let v = ex.eval(&mut env_copy, msg);
+                            let v = a_ex.eval(&mut env_copy, msg);
                             env_copy.vars.insert(a_name.clone(), Binding::Val(v));
                             found = true;
                             break;
@@ -370,9 +379,9 @@ impl Expression for CallExpression {
                     }
                     if !found {
                         // take first anonymous parameter
-                        for &mut (ref mut a_name, ref ex) in &mut args {
+                        for &mut (ref mut a_name, ref a_ex) in &mut args {
                             if a_name.is_empty() {
-                                let v = ex.eval(&mut env_copy, msg);
+                                let v = a_ex.eval(&mut env_copy, msg);
                                 env_copy.vars.insert(p_name.clone(), Binding::Val(v));
                                 *a_name = "0".to_string();  // de-anonymize
                                 found = true;
@@ -395,7 +404,7 @@ impl Expression for CallExpression {
                         }
                     }
                 }
-                let result = ex.eval(&mut env_copy, msg);
+                let result = ex(&mut env_copy, msg);
                 // Append all objects from the call them to the current env.
                 env.objs.append(&mut env_copy.objs);
                 return result;
