@@ -218,6 +218,11 @@ impl Transform {
     }
 }
 
+impl ::std::fmt::Debug for Transform {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "Transform{{unknown}}")
+    }
+}
 
 
 #[cfg(test)]

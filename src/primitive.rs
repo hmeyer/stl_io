@@ -1,9 +1,10 @@
+use std::fmt::Debug;
 
 use Float;
 
 use types::{Point, Vector, Transform, EPSILON_X, EPSILON_Y, EPSILON_Z};
 
-pub trait Object {
+pub trait Object: Debug {
     fn basic_value(&self, p: &Point) -> Float;
     fn basic_normal(&self, p: &Point) -> Vector {
         let center = self.value(p);
@@ -34,6 +35,7 @@ pub trait Object {
     }
 }
 
+#[derive(Debug)]
 pub struct Sphere {
     radius: Float,
     trans: Transform,
@@ -64,6 +66,7 @@ impl Object for Sphere {
     }
 }
 
+#[derive(Debug)]
 pub struct Neg {
     a: Box<Object>,
 }
@@ -95,6 +98,7 @@ impl Object for Neg {
     }
 }
 
+#[derive(Debug)]
 pub struct Union {
     a: Box<Object>,
     b: Box<Object>,
@@ -147,6 +151,7 @@ impl Object for Union {
     }
 }
 
+#[derive(Debug)]
 pub struct Intersection {
     a: Box<Object>,
     b: Box<Object>,
@@ -188,6 +193,7 @@ impl Object for Intersection {
 }
 
 
+#[derive(Debug)]
 pub struct Subtraction {
     i: Intersection,
 }

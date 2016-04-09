@@ -4,7 +4,32 @@ use std::rc::Rc;
 
 pub struct Environment {
     vars: ::std::collections::HashMap<String, Binding>,
-    objs: Vec<Box<::primitive::Object>>,
+    pub objs: Vec<Box<::primitive::Object>>,
+}
+
+macro_rules! add_func {
+    ( $func_name:expr, $closure:expr, $param:ident, $default:expr, $vars:expr ) => {
+        {
+            let mut interface = Vec::new();
+            const PARAM_NAME: &'static str = stringify!($param);
+            let func_closure: Rc<ExpressionFn> = Rc::new(|env, msg| {
+                if let &Binding::Val(ref $param) = env.vars.get(PARAM_NAME).unwrap() {
+                    let (result, mut objs) = ($closure)($param.clone(), msg);
+                    env.objs.append(&mut objs);
+                    result
+                } else {
+                    panic!("did not find expected param!");
+                }
+            });
+            interface.push((PARAM_NAME.to_string(), Some(Box::new($default) as Box<Expression>)));
+            $vars.insert($func_name.to_string(),
+                                  Binding::Call(Callable {
+                                      interface: interface,
+                                      ex: func_closure,
+                                  }));
+
+        }
+    };
 }
 
 impl Environment {
@@ -14,19 +39,25 @@ impl Environment {
             objs: vec![],
         }
     }
-    pub fn new_with_pritives() -> Environment {
+    pub fn new_with_primitives() -> Environment {
         let mut basic_bindings = ::std::collections::HashMap::new();
-        let echo_id = "msg";
-        let echo_closure: Rc<ExpressionFn> = Rc::new(|env, msg| {
-            writeln!(msg, "echo: {:?}", env.vars.get("msg").unwrap()).unwrap();
-            Value::Undef
-        });
-        basic_bindings.insert("echo".to_string(),
-                              Binding::Call(Callable {
-                                  interface: vec![(echo_id.to_string(),
-                                                   Some(Box::new(Value::String("".to_string()))))],
-                                  ex: echo_closure,
-                              }));
+        add_func!("echo",
+                  |text: Value, msg: &mut Write| {
+                      writeln!(msg, "echo: {:?}", text).unwrap();
+                      (Value::Undef, vec![])
+                  },
+                  text,
+                  Value::String("".to_string()),
+                  basic_bindings);
+        add_func!("sphere",
+                  |r: Value, _| {
+                      (Value::Undef,
+                       vec![Box::new(::primitive::Sphere::new(r.as_f64())) as Box<::primitive::Object>])
+                  },
+                  r,
+                  Value::Number(1.),
+                  basic_bindings);
+
 
         Environment {
             vars: basic_bindings,
@@ -90,6 +121,12 @@ pub enum Value {
 }
 
 impl Value {
+    pub fn as_f64(&self) -> f64 {
+        match self {
+            &Value::Number(x) => x,
+            _ => ::std::f64::NAN,
+        }
+    }
     pub fn as_bool(&self) -> bool {
         match self {
             &Value::Undef => false,

@@ -289,7 +289,7 @@ mod tests {
 	use super::grammar::*;
 
 	fn assert_ex_eq(ex: &'static str, v: Value) {
-		let mut env = Environment::new_with_pritives();
+		let mut env = Environment::new_with_primitives();
 		let pex = expression(ex);
 		assert!(pex.is_ok(), format!("{:?} while parsing {:?}", pex, ex));
 		let pex = pex.unwrap();
@@ -324,7 +324,7 @@ mod tests {
 		let ppgm = program(pgm);
 		assert!(ppgm.is_ok(), format!("{:?} while parsing {:?}", ppgm, pgm));
 		let ppgm = ppgm.unwrap();
-		let mut env = Environment::new_with_pritives();
+		let mut env = Environment::new_with_primitives();
 		let mut out = ::std::io::stdout();
 		let result = ppgm.eval(&mut env, &mut out);
 		assert!(v == result, format!("{:?} == {:?} [{:?}]", v, result, ppgm));
@@ -339,6 +339,24 @@ mod tests {
 		assert_pgm_eq("foo();", Value::Undef);
 		assert_pgm_eq("baz=3;function foo(x=2+2)=17;bar();baz();foo();", Value::Number(17.));
 		assert_pgm_eq("echo(\"foobar\");", Value::Undef);
+	}
+
+	fn assert_pgm_results(pgm: &'static str, objs: Vec<Box<::primitive::Object>>) {
+		let ppgm = program(pgm);
+		assert!(ppgm.is_ok(), format!("{:?} while parsing {:?}", ppgm, pgm));
+		let ppgm = ppgm.unwrap();
+		let mut env = Environment::new_with_primitives();
+		let mut out = ::std::io::stdout();
+		ppgm.eval(&mut env, &mut out);
+		assert_eq!(format!("{:?}", &objs),
+				   format!("{:?}", &env.objs));
+	}
+
+	#[test]
+    fn objects() {
+		assert_pgm_results("sphere(15);",
+		                   vec![Box::new(::primitive::Sphere::new(15.))
+						        as Box<::primitive::Object>]);
 	}
 
 }
