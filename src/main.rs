@@ -1,3 +1,4 @@
+
 extern crate gtk;
 extern crate gdk;
 extern crate xplicit;
@@ -28,17 +29,14 @@ fn main() {
     let h_pane = gtk::Paned::new(gtk::Orientation::Horizontal);
     v_pane.add1(&h_pane);
     let debug_view = gtk::TextView::new();
-    debug_view.set_wrap_mode(gtk::WrapMode::WordChar);
     let debug_text = debug_view.get_buffer().unwrap();
     v_pane.add2(&debug_view);
 
     let code_view = gtk::TextView::new();
-    code_view.set_wrap_mode(gtk::WrapMode::WordChar);
     let code_text = code_view.get_buffer().unwrap();
     h_pane.add1(&code_view);
 
     let xw = xplicit_widget::XplicitWidget::new();
-    let renderer_clone = xw.renderer.clone();
     h_pane.add2(&xw.drawing_area);
     code_view.connect_key_release_event(move |code_view: &gtk::TextView,
                                               key: &gdk::EventKey|
@@ -58,11 +56,10 @@ fn main() {
                 out.append(&mut format!("\nexecuted : {:?}", result).into_bytes());
 
                 if let openscad::ast::Value::Objects(objs) = result {
-                    if objs.len() > 0 {
-                        let union = xplicit::primitive::Union::from_vec(objs).unwrap();
-                        out.append(&mut format!("\n\nrendering : {:?}", union).into_bytes());
-                        renderer_clone.borrow_mut().object = union;
-                    }
+                    let union = xplicit::primitive::Union::from_vec(objs);
+                    out.append(&mut format!("\n\nrendering : {:?}", union).into_bytes());
+                    xw.renderer.borrow_mut().object = union;
+                    xw.drawing_area.queue_draw();
                 }
                 debug_text.set_text(&String::from_utf8(out).unwrap());
             } else {
@@ -79,10 +76,12 @@ fn main() {
     h_pane.set_position(h_pane.get_allocated_width() * 50 / 100);
 
     code_text.set_text(r#"
-    translate([-1,0,0]) sphere(1.5);
-    translate([ 1,0,0]) sphere(1.5);
+    translate([-.5,0,0]) sphere(.5);
+    translate([ .5,0,0]) sphere(.8);
     "#);
+    debug_view.set_wrap_mode(gtk::WrapMode::WordChar);
 
     gtk::main();
+    code_view.set_wrap_mode(gtk::WrapMode::WordChar);
 
 }

@@ -16,19 +16,7 @@ const MAXVAL: Float = 100.;
 pub struct Renderer {
     light_dir: Vector,
     trans: Transform,
-    pub object: Box<Object>,
-}
-
-fn create_object() -> Box<Object> {
-    let sphere1 = Box::new(Sphere::new(0.8));
-
-    let mut sphere2 = Box::new(Sphere::new(0.3));
-    sphere2.translate(Vector::new(0.15, -0.1, 1.));
-
-    let mut sphere3 = Box::new(Sphere::new(0.5));
-    sphere3.translate(Vector::new(-0.1, -0.1, 0.3));
-
-    return Box::new(Union::new(Box::new(Subtraction::new(sphere1, sphere2)), sphere3));
+    pub object: Option<Box<Object>>,
 }
 
 impl Renderer {
@@ -36,7 +24,7 @@ impl Renderer {
         Renderer {
             light_dir: Vector::new(-0.6666666666666666, 0.6666666666666666, -0.3333333333333333),
             trans: Transform::identity(),
-            object: create_object(),
+            object: None,
         }
     }
 
@@ -52,7 +40,12 @@ impl Renderer {
         self.trans = self.trans.concat(&other);
     }
 
-    fn cast_ray(&self, obj: &Object, r: &Ray, light_dir: &Vector, origin_value: Float) -> Float {
+    fn cast_ray(&self,
+                obj: &Box<Object>,
+                r: &Ray,
+                light_dir: &Vector,
+                origin_value: Float)
+                -> Float {
         let mut cr = *r;
         let mut value = origin_value;
 
@@ -90,27 +83,29 @@ impl Renderer {
         let ray_origin = self.trans.t_point(Point::new(0., 0., -2.));
         let mut ray = Ray::new(ray_origin, dir_front);
 
-        let origin_value = self.object.value(&ray.origin);
+        if let Some(ref my_obj) = self.object {
+            let origin_value = my_obj.value(&ray.origin);
 
 
-        let mut index = 0 as usize;
-        for y in 0..height {
-            let dir_row = dir_front + dir_tb * ((y - h2) as Float * scale);
+            let mut index = 0 as usize;
+            for y in 0..height {
+                let dir_row = dir_front + dir_tb * ((y - h2) as Float * scale);
 
-            for x in 0..width {
-                ray.dir = dir_row + dir_rl * ((x - w2) as Float * scale);
+                for x in 0..width {
+                    ray.dir = dir_row + dir_rl * ((x - w2) as Float * scale);
 
-                let v = self.cast_ray(&*self.object, &ray, &light_dir, origin_value);
+                    let v = self.cast_ray(my_obj, &ray, &light_dir, origin_value);
 
-                let b = (255.0 * v * v) as u8;
+                    let b = (255.0 * v * v) as u8;
 
-                buf[index] = b;
-                index += 1;
-                buf[index] = b;
-                index += 1;
-                buf[index] = b;
-                index += 1;
-                index += 1;
+                    buf[index] = b;
+                    index += 1;
+                    buf[index] = b;
+                    index += 1;
+                    buf[index] = b;
+                    index += 1;
+                    index += 1;
+                }
             }
         }
     }
