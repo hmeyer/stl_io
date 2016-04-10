@@ -252,7 +252,7 @@ call_with_sub -> Box<CallExpression>
 	= e:call_expression { e }
 
 call_statement -> Box<Expression>
-	= main:call_with_sub sub:statement? ';' {
+	= main:call_with_sub space sub:expression? ';' {
 		let mut cp = main.clone();
 		cp.set_sub(sub);
 		cp
@@ -287,6 +287,7 @@ statement_list -> Vec<Box<Expression>>
 mod tests {
 	use super::ast::*;
 	use super::grammar::*;
+	use ::primitive::Object;
 
 	fn assert_ex_eq(ex: &'static str, v: Value) {
 		let mut env = Environment::new_with_primitives();
@@ -346,6 +347,11 @@ mod tests {
 		assert_pgm_eq("sphere(15);",
 		                   Value::Objects(vec![Box::new(::primitive::Sphere::new(15.))
 						        as Box<::primitive::Object>]));
+
+		let mut sphere = ::primitive::Sphere::new(7.);
+		sphere.translate(::types::Vector::new(1., 2., 3.));
+		assert_pgm_eq("translate([1,2,3]) sphere(7);",
+		                   Value::Objects(vec![Box::new(sphere) as Box<::primitive::Object>]));
 	}
 
 }

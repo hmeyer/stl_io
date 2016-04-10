@@ -15,7 +15,7 @@ macro_rules! add_func {
             const PARAM_NAME: &'static str = stringify!($param);
             let func_closure: Rc<ExpressionFn> = Rc::new(|env, msg| {
                 if let &Binding::Val(ref $param) = env.vars.get(PARAM_NAME).unwrap() {
-                    ($closure)($param.clone(), msg)
+                    ($closure)($param.clone(), &env.objs, msg)
                 } else {
                     panic!("did not find expected param!");
                 }
@@ -41,7 +41,7 @@ impl Environment {
     pub fn new_with_primitives() -> Environment {
         let mut basic_bindings = ::std::collections::HashMap::new();
         add_func!("echo",
-                  |text: Value, msg: &mut Write| {
+                  |text: Value, _, msg: &mut Write| {
                       writeln!(msg, "echo: {:?}", text).unwrap();
                       Value::Undef
                   },
@@ -49,11 +49,34 @@ impl Environment {
                   Value::String("".to_string()),
                   basic_bindings);
         add_func!("sphere",
-                  |r: Value, _| {
+                  |r: Value, _, _| {
                       Value::Objects(vec![Box::new(::primitive::Sphere::new(r.as_f64())) as Box<::primitive::Object>])
                   },
                   r,
                   Value::Number(1.),
+                  basic_bindings);
+        add_func!("translate",
+                  |t: Value, subs: &Vec<Box<Object>>, _| {
+                      if subs.len() > 0 {
+                          if let Value::Vector(tv) = t {
+                              let mut v = Vec::new();
+                              for i in 0..3 {
+                                  v.push(if let Some(x) = tv.get(i) {
+                                      x.as_f64_or(0.)
+                                  } else {
+                                      0.
+                                  });
+                              }
+                              let mut union_of_subs = ::primitive::Union::from_vec(subs.clone())
+                                                          .unwrap();
+                              union_of_subs.translate(::types::Vector::new(v[0], v[1], v[2]));
+                              return Value::Objects(vec![union_of_subs]);
+                          }
+                      }
+                      return Value::Undef;
+                  },
+                  t,
+                  Value::Vector(vec![Value::Number(0.), Value::Number(0.), Value::Number(0.)]),
                   basic_bindings);
 
 
@@ -124,6 +147,12 @@ impl Value {
         match self {
             &Value::Number(x) => x,
             _ => ::std::f64::NAN,
+        }
+    }
+    pub fn as_f64_or(&self, default: f64) -> f64 {
+        match self {
+            &Value::Number(x) => x,
+            _ => default,
         }
     }
     pub fn as_bool(&self) -> bool {
@@ -452,6 +481,12 @@ impl Expression for CallExpression {
                                 .unwrap();
                             return Value::Undef;
                         }
+                    }
+                }
+                if let Some(ref subex) = self.sub {
+                    let maybe_objs = subex.eval(&mut env.clone_vars(), msg);
+                    if let Value::Objects(o) = maybe_objs {
+                        env_copy.objs = o;
                     }
                 }
                 return ex(&mut env_copy, msg);
