@@ -4,7 +4,7 @@ use Float;
 
 use types::{Point, Vector, Transform, EPSILON_X, EPSILON_Y, EPSILON_Z};
 
-pub trait Object: Debug {
+pub trait Object: ObjectClone + Debug {
     fn basic_value(&self, p: &Point) -> Float;
     fn basic_normal(&self, p: &Point) -> Vector {
         let center = self.value(p);
@@ -33,9 +33,53 @@ pub trait Object: Debug {
         let trans = Transform::scale(s);
         self.concat_transform(&trans);
     }
+    fn to_string(&self) -> String {
+        format!("{:?}", self)
+    }
 }
 
-#[derive(Debug)]
+pub trait ObjectClone {
+    fn clone_box(&self) -> Box<Object>;
+}
+
+impl<T> ObjectClone for T
+    where T: 'static + Object + Clone
+{
+    fn clone_box(&self) -> Box<Object> {
+        Box::new(self.clone())
+    }
+}
+
+// We can now implement Clone manually by forwarding to clone_box.
+impl Clone for Box<Object> {
+    fn clone(&self) -> Box<Object> {
+        self.clone_box()
+    }
+}
+
+// TODO: This is a hack. Replace it with something sane.
+impl PartialEq for Box<Object> {
+    fn eq(&self, other: &Self) -> bool {
+        self.to_string() == other.to_string()
+    }
+}
+
+// TODO: This is a hack. Replace it with something sane.
+impl PartialOrd for Box<Object> {
+    fn partial_cmp(&self, other: &Self) -> Option<::std::cmp::Ordering> {
+        let s = self.to_string();
+        let o = other.to_string();
+        if s < o {
+            return Some(::std::cmp::Ordering::Less);
+        } else if s > o {
+            return Some(::std::cmp::Ordering::Greater);
+        } else {
+            return Some(::std::cmp::Ordering::Equal);
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct Sphere {
     radius: Float,
     trans: Transform,
@@ -66,7 +110,7 @@ impl Object for Sphere {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Neg {
     a: Box<Object>,
 }
@@ -98,7 +142,7 @@ impl Object for Neg {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Union {
     a: Box<Object>,
     b: Box<Object>,
@@ -151,7 +195,7 @@ impl Object for Union {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Intersection {
     a: Box<Object>,
     b: Box<Object>,
@@ -193,7 +237,7 @@ impl Object for Intersection {
 }
 
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Subtraction {
     i: Intersection,
 }

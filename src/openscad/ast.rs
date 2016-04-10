@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 use std::io::Write;
 use std::rc::Rc;
+use primitive::Object;
 
 pub struct Environment {
     vars: ::std::collections::HashMap<String, Binding>,
@@ -14,9 +15,7 @@ macro_rules! add_func {
             const PARAM_NAME: &'static str = stringify!($param);
             let func_closure: Rc<ExpressionFn> = Rc::new(|env, msg| {
                 if let &Binding::Val(ref $param) = env.vars.get(PARAM_NAME).unwrap() {
-                    let (result, mut objs) = ($closure)($param.clone(), msg);
-                    env.objs.append(&mut objs);
-                    result
+                    ($closure)($param.clone(), msg)
                 } else {
                     panic!("did not find expected param!");
                 }
@@ -44,15 +43,14 @@ impl Environment {
         add_func!("echo",
                   |text: Value, msg: &mut Write| {
                       writeln!(msg, "echo: {:?}", text).unwrap();
-                      (Value::Undef, vec![])
+                      Value::Undef
                   },
                   text,
                   Value::String("".to_string()),
                   basic_bindings);
         add_func!("sphere",
                   |r: Value, _| {
-                      (Value::Undef,
-                       vec![Box::new(::primitive::Sphere::new(r.as_f64())) as Box<::primitive::Object>])
+                      Value::Objects(vec![Box::new(::primitive::Sphere::new(r.as_f64())) as Box<::primitive::Object>])
                   },
                   r,
                   Value::Number(1.),
@@ -118,6 +116,7 @@ pub enum Value {
     String(String),
     Vector(Vec<Value>),
     Range(f64, f64, f64),
+    Objects(Vec<Box<Object>>),
 }
 
 impl Value {
@@ -135,6 +134,7 @@ impl Value {
             &Value::String(ref s) => s.len() != 0,
             &Value::Vector(ref v) => v.len() != 0,
             &Value::Range(_, _, _) => true,
+            &Value::Objects(ref v) => v.len() != 0,
         }
     }
 }
@@ -454,10 +454,7 @@ impl Expression for CallExpression {
                         }
                     }
                 }
-                let result = ex(&mut env_copy, msg);
-                // Append all objects from the call them to the current env.
-                env.objs.append(&mut env_copy.objs);
-                return result;
+                return ex(&mut env_copy, msg);
             }
             Some(&Binding::Val(ref x)) => {
                 writeln!(msg,
@@ -517,13 +514,21 @@ impl Expression for CompoundExpression {
     fn eval(&self, env: &mut Environment, msg: &mut Write) -> Value {
         let mut v = Value::Undef;
         let mut env_copy = env.clone_vars();
+        let mut objs = Vec::new();
         for ex in &self.v {
             v = ex.eval(&mut env_copy, msg);
+            if let Value::Objects(o) = v {
+                if let Some(union) = ::primitive::Union::from_vec(o) {
+                    objs.push(union);
+                }
+                v = Value::Undef;
+            }
         }
-        if let Some(union) = ::primitive::Union::from_vec(env_copy.objs) {
-            env.objs.push(union)
+        if objs.len() > 0 {
+            Value::Objects(objs)
+        } else {
+            v
         }
-        v
     }
 }
 

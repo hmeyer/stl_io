@@ -54,15 +54,9 @@ impl PartialEq for Point {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Vector {
     v: CGVector3,
-}
-
-impl PartialEq for Vector {
-    fn eq(&self, other: &Self) -> bool {
-        self.v == other.v
-    }
 }
 
 impl Add for Vector {
@@ -135,6 +129,14 @@ impl Ray {
 pub struct Transform {
     t: CGDecomposed3,
     i: CGDecomposed3,
+}
+
+impl PartialEq for Transform {
+    fn eq(&self, other: &Self) -> bool {
+        self.t.scale == other.t.scale && self.t.rot == other.t.rot &&
+        self.t.disp == other.t.disp && self.i.scale == other.i.scale &&
+        self.i.rot == other.i.rot && self.i.disp == other.i.disp
+    }
 }
 
 impl Transform {
@@ -220,7 +222,10 @@ impl Transform {
 
 impl ::std::fmt::Debug for Transform {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        write!(f, "Transform{{unknown}}")
+        write!(f,
+               "Transform{{ t.scale: {:?}, t.disp: {:?}}}",
+               self.t.scale,
+               self.t.disp)
     }
 }
 

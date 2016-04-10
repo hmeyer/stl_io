@@ -341,22 +341,11 @@ mod tests {
 		assert_pgm_eq("echo(\"foobar\");", Value::Undef);
 	}
 
-	fn assert_pgm_results(pgm: &'static str, objs: Vec<Box<::primitive::Object>>) {
-		let ppgm = program(pgm);
-		assert!(ppgm.is_ok(), format!("{:?} while parsing {:?}", ppgm, pgm));
-		let ppgm = ppgm.unwrap();
-		let mut env = Environment::new_with_primitives();
-		let mut out = ::std::io::stdout();
-		ppgm.eval(&mut env, &mut out);
-		assert_eq!(format!("{:?}", &objs),
-				   format!("{:?}", &env.objs));
-	}
-
 	#[test]
     fn objects() {
-		assert_pgm_results("sphere(15);",
-		                   vec![Box::new(::primitive::Sphere::new(15.))
-						        as Box<::primitive::Object>]);
+		assert_pgm_eq("sphere(15);",
+		                   Value::Objects(vec![Box::new(::primitive::Sphere::new(15.))
+						        as Box<::primitive::Object>]));
 	}
 
 }
