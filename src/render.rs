@@ -12,10 +12,11 @@ const EPSILON: Float = 0.001;
 const MAXVAL: Float = 100.;
 // Normalized Vector for diagonally left above
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct Renderer {
     light_dir: Vector,
     trans: Transform,
+    pub object: Box<Object>,
 }
 
 fn create_object() -> Box<Object> {
@@ -35,6 +36,7 @@ impl Renderer {
         Renderer {
             light_dir: Vector::new(-0.6666666666666666, 0.6666666666666666, -0.3333333333333333),
             trans: Transform::identity(),
+            object: create_object(),
         }
     }
 
@@ -88,8 +90,7 @@ impl Renderer {
         let ray_origin = self.trans.t_point(Point::new(0., 0., -2.));
         let mut ray = Ray::new(ray_origin, dir_front);
 
-        let my_obj = create_object();
-        let origin_value = my_obj.value(&ray.origin);
+        let origin_value = self.object.value(&ray.origin);
 
 
         let mut index = 0 as usize;
@@ -99,7 +100,7 @@ impl Renderer {
             for x in 0..width {
                 ray.dir = dir_row + dir_rl * ((x - w2) as Float * scale);
 
-                let v = self.cast_ray(&*my_obj, &ray, &light_dir, origin_value);
+                let v = self.cast_ray(&*self.object, &ray, &light_dir, origin_value);
 
                 let b = (255.0 * v * v) as u8;
 

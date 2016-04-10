@@ -11,7 +11,7 @@ use render;
 
 pub struct XplicitWidget {
     pub drawing_area: DrawingArea,
-    renderer: Rc<RefCell<::render::Renderer>>,
+    pub renderer: Rc<RefCell<::render::Renderer>>,
     mouse_pos: Rc<Cell<(f64, f64)>>,
 }
 
