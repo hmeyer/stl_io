@@ -242,17 +242,27 @@ program -> Box<Expression>
 statement -> Box<Expression>
 	= call_statement
 	/ compound_statement
-    / expression_statement
+  / expression_statement
 	/ function_definition_statement
 
 call_with_sub -> Box<CallExpression>
-	= e:call_expression { e }
+	= e:call_expression spacing { e }
+
+maybe_statement -> Option<Box<Expression>>
+  = s:statement { Some(s) }
+	/ ';' { None }
 
 call_statement -> Box<Expression>
-	= main:call_with_sub space sub:expression? ';' {
-		let mut cp = main.clone();
-		cp.set_sub(sub);
-		cp
+	= calls:call_with_sub+ sub:maybe_statement {
+		let mut mycalls = calls.clone();
+		let mut c = mycalls.pop().unwrap();
+		c.set_sub(sub);
+		while mycalls.len() > 0 {
+			let mut t = mycalls.pop().unwrap();
+			t.set_sub(Some(c));
+			c = t;
+		}
+		c as Box<Expression>
 	}
 
 expression_statement -> Box<Expression>
