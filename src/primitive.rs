@@ -86,11 +86,11 @@ pub struct Sphere {
 }
 
 impl Sphere {
-    pub fn new(r: Float) -> Sphere {
-        Sphere {
+    pub fn new(r: Float) -> Box<Sphere> {
+        Box::new(Sphere {
             radius: r,
             trans: Transform::identity(),
-        }
+        })
     }
 }
 
@@ -110,47 +110,27 @@ impl Object for Sphere {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct Neg {
-    a: Box<Object>,
-}
-
-impl Neg {
-    pub fn new(a: Box<Object>) -> Neg {
-        Neg { a: a }
-    }
-}
-
-impl Object for Neg {
-    fn value(&self, p: &Point) -> Float {
-        return -self.a.value(p);
-    }
-    fn normal(&self, p: &Point) -> Vector {
-        self.a.normal(p) * -1.0
-    }
-    fn concat_transform(&mut self, other: &Transform) {
-        self.a.concat_transform(other);
-    }
-    fn basic_value(&self, _: &Point) -> Float {
-        panic!("undefined");
-    }
-    fn basic_normal(&self, _: &Point) -> Vector {
-        panic!("undefined");
-    }
-    fn transform(&self) -> &Transform {
-        panic!("undefined");
-    }
+pub trait Mixer: Clone + Debug {
+    fn new() -> Box<Self>;
+    fn mixval(&self, a: Float, b: Float) -> Float;
+    fn mixnormal(&self,
+                     a: Float,
+                     b: Float,
+                     get_an: &Fn() -> Vector,
+                     get_bn: &Fn() -> Vector)
+                     -> Vector;
 }
 
 #[derive(Clone, Debug)]
-pub struct Union {
+pub struct Bool<T: Mixer> {
     a: Box<Object>,
     b: Box<Object>,
+    mixer: Box<T>,
 }
 
-impl Union {
-    pub fn new(a: Box<Object>, b: Box<Object>) -> Union {
-        Union { a: a, b: b }
+impl<T: Mixer + 'static> Bool<T> {
+    pub fn new(a: Box<Object>, b: Box<Object>) -> Box<Bool<T>> {
+        Box::new(Bool::<T> { a: a, b: b, mixer: T::new() })
     }
     pub fn from_vec(mut v: Vec<Box<Object>>) -> Option<Box<Object>> {
         match v.len() {
@@ -159,26 +139,25 @@ impl Union {
             _ => {
                 let l2 = v.len() / 2;
                 let v2 = v.split_off(l2);
-                Some(Box::new(Union::new(Union::from_vec(v).unwrap(),
-                                         Union::from_vec(v2).unwrap())))
+                Some(Bool::<T>::new(Bool::<T>::from_vec(v).unwrap(), Bool::<T>::from_vec(v2).unwrap()))
             }
         }
     }
 }
 
-impl Object for Union {
+
+impl<T: Mixer + 'static> Object for Bool<T> {
     fn value(&self, p: &Point) -> Float {
-        return self.a.value(p).min(self.b.value(p));
+        return self.mixer.mixval(self.a.value(p), self.b.value(p));
     }
 
     fn normal(&self, p: &Point) -> Vector {
         let va = self.a.value(p);
         let vb = self.b.value(p);
-        if va < vb {
-            self.a.normal(p)
-        } else {
-            self.b.normal(p)
-        }
+        self.mixer.mixnormal(va,
+                             vb,
+                             &|| self.a.normal(&p.clone()),
+                             &|| self.b.normal(&p.clone()))
     }
     fn concat_transform(&mut self, other: &Transform) {
         self.a.concat_transform(other);
@@ -196,76 +175,70 @@ impl Object for Union {
 }
 
 #[derive(Clone, Debug)]
-pub struct Intersection {
-    a: Box<Object>,
-    b: Box<Object>,
+pub struct UnionMixer {}
+impl Mixer for UnionMixer {
+    fn new() -> Box<Self> { Box::new(UnionMixer{})}
+    fn mixval(&self, a: Float, b: Float) -> Float {
+        a.min(b)
+    }
+    fn mixnormal(&self,
+                     a: Float,
+                     b: Float,
+                     get_an: &Fn() -> Vector,
+                     get_bn: &Fn() -> Vector)
+                     -> Vector {
+                         if a < b {
+                             get_an()
+                         } else {
+                             get_bn()
+                         }
+                     }
 }
 
-impl Intersection {
-    pub fn new(a: Box<Object>, b: Box<Object>) -> Intersection {
-        Intersection { a: a, b: b }
-    }
-}
-
-impl Object for Intersection {
-    fn value(&self, p: &Point) -> Float {
-        return self.a.value(p).max(self.b.value(p));
-    }
-
-    fn normal(&self, p: &Point) -> Vector {
-        let va = self.a.value(p);
-        let vb = self.b.value(p);
-        if va > vb {
-            self.a.normal(p)
-        } else {
-            self.b.normal(p)
-        }
-    }
-    fn concat_transform(&mut self, other: &Transform) {
-        self.a.concat_transform(other);
-        self.b.concat_transform(other);
-    }
-    fn basic_value(&self, _: &Point) -> Float {
-        panic!("undefined");
-    }
-    fn basic_normal(&self, _: &Point) -> Vector {
-        panic!("undefined");
-    }
-    fn transform(&self) -> &Transform {
-        panic!("undefined");
-    }
-}
-
+pub type Union = Bool<UnionMixer>;
 
 #[derive(Clone, Debug)]
-pub struct Subtraction {
-    i: Intersection,
+pub struct IntersectionMixer {}
+impl Mixer for IntersectionMixer {
+    fn new() -> Box<Self> { Box::new(IntersectionMixer{})}
+    fn mixval(&self, a: Float, b: Float) -> Float {
+        a.max(b)
+    }
+    fn mixnormal(&self,
+                     a: Float,
+                     b: Float,
+                     get_an: &Fn() -> Vector,
+                     get_bn: &Fn() -> Vector)
+                     -> Vector {
+                         if a > b {
+                             get_an()
+                         } else {
+                             get_bn()
+                         }
+                     }
 }
 
-impl Subtraction {
-    pub fn new(a: Box<Object>, b: Box<Object>) -> Subtraction {
-        Subtraction { i: Intersection::new(a, Box::new(Neg::new(b))) }
+pub type Intersection = Bool<IntersectionMixer>;
+
+#[derive(Clone, Debug)]
+pub struct SubtractionMixer {}
+impl Mixer for SubtractionMixer {
+    fn new() -> Box<Self> { Box::new(SubtractionMixer{})}
+    fn mixval(&self, a: Float, b: Float) -> Float {
+        a.max(-b)
     }
+    fn mixnormal(&self,
+                     a: Float,
+                     b: Float,
+                     get_an: &Fn() -> Vector,
+                     get_bn: &Fn() -> Vector)
+                     -> Vector {
+                         if a > -b {
+                             get_an()
+                         } else {
+                             get_bn() * -1.
+                         }
+                     }
 }
 
-impl Object for Subtraction {
-    fn value(&self, p: &Point) -> Float {
-        self.i.value(p)
-    }
-
-    fn normal(&self, p: &Point) -> Vector {
-        self.i.normal(p)
-    }
-    fn concat_transform(&mut self, other: &Transform) {
-        self.i.concat_transform(other)
-    }
-    fn basic_value(&self, p: &Point) -> Float {
-        self.i.basic_value(p)
-    }
-    fn basic_normal(&self, p: &Point) -> Vector {
-        self.i.basic_normal(p)
-    }
-    fn transform(&self) -> &Transform {
-        self.i.transform()
-    }
-}
+pub type Subtraction = Bool<SubtractionMixer>;

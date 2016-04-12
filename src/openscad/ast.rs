@@ -49,9 +49,7 @@ impl Environment {
                   Value::String("".to_string()),
                   basic_bindings);
         add_func!("sphere",
-                  |r: Value, _, _| {
-                      Value::Objects(vec![Box::new(::primitive::Sphere::new(r.as_f64())) as Box<::primitive::Object>])
-                  },
+                  |r: Value, _, _| Value::Objects(vec![::primitive::Sphere::new(r.as_f64())]),
                   r,
                   Value::Number(1.),
                   basic_bindings);

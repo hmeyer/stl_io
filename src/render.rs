@@ -6,7 +6,7 @@
 use std::cmp;
 use Float;
 use types::{Point, Vector, Ray, Transform};
-use primitive::{Object, Sphere, Union, /* Neg, Intersection, */ Subtraction};
+use primitive::Object;
 
 const EPSILON: Float = 0.001;
 const MAXVAL: Float = 100.;
@@ -22,7 +22,7 @@ pub struct Renderer {
 impl Renderer {
     pub fn new() -> Renderer {
         Renderer {
-            light_dir: Vector::new(-0.6666666666666666, 0.6666666666666666, -0.3333333333333333),
+            light_dir: Vector::new(-2. / 3., 2. / 3., -1. / 3.),
             trans: Transform::identity(),
             object: None,
         }
