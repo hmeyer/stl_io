@@ -242,3 +242,16 @@ impl Mixer for SubtractionMixer {
 }
 
 pub type Subtraction = Bool<SubtractionMixer>;
+
+impl Bool<SubtractionMixer> {
+    pub fn subtraction_from_vec(mut v: Vec<Box<Object>>) -> Option<Box<Object>> {
+        match v.len() {
+            0 => None,
+            1 => Some(v.pop().unwrap()),
+            _ => {
+                let v_rest = v.split_off(1);
+                Some(Subtraction::new(v.pop().unwrap(), Union::from_vec(v_rest).unwrap()))
+            }
+        }
+    }
+}

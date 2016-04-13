@@ -76,8 +76,13 @@ fn main() {
     h_pane.set_position(h_pane.get_allocated_width() * 50 / 100);
 
     code_text.set_text(r#"
-    translate([-.5,0,0]) sphere(.5);
-    translate([ .5,0,0]) sphere(.8);
+    difference() {
+        union() {
+            translate([-.5, 0, 0]) sphere(.5);
+            translate([ .5, 0, 0]) sphere(.8);
+        }
+        translate([0, 0, .5]) sphere(.5);
+    }
     "#);
     debug_view.set_wrap_mode(gtk::WrapMode::WordChar);
 

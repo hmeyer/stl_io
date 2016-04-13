@@ -76,6 +76,38 @@ impl Environment {
                   t,
                   Value::Vector(vec![Value::Number(0.), Value::Number(0.), Value::Number(0.)]),
                   basic_bindings);
+        add_func!("union",
+                  |_: Value, subs: &Vec<Box<Object>>, _| {
+                      if subs.len() == 0 {
+                          return Value::Undef;
+                      }
+                      return Value::Objects(vec![::primitive::Union::from_vec(subs.clone())
+                                                     .unwrap()]);
+                  },
+                  r,
+                  Value::Undef,
+                  basic_bindings);
+        add_func!("intersection",
+                  |_: Value, subs: &Vec<Box<Object>>, _| {
+                      if subs.len() == 0 {
+                          return Value::Undef;
+                      }
+                      return Value::Objects(vec![::primitive::Intersection::from_vec(subs.clone())
+                                                .unwrap()]);
+                  },
+                  r,
+                  Value::Undef,
+                  basic_bindings);
+        add_func!("difference",
+                  |_: Value, subs: &Vec<Box<Object>>, _| {
+                      if subs.len() == 0 {
+                          return Value::Undef;
+                      }
+                      return Value::Objects(vec![::primitive::Subtraction::subtraction_from_vec(subs.clone()).unwrap()]);
+                  },
+                  r,
+                  Value::Undef,
+                  basic_bindings);
 
 
         Environment {
