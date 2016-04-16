@@ -66,13 +66,12 @@ mod tests {
 	#[test]
     fn objects() {
 		assert_pgm_eq("sphere(15);",
-		                   Value::Objects(vec![Box::new(::primitive::Sphere::new(15.))
-						        as Box<::primitive::Object>]));
+		                   Value::Objects(vec![::primitive::Sphere::new(15.)]));
 
 		let mut sphere = ::primitive::Sphere::new(7.);
 		sphere.translate(::types::Vector::new(1., 2., 3.));
 		assert_pgm_eq("translate([1,2,3]) sphere(7);",
-		                   Value::Objects(vec![Box::new(sphere) as Box<::primitive::Object>]));
+		                   Value::Objects(vec![sphere]));
 	}
 
 }

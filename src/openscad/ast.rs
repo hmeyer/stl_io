@@ -65,7 +65,8 @@ impl Environment {
                                       0.
                                   });
                               }
-                              let mut union_of_subs = ::primitive::Union::from_vec(subs.clone())
+                              let mut union_of_subs = ::primitive::Union::from_vec(subs.clone(),
+                                                                                   0.)
                                                           .unwrap();
                               union_of_subs.translate(::types::Vector::new(v[0], v[1], v[2]));
                               return Value::Objects(vec![union_of_subs]);
@@ -77,36 +78,42 @@ impl Environment {
                   Value::Vector(vec![Value::Number(0.), Value::Number(0.), Value::Number(0.)]),
                   basic_bindings);
         add_func!("union",
-                  |_: Value, subs: &Vec<Box<Object>>, _| {
-                      if subs.len() == 0 {
-                          return Value::Undef;
+                  |r: Value, subs: &Vec<Box<Object>>, _| {
+                      if subs.len() > 0 {
+                          if let Value::Number(rf) = r {
+                              return Value::Objects(vec![::primitive::Union::from_vec(subs.clone(), rf)
+                                                             .unwrap()]);
+                          }
                       }
-                      return Value::Objects(vec![::primitive::Union::from_vec(subs.clone())
-                                                     .unwrap()]);
+                      return Value::Undef;
                   },
                   r,
-                  Value::Undef,
+                  Value::Number(0.),
                   basic_bindings);
         add_func!("intersection",
-                  |_: Value, subs: &Vec<Box<Object>>, _| {
-                      if subs.len() == 0 {
-                          return Value::Undef;
+                  |r: Value, subs: &Vec<Box<Object>>, _| {
+                      if subs.len() > 0 {
+                          if let Value::Number(rf) = r {
+                              return Value::Objects(vec![::primitive::Intersection::from_vec(subs.clone(), rf)
+                                                        .unwrap()]);
+                          }
                       }
-                      return Value::Objects(vec![::primitive::Intersection::from_vec(subs.clone())
-                                                .unwrap()]);
+                      return Value::Undef;
                   },
                   r,
-                  Value::Undef,
+                  Value::Number(0.),
                   basic_bindings);
         add_func!("difference",
-                  |_: Value, subs: &Vec<Box<Object>>, _| {
-                      if subs.len() == 0 {
-                          return Value::Undef;
+                  |r: Value, subs: &Vec<Box<Object>>, _| {
+                      if subs.len() > 0 {
+                          if let Value::Number(rf) = r {
+                              return Value::Objects(vec![::primitive::Subtraction::subtraction_from_vec(subs.clone(), rf).unwrap()]);
+                          }
                       }
-                      return Value::Objects(vec![::primitive::Subtraction::subtraction_from_vec(subs.clone()).unwrap()]);
+                      return Value::Undef;
                   },
                   r,
-                  Value::Undef,
+                  Value::Number(0.),
                   basic_bindings);
 
 
@@ -583,7 +590,7 @@ impl Expression for CompoundExpression {
         for ex in &self.v {
             v = ex.eval(&mut env_copy, msg);
             if let Value::Objects(o) = v {
-                if let Some(union) = ::primitive::Union::from_vec(o) {
+                if let Some(union) = ::primitive::Union::from_vec(o, 0.) {
                     objs.push(union);
                 }
                 v = Value::Undef;

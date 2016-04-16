@@ -56,7 +56,7 @@ fn main() {
                 out.append(&mut format!("\nexecuted : {:?}", result).into_bytes());
 
                 if let openscad::ast::Value::Objects(objs) = result {
-                    let union = xplicit::primitive::Union::from_vec(objs);
+                    let union = xplicit::primitive::Union::from_vec(objs, 0.);
                     out.append(&mut format!("\n\nrendering : {:?}", union).into_bytes());
                     xw.renderer.borrow_mut().object = union;
                     xw.drawing_area.queue_draw();
