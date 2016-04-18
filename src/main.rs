@@ -34,7 +34,7 @@ fn main() {
     let xw = xplicit_widget::XplicitWidget::new();
     h_pane.add2(&xw.drawing_area);
 
-    let editor = ::xplicit::editor::Editor::new(&xw, &debug_text);
+    let editor = ::xplicit::editor::Editor::new("xplicit.scad".to_string(), &xw, &debug_text);
     h_pane.add1(&editor.text_view);
 
     window.add(&v_pane);
