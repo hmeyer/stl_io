@@ -2,9 +2,10 @@ use std::fmt::Debug;
 use std::io::Write;
 use std::rc::Rc;
 use primitive::Object;
+use super::functions;
 
 pub struct Environment {
-    vars: ::std::collections::HashMap<String, Binding>,
+    pub vars: ::std::collections::HashMap<String, Binding>,
     pub objs: Vec<Box<::primitive::Object>>,
 }
 
@@ -38,85 +39,9 @@ impl Environment {
             objs: vec![],
         }
     }
-    pub fn new_with_primitives() -> Environment {
+    pub fn new() -> Environment {
         let mut basic_bindings = ::std::collections::HashMap::new();
-        add_func!("echo",
-                  |text: Value, _, msg: &mut Write| {
-                      writeln!(msg, "echo: {:?}", text).unwrap();
-                      Value::Undef
-                  },
-                  text,
-                  Value::String("".to_string()),
-                  basic_bindings);
-        add_func!("sphere",
-                  |r: Value, _, _| Value::Objects(vec![::primitive::Sphere::new(r.as_f64())]),
-                  r,
-                  Value::Number(1.),
-                  basic_bindings);
-        add_func!("translate",
-                  |t: Value, subs: &Vec<Box<Object>>, _| {
-                      if subs.len() > 0 {
-                          if let Value::Vector(tv) = t {
-                              let mut v = Vec::new();
-                              for i in 0..3 {
-                                  v.push(if let Some(x) = tv.get(i) {
-                                      x.as_f64_or(0.)
-                                  } else {
-                                      0.
-                                  });
-                              }
-                              let mut union_of_subs = ::primitive::Union::from_vec(subs.clone(),
-                                                                                   0.)
-                                                          .unwrap();
-                              union_of_subs.translate(::types::Vector::new(v[0], v[1], v[2]));
-                              return Value::Objects(vec![union_of_subs]);
-                          }
-                      }
-                      return Value::Undef;
-                  },
-                  t,
-                  Value::Vector(vec![Value::Number(0.), Value::Number(0.), Value::Number(0.)]),
-                  basic_bindings);
-        add_func!("union",
-                  |r: Value, subs: &Vec<Box<Object>>, _| {
-                      if subs.len() > 0 {
-                          if let Value::Number(rf) = r {
-                              return Value::Objects(vec![::primitive::Union::from_vec(subs.clone(), rf)
-                                                             .unwrap()]);
-                          }
-                      }
-                      return Value::Undef;
-                  },
-                  r,
-                  Value::Number(0.),
-                  basic_bindings);
-        add_func!("intersection",
-                  |r: Value, subs: &Vec<Box<Object>>, _| {
-                      if subs.len() > 0 {
-                          if let Value::Number(rf) = r {
-                              return Value::Objects(vec![::primitive::Intersection::from_vec(subs.clone(), rf)
-                                                        .unwrap()]);
-                          }
-                      }
-                      return Value::Undef;
-                  },
-                  r,
-                  Value::Number(0.),
-                  basic_bindings);
-        add_func!("difference",
-                  |r: Value, subs: &Vec<Box<Object>>, _| {
-                      if subs.len() > 0 {
-                          if let Value::Number(rf) = r {
-                              return Value::Objects(vec![::primitive::Subtraction::subtraction_from_vec(subs.clone(), rf).unwrap()]);
-                          }
-                      }
-                      return Value::Undef;
-                  },
-                  r,
-                  Value::Number(0.),
-                  basic_bindings);
-
-
+        functions::add_functions(&mut basic_bindings);
         Environment {
             vars: basic_bindings,
             objs: vec![],

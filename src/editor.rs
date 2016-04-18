@@ -53,7 +53,7 @@ impl Editor {
                     let maybe_pgm = openscad::program(&code_text);
                     if let Ok(pgm) = maybe_pgm {
                         let mut out = format!("parsed : {:?}\n", pgm).into_bytes();
-                        let mut env = openscad::ast::Environment::new_with_primitives();
+                        let mut env = openscad::ast::Environment::new();
                         let result = pgm.eval(&mut env, &mut out);
                         out.append(&mut format!("\nexecuted : {:?}", result).into_bytes());
 
@@ -83,7 +83,7 @@ impl Editor {
                         println!("opening for write {:?}: {:?}", &input_filename, open_result);
                     }
                 }
-                x => {
+                _ => {
                     // println!("unbound key release: {:?}", x);
                 }
             }

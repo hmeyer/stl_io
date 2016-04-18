@@ -1,4 +1,6 @@
 pub mod ast;
+pub mod functions;
+
 
 peg_file! grammar("openscad.rustpeg");
 
@@ -11,7 +13,7 @@ mod tests {
 	use ::primitive::Object;
 
 	fn assert_ex_eq(ex: &'static str, v: Value) {
-		let mut env = Environment::new_with_primitives();
+		let mut env = Environment::new();
 		let pex = expression(ex);
 		assert!(pex.is_ok(), format!("{:?} while parsing {:?}", pex, ex));
 		let pex = pex.unwrap();
@@ -46,7 +48,7 @@ mod tests {
 		let ppgm = program(pgm);
 		assert!(ppgm.is_ok(), format!("{:?} while parsing {:?}", ppgm, pgm));
 		let ppgm = ppgm.unwrap();
-		let mut env = Environment::new_with_primitives();
+		let mut env = Environment::new();
 		let mut out = ::std::io::stdout();
 		let result = ppgm.eval(&mut env, &mut out);
 		assert!(v == result, format!("{:?} == {:?} [{:?}]", v, result, ppgm));
