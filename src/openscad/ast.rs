@@ -9,29 +9,6 @@ pub struct Environment {
     pub objs: Vec<Box<::primitive::Object>>,
 }
 
-macro_rules! add_func {
-    ( $func_name:expr, $closure:expr, $param:ident, $default:expr, $vars:expr ) => {
-        {
-            let mut interface = Vec::new();
-            const PARAM_NAME: &'static str = stringify!($param);
-            let func_closure: Rc<ExpressionFn> = Rc::new(|env, msg| {
-                if let &Binding::Val(ref $param) = env.vars.get(PARAM_NAME).unwrap() {
-                    ($closure)($param.clone(), &env.objs, msg)
-                } else {
-                    panic!("did not find expected param!");
-                }
-            });
-            interface.push((PARAM_NAME.to_string(), Some(Box::new($default) as Box<Expression>)));
-            $vars.insert($func_name.to_string(),
-                                  Binding::Call(Callable {
-                                      interface: interface,
-                                      ex: func_closure,
-                                  }));
-
-        }
-    };
-}
-
 impl Environment {
     fn clone_vars(&self) -> Environment {
         Environment {
