@@ -8,7 +8,7 @@ use Float;
 use types::{Point, Vector, Ray, Transform};
 use primitive::Object;
 
-const EPSILON: Float = 0.001;
+const EPSILON: Float = 0.003;
 const MAXVAL: Float = 100.;
 // Normalized Vector for diagonally left above
 
@@ -45,16 +45,18 @@ impl Renderer {
                 r: &Ray,
                 light_dir: &Vector,
                 origin_value: Float)
-                -> Float {
+                -> (usize, Float) {
         let mut cr = *r;
         let mut value = origin_value;
+        let mut iter: usize = 0;
 
         loop {
             cr.dir = cr.dir.normalize();
             cr.origin = cr.origin + cr.dir * value;
             value = obj.value(&cr.origin);
+            iter += 1;
             if value > MAXVAL {
-                return 0.;
+                return (iter, 0.);
             }
 
             if value < EPSILON {
@@ -64,9 +66,9 @@ impl Renderer {
         let norm = obj.normal(&cr.origin);
         let dot = norm.dot(*light_dir);
         if dot < 0. {
-            return 0.;
+            return (iter, 0.);
         }
-        return dot;
+        return (iter, dot);
     }
 
     pub fn draw_on_buf(&self, buf: &mut [u8], width: i32, height: i32) {
@@ -94,11 +96,11 @@ impl Renderer {
                 for x in 0..width {
                     ray.dir = dir_row + dir_rl * ((x - w2) as Float * scale);
 
-                    let v = self.cast_ray(my_obj, &ray, &light_dir, origin_value);
+                    let (i, v) = self.cast_ray(my_obj, &ray, &light_dir, origin_value);
 
                     let b = (255.0 * v * v) as u8;
 
-                    buf[index] = b;
+                    buf[index] = i as u8;
                     index += 1;
                     buf[index] = b;
                     index += 1;

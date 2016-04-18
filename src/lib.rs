@@ -11,4 +11,5 @@ pub mod render;
 pub mod types;
 pub mod primitive;
 pub mod xplicit_widget;
+pub mod editor;
 pub mod openscad;
