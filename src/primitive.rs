@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::f64;
 
 use Float;
 
@@ -137,6 +138,7 @@ pub trait Mixer: Clone + Debug {
                  get_an: &Fn() -> Vector,
                  get_bn: &Fn() -> Vector)
                  -> Vector;
+    fn r(&self) -> Float;
 }
 
 #[derive(Clone, Debug)]
@@ -178,10 +180,18 @@ impl<T: Mixer + 'static> Object for Bool<T> {
     fn normal(&self, p: &Point) -> Vector {
         let va = self.a.value(p);
         let vb = self.b.value(p);
-        self.mixer.mixnormal(va,
-                             vb,
-                             &|| self.a.normal(&p.clone()),
-                             &|| self.b.normal(&p.clone()))
+        if (va - vb).abs() < self.mixer.r() {
+            let center = self.value(p);
+            let dx = self.value(&(*p + EPSILON_X)) - center;
+            let dy = self.value(&(*p + EPSILON_Y)) - center;
+            let dz = self.value(&(*p + EPSILON_Z)) - center;
+            Vector::new(dx, dy, dz).normalize()
+        } else {
+            self.mixer.mixnormal(va,
+                                 vb,
+                                 &|| self.a.normal(&p.clone()),
+                                 &|| self.b.normal(&p.clone()))
+        }
     }
     fn apply_transform(&mut self, other: &Transform) {
         self.a.apply_transform(other);
@@ -193,15 +203,27 @@ impl<T: Mixer + 'static> Object for Bool<T> {
 pub struct UnionMixer {
     r: Float,
 }
+
+fn rmin(a: Float, b: Float, r: Float) -> Float {
+    if (a - b).abs() < r {
+        return b + r * (f64::consts::PI / 4. + ((a - b) / r / 2_f64.sqrt()).asin()).sin() - r;
+    }
+    a.min(b)
+}
+
+fn rmax(a: Float, b: Float, r: Float) -> Float {
+    if (a - b).abs() < r {
+        return b - r * (f64::consts::PI / 4. - ((a - b) / r / 2_f64.sqrt()).asin()).sin() + r;
+    }
+    a.max(b)
+}
+
 impl Mixer for UnionMixer {
     fn new(r: Float) -> Box<Self> {
         Box::new(UnionMixer { r: r })
     }
     fn mixval(&self, a: Float, b: Float) -> Float {
-        if (a - b).abs() < self.r {
-            return (a + b) / 2.;
-        }
-        a.min(b)
+        rmin(a, b, self.r)
     }
     fn mixnormal(&self,
                  a: Float,
@@ -209,14 +231,14 @@ impl Mixer for UnionMixer {
                  get_an: &Fn() -> Vector,
                  get_bn: &Fn() -> Vector)
                  -> Vector {
-        if (a - b).abs() < self.r {
-            return (get_an() + get_bn()).normalize();
-        }
         if a < b {
             get_an()
         } else {
             get_bn()
         }
+    }
+    fn r(&self) -> Float {
+        self.r
     }
 }
 
@@ -231,7 +253,7 @@ impl Mixer for IntersectionMixer {
         Box::new(IntersectionMixer { r: r })
     }
     fn mixval(&self, a: Float, b: Float) -> Float {
-        a.max(b)
+        rmax(a, b, self.r)
     }
     fn mixnormal(&self,
                  a: Float,
@@ -244,6 +266,9 @@ impl Mixer for IntersectionMixer {
         } else {
             get_bn()
         }
+    }
+    fn r(&self) -> Float {
+        self.r
     }
 }
 
@@ -258,7 +283,7 @@ impl Mixer for SubtractionMixer {
         Box::new(SubtractionMixer { r: r })
     }
     fn mixval(&self, a: Float, b: Float) -> Float {
-        a.max(-b)
+        rmax(a, -b, self.r)
     }
     fn mixnormal(&self,
                  a: Float,
@@ -271,6 +296,9 @@ impl Mixer for SubtractionMixer {
         } else {
             get_bn() * -1.
         }
+    }
+    fn r(&self) -> Float {
+        self.r
     }
 }
 
