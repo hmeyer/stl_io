@@ -5,9 +5,22 @@ use Float;
 
 use types::{Point, Vector, Transform, EPSILON_X, EPSILON_Y, EPSILON_Z};
 
-pub trait Object: ObjectClone + Debug {
+pub trait ImplicitFunction {
     fn value(&self, p: &Point) -> Float;
     fn normal(&self, p: &Point) -> Vector;
+}
+
+fn normal_from_implicit<T: ImplicitFunction>(f: &T, p: &Point) -> Vector {
+    let center = f.value(p);
+    let dx = f.value(&(*p + EPSILON_X)) - center;
+    let dy = f.value(&(*p + EPSILON_Y)) - center;
+    let dz = f.value(&(*p + EPSILON_Z)) - center;
+    Vector::new(dx, dy, dz).normalize()
+}
+
+pub trait Primitive: ImplicitFunction + Clone + Debug {}
+
+pub trait Object: ImplicitFunction + ObjectClone {
     fn apply_transform(&mut self, other: &Transform);
     fn translate(&mut self, t: Vector) {
         let trans = Transform::translate(&t);
@@ -67,24 +80,13 @@ impl PartialOrd for Box<Object> {
     }
 }
 
-pub trait Primitive: Clone + Debug {
-    fn value(&self, p: &Point) -> Float;
-    fn normal(&self, p: &Point) -> Vector {
-        let center = self.value(p);
-        let dx = self.value(&(*p + EPSILON_X)) - center;
-        let dy = self.value(&(*p + EPSILON_Y)) - center;
-        let dz = self.value(&(*p + EPSILON_Z)) - center;
-        return Vector::new(dx, dy, dz).normalize();
-    }
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct PrimitiveWrapper<T: Primitive> {
     primitive: Box<T>,
     transform: Transform,
 }
 
-impl<T: Primitive + 'static> Object for PrimitiveWrapper<T> {
+impl<T: Primitive + 'static> ImplicitFunction for PrimitiveWrapper<T> {
     fn value(&self, p: &Point) -> Float {
         self.primitive.value(&self.transform.t_point(*p))
     }
@@ -93,6 +95,8 @@ impl<T: Primitive + 'static> Object for PrimitiveWrapper<T> {
             .i_vector(self.primitive.normal(&self.transform.t_point(*p)))
             .normalize()
     }
+}
+impl<T: Primitive + 'static> Object for PrimitiveWrapper<T> {
     fn apply_transform(&mut self, other: &Transform) {
         self.transform = self.transform.concat(other)
     }
@@ -109,7 +113,7 @@ impl SpherePrimitive {
     }
 }
 
-impl Primitive for SpherePrimitive {
+impl ImplicitFunction for SpherePrimitive {
     fn value(&self, p: &Point) -> Float {
         return p.to_vec().length() - self.radius;
     }
@@ -117,6 +121,8 @@ impl Primitive for SpherePrimitive {
         return p.to_vec().normalize();
     }
 }
+
+impl Primitive for SpherePrimitive {}
 
 pub type Sphere = PrimitiveWrapper<SpherePrimitive>;
 
@@ -172,7 +178,7 @@ impl<T: Mixer + 'static> Bool<T> {
 }
 
 
-impl<T: Mixer + 'static> Object for Bool<T> {
+impl<T: Mixer + 'static> ImplicitFunction for Bool<T> {
     fn value(&self, p: &Point) -> Float {
         return self.mixer.mixval(self.a.value(p), self.b.value(p));
     }
@@ -181,11 +187,7 @@ impl<T: Mixer + 'static> Object for Bool<T> {
         let va = self.a.value(p);
         let vb = self.b.value(p);
         if (va - vb).abs() < self.mixer.r() {
-            let center = self.value(p);
-            let dx = self.value(&(*p + EPSILON_X)) - center;
-            let dy = self.value(&(*p + EPSILON_Y)) - center;
-            let dz = self.value(&(*p + EPSILON_Z)) - center;
-            Vector::new(dx, dy, dz).normalize()
+            normal_from_implicit(self, p)
         } else {
             self.mixer.mixnormal(va,
                                  vb,
@@ -193,6 +195,8 @@ impl<T: Mixer + 'static> Object for Bool<T> {
                                  &|| self.b.normal(&p.clone()))
         }
     }
+}
+impl<T: Mixer + 'static> Object for Bool<T> {
     fn apply_transform(&mut self, other: &Transform) {
         self.a.apply_transform(other);
         self.b.apply_transform(other);
