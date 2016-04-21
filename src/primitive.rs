@@ -20,7 +20,7 @@ fn normal_from_implicit<T: ImplicitFunction>(f: &T, p: &Point) -> Vector {
 
 pub trait Primitive: ImplicitFunction + Clone + Debug {}
 
-pub trait Object: ImplicitFunction + ObjectClone {
+pub trait Object: ImplicitFunction + ObjectClone + Debug {
     fn apply_transform(&mut self, other: &Transform);
     fn translate(&mut self, t: Vector) {
         let trans = Transform::translate(&t);

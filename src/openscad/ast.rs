@@ -223,6 +223,56 @@ impl ::std::ops::Rem for Value {
         Value::Undef
     }
 }
+pub struct ValueIterator {
+    v: Value,
+    i: isize,
+}
+
+impl Iterator for ValueIterator {
+    type Item = Value;
+
+    fn next(&mut self) -> Option<Value> {
+        if self.i < 0 {
+            return None;
+        }
+        let i = self.i as usize;
+        self.i += 1;
+        match self.v {
+            Value::Vector(ref v) => {
+                if let Some(val) = v.get(i) {
+                    Some(val.clone())
+                } else {
+                    None
+                }
+            } 
+            Value::Range(s, inc, e) => {
+                let n = s + i as f64 * inc;
+                if n <= e {
+                    Some(Value::Number(n))
+                } else {
+                    self.i = -1;
+                    None
+                }
+            }
+            Value::Undef => None,
+            Value::Bool(_) | Value::Number(_) | Value::String(_) => {
+                self.i = -1;
+                Some(self.v.clone())
+            }
+            _ => None,
+        }
+    }
+}
+
+impl IntoIterator for Value {
+    type Item = Value;
+    type IntoIter = ValueIterator;
+
+    fn into_iter(self) -> Self::IntoIter {
+        ValueIterator { v: self, i: 0 }
+    }
+}
+
 
 #[derive(Clone, Debug)]
 pub struct AssignmentExpression {
@@ -555,8 +605,17 @@ mod tests {
         assert_eq!(Value::Number(1.), Value::Number(1.));
         assert!(Value::Number(17.) != Value::Number(1.));
 
+        let mut it = Value::Number(17.).into_iter();
+        assert_eq!(Some(Value::Number(17.)), it.next());
+        assert_eq!(None, it.next());
+
         assert_eq!(Value::Range(1., 2., 3.), Value::Range(1., 2., 3.));
         assert!(Value::Range(1., 2., 3.) != Value::Range(1., 2., 3.7));
+        let mut it = Value::Range(1., 1.1, 4.).into_iter();
+        assert_eq!(Some(Value::Number(1.)), it.next());
+        assert_eq!(Some(Value::Number(2.1)), it.next());
+        assert_eq!(Some(Value::Number(3.2)), it.next());
+        assert_eq!(None, it.next());
 
         assert_eq!(Value::Vector(vec![]), Value::Vector(vec![]));
         assert_eq!(Value::Vector(vec![Value::Bool(true),
@@ -570,6 +629,11 @@ mod tests {
         assert!(Value::Vector(vec![Value::Bool(true)]) != Value::Vector(vec![Value::Bool(false)]));
         assert!(Value::Vector(vec![Value::Bool(true)]) !=
                 Value::Vector(vec![Value::Bool(true), Value::Bool(true)]));
+        let mut it = Value::Vector(vec![Value::Bool(true), Value::String("foo".to_string())])
+                         .into_iter();
+        assert_eq!(Some(Value::Bool(true)), it.next());
+        assert_eq!(Some(Value::String("foo".to_string())), it.next());
+        assert_eq!(None, it.next());
 
         assert!(Value::Undef != Value::Vector(vec![]));
 
