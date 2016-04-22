@@ -228,6 +228,12 @@ pub struct ValueIterator {
     i: isize,
 }
 
+impl ValueIterator {
+    fn reset(&mut self) {
+        self.i = 0;
+    }
+}
+
 impl Iterator for ValueIterator {
     type Item = Value;
 
@@ -244,7 +250,7 @@ impl Iterator for ValueIterator {
                 } else {
                     None
                 }
-            } 
+            }
             Value::Range(s, inc, e) => {
                 let n = s + i as f64 * inc;
                 if n <= e {
@@ -422,14 +428,106 @@ pub struct CallExpression {
     pub sub: Option<Box<Expression>>,
 }
 
+
+struct ForLoopArgumentIterator {
+    v: Vec<(String, ValueIterator)>,
+    current: ::std::collections::HashMap<String, Binding>,
+}
+
+impl ForLoopArgumentIterator {
+    fn new(arg: &Vec<(String, Box<Expression>)>,
+           env: &mut Environment,
+           msg: &mut Write)
+           -> Option<ForLoopArgumentIterator> {
+        let mut iv = Vec::new();
+        for &(ref id, ref ex) in arg {
+            iv.push((id.clone(), ex.eval(&mut env.clone_vars(), msg).into_iter()));
+        }
+        let mut hm = ::std::collections::HashMap::new();
+        for &mut (ref id, ref mut vi) in &mut iv {
+            if let Some(v) = vi.next() {
+                hm.insert(id.clone(), Binding::Val(v));
+            } else {
+                return None;
+            }
+        }
+        Some(ForLoopArgumentIterator {
+            v: iv,
+            current: hm,
+        })
+    }
+}
+
+impl Iterator for ForLoopArgumentIterator {
+    type Item = ::std::collections::HashMap<String, Binding>;
+
+    fn next(&mut self) -> Option<::std::collections::HashMap<String, Binding>> {
+        if self.current.len() == 0 {
+            return None;
+        }
+        let old = self.current.clone();
+        let len = self.v.len();
+        for idx in 0..self.v.len() {
+            let &mut (ref id, ref mut value_it) = &mut self.v[idx];
+            if let Some(v) = value_it.next() {
+                self.current.insert(id.clone(), Binding::Val(v));
+                break;
+            } else {
+                if idx == len - 1 {
+                    self.current.clear();
+                    break;
+                }
+                value_it.reset();
+                self.current.insert(id.clone(), Binding::Val(value_it.next().unwrap()));
+            }
+        }
+        return Some(old);
+    }
+}
+
 impl CallExpression {
     pub fn set_sub(&mut self, sub: Option<Box<Expression>>) {
         self.sub = sub;
+    }
+    // Special impl for for-loops
+    fn eval_for(&self, env: &mut Environment, msg: &mut Write) -> Value {
+        if let Some(ref subex) = self.sub {
+            let for_loop_it = ForLoopArgumentIterator::new(&self.arguments,
+                                                           &mut env.clone_vars(),
+                                                           msg);
+            if for_loop_it.is_none() {
+                return Value::Undef;
+            }
+            let mut for_loop_it = for_loop_it.unwrap();
+
+            let mut result_objects = Vec::new();
+
+            loop {
+                if let Some(loop_vars) = for_loop_it.next() {
+                    let mut env_copy = env.clone_vars();
+                    for (key, value) in loop_vars.into_iter() {
+                        env_copy.vars.insert(key, value);
+                    }
+                    let maybe_objs = subex.eval(&mut env_copy, msg);
+                    if let Value::Objects(mut o) = maybe_objs {
+                        result_objects.append(&mut o);
+                    }
+                } else {
+                    break;
+                }
+            }
+            Value::Objects(result_objects)
+        } else {
+            Value::Undef
+        }
     }
 }
 
 impl Expression for CallExpression {
     fn eval(&self, env: &mut Environment, msg: &mut Write) -> Value {
+        if self.id == "for" {
+            return self.eval_for(env, msg);
+        }
         match env.vars.get(&self.id) {
             Some(&Binding::Call(Callable { ref interface, ref ex })) => {
                 let mut env_copy = env.clone_vars();

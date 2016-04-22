@@ -1,7 +1,5 @@
-difference(r=0.3) {
-  union(r=0.4) {
-    translate([-.5, 0, 0]) sphere(.5);
-    translate([ .5, 0, 0]) sphere(.8);
-  }
-  translate([0, 0, .5]) sphere(.5);
+union(0.4) for(x=[-1:0.5:1],y=[-1:0.5:1]) {
+  xs = (x*x+.5)/2;
+  ys = (y*y+.5)/2;
+  translate([x,0,y]) sphere(xs*ys);
 }

@@ -15,7 +15,7 @@ identifier -> String
     = !keyword [a-zA-Z_] [a-zA-Z0-9_]* { match_str.to_string() }
 
 keyword
-    = "mod" / "if" / "function" / "for" / "true" / "false" / "undef"
+    = "mod" / "if" / "function" / "true" / "false" / "undef"
 
 spacing
     = (space / end_of_line / comment)*
