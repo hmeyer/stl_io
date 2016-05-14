@@ -95,7 +95,7 @@ pub fn add_functions(env: &mut ::std::collections::HashMap<String, Binding>) {
               |r: Value, subs: &Vec<Box<Object>>, _| {
                   if subs.len() > 0 {
                       if let Value::Number(rf) = r {
-                          return Value::Objects(vec![::primitive::Subtraction::subtraction_from_vec(subs.clone(), rf).unwrap()]);
+                          return Value::Objects(vec![::primitive::Difference::from_vec(subs.clone(), rf).unwrap()]);
                       }
                   }
                   return Value::Undef;

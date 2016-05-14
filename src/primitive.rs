@@ -135,188 +135,228 @@ impl Sphere {
     }
 }
 
-pub trait Mixer: Clone + Debug {
-    fn new(Float) -> Box<Self>;
-    fn mixval(&self, a: Float, b: Float) -> Float;
-    fn mixnormal(&self,
-                 a: Float,
-                 b: Float,
-                 get_an: &Fn() -> Vector,
-                 get_bn: &Fn() -> Vector)
-                 -> Vector;
-    fn r(&self) -> Float;
+#[derive(Clone, Debug)]
+pub struct Union {
+    objs: Vec<Box<Object>>,
+    r: Float,
+}
+
+impl Union {
+    pub fn from_vec(mut v: Vec<Box<Object>>, r: Float) -> Option<Box<Object>> {
+        match v.len() {
+            0 => None,
+            1 => Some(v.pop().unwrap()),
+            _ => Some(Box::new(Union { objs: v, r: r })),
+        }
+    }
+}
+
+impl ImplicitFunction for Union {
+    fn value(&self, p: &Point) -> Float {
+        rvmin(&self.objs.iter().map(|o| o.value(p)).collect::<Vec<f64>>(),
+              self.r)
+    }
+
+    fn normal(&self, p: &Point) -> Vector {
+        // Find the two smallest values with their indices.
+        let (v0, v1) = self.objs
+                           .iter()
+                           .enumerate()
+                           .fold(((0, f64::INFINITY), (0, f64::INFINITY)), |(v0, v1), x| {
+                               let t = x.1.value(p);
+                               if t < v0.1 {
+                                   ((x.0, t), v0)
+                               } else if t < v1.1 {
+                                   (v0, (x.0, t))
+                               } else {
+                                   (v0, v1)
+                               }
+                           });
+        // if they are far apart, use the min's normal
+        if (v1.1 - v0.1) >= self.r {
+            self.objs[v0.0].normal(p)
+        } else {
+            // else, calc normal from full implicit
+            normal_from_implicit(self, p)
+        }
+    }
+}
+
+impl Object for Union {
+    fn apply_transform(&mut self, other: &Transform) {
+        for x in &mut self.objs {
+            x.apply_transform(other);
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
-pub struct Bool<T: Mixer> {
-    a: Box<Object>,
-    b: Box<Object>,
-    mixer: Box<T>,
+pub struct Intersection {
+    objs: Vec<Box<Object>>,
+    r: Float,
 }
 
-impl<T: Mixer + 'static> Bool<T> {
-    pub fn new(a: Box<Object>, b: Box<Object>, r: Float) -> Box<Bool<T>> {
-        Box::new(Bool::<T> {
-            a: a,
-            b: b,
-            mixer: T::new(r),
-        })
+impl Intersection {
+    pub fn from_vec(mut v: Vec<Box<Object>>, r: Float) -> Option<Box<Object>> {
+        match v.len() {
+            0 => None,
+            1 => Some(v.pop().unwrap()),
+            _ => Some(Box::new(Intersection { objs: v, r: r })),
+        }
     }
+}
+
+impl ImplicitFunction for Intersection {
+    fn value(&self, p: &Point) -> Float {
+        rvmax(&self.objs.iter().map(|o| o.value(p)).collect::<Vec<f64>>(),
+              self.r)
+    }
+
+    fn normal(&self, p: &Point) -> Vector {
+        // Find the two largest values with their indices.
+        let (v0, v1) = self.objs
+                           .iter()
+                           .enumerate()
+                           .fold(((0, f64::NEG_INFINITY), (0, f64::NEG_INFINITY)),
+                                 |(v0, v1), x| {
+                                     let t = x.1.value(p);
+                                     if t > v0.1 {
+                                         ((x.0, t), v0)
+                                     } else if t > v1.1 {
+                                         (v0, (x.0, t))
+                                     } else {
+                                         (v0, v1)
+                                     }
+                                 });
+        // if they are far apart, use the min's normal
+        if (v0.1 - v1.1) >= self.r {
+            self.objs[v0.0].normal(p)
+        } else {
+            // else, calc normal from full implicit
+            normal_from_implicit(self, p)
+        }
+    }
+}
+
+impl Object for Intersection {
+    fn apply_transform(&mut self, other: &Transform) {
+        for x in &mut self.objs {
+            x.apply_transform(other);
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Difference {
+    a: Box<Object>,
+    b: Box<Object>,
+    r: Float,
+}
+
+impl Difference {
     pub fn from_vec(mut v: Vec<Box<Object>>, r: Float) -> Option<Box<Object>> {
         match v.len() {
             0 => None,
             1 => Some(v.pop().unwrap()),
             _ => {
-                let l2 = v.len() / 2;
-                let v2 = v.split_off(l2);
-                Some(Bool::<T>::new(Bool::<T>::from_vec(v, r).unwrap(),
-                                    Bool::<T>::from_vec(v2, r).unwrap(),
-                                    r))
+                let rest = v.split_off(1);
+                return Some(Box::new(Difference {
+                    a: v.get_mut(0).unwrap().clone(),
+                    b: Union::from_vec(rest, r).unwrap(),
+                    r: r,
+                }));
             }
         }
     }
 }
 
-
-impl<T: Mixer + 'static> ImplicitFunction for Bool<T> {
+impl ImplicitFunction for Difference {
     fn value(&self, p: &Point) -> Float {
-        return self.mixer.mixval(self.a.value(p), self.b.value(p));
+        rmax(self.a.value(p), -self.b.value(p), self.r)
     }
 
     fn normal(&self, p: &Point) -> Vector {
         let va = self.a.value(p);
-        let vb = self.b.value(p);
-        if (va - vb).abs() < self.mixer.r() {
-            normal_from_implicit(self, p)
+        let vb = -self.b.value(p);
+        // if they are far apart, use the max's normal
+        if (va - vb).abs() >= self.r {
+            if va > vb {
+                self.a.normal(p)
+            } else {
+                self.b.normal(p) * -1.
+            }
         } else {
-            self.mixer.mixnormal(va,
-                                 vb,
-                                 &|| self.a.normal(&p.clone()),
-                                 &|| self.b.normal(&p.clone()))
+            // else, calc normal from full implicit
+            normal_from_implicit(self, p)
         }
     }
 }
-impl<T: Mixer + 'static> Object for Bool<T> {
+
+impl Object for Difference {
     fn apply_transform(&mut self, other: &Transform) {
         self.a.apply_transform(other);
         self.b.apply_transform(other);
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct UnionMixer {
-    r: Float,
-}
-
-fn rmin(a: Float, b: Float, r: Float) -> Float {
-    if (a - b).abs() < r {
-        return b + r * (f64::consts::PI / 4. + ((a - b) / r / 2_f64.sqrt()).asin()).sin() - r;
+fn rvmin(v: &[Float], r: Float) -> Float {
+    let mut close_min = false;
+    let minimum = v.iter().fold(f64::INFINITY, |min, x| {
+        if x < &min {
+            if (min - x) < r {
+                close_min = true;
+            } else {
+                close_min = false;
+            }
+            *x
+        } else {
+            if (x - min) < r {
+                close_min = true;
+            }
+            min
+        }
+    });
+    if !close_min {
+        return minimum;
     }
-    a.min(b)
+    let min_plus_r = minimum + r;
+    let r4 = r / 4.;
+    // Inpired by http://iquilezles.org/www/articles/smin/smin.htm
+    let exp_sum = v.iter().filter(|&x| x < &min_plus_r).fold(0., |sum, x| sum + (-x / r4).exp());
+    return exp_sum.ln() * -r4;
 }
 
 fn rmax(a: Float, b: Float, r: Float) -> Float {
     if (a - b).abs() < r {
-        return b - r * (f64::consts::PI / 4. - ((a - b) / r / 2_f64.sqrt()).asin()).sin() + r;
+        let r = r / 4.;
+        return ((a / r).exp() + (b / r).exp()).ln() * r;
+        // return b - r * (f64::consts::PI / 4. - ((a - b) / r / 2_f64.sqrt()).asin()).sin() + r;
     }
     a.max(b)
 }
 
-impl Mixer for UnionMixer {
-    fn new(r: Float) -> Box<Self> {
-        Box::new(UnionMixer { r: r })
-    }
-    fn mixval(&self, a: Float, b: Float) -> Float {
-        rmin(a, b, self.r)
-    }
-    fn mixnormal(&self,
-                 a: Float,
-                 b: Float,
-                 get_an: &Fn() -> Vector,
-                 get_bn: &Fn() -> Vector)
-                 -> Vector {
-        if a < b {
-            get_an()
-        } else {
-            get_bn()
-        }
-    }
-    fn r(&self) -> Float {
-        self.r
-    }
-}
-
-pub type Union = Bool<UnionMixer>;
-
-#[derive(Clone, Debug)]
-pub struct IntersectionMixer {
-    r: Float,
-}
-impl Mixer for IntersectionMixer {
-    fn new(r: Float) -> Box<Self> {
-        Box::new(IntersectionMixer { r: r })
-    }
-    fn mixval(&self, a: Float, b: Float) -> Float {
-        rmax(a, b, self.r)
-    }
-    fn mixnormal(&self,
-                 a: Float,
-                 b: Float,
-                 get_an: &Fn() -> Vector,
-                 get_bn: &Fn() -> Vector)
-                 -> Vector {
-        if a > b {
-            get_an()
-        } else {
-            get_bn()
-        }
-    }
-    fn r(&self) -> Float {
-        self.r
-    }
-}
-
-pub type Intersection = Bool<IntersectionMixer>;
-
-#[derive(Clone, Debug)]
-pub struct SubtractionMixer {
-    r: Float,
-}
-impl Mixer for SubtractionMixer {
-    fn new(r: Float) -> Box<Self> {
-        Box::new(SubtractionMixer { r: r })
-    }
-    fn mixval(&self, a: Float, b: Float) -> Float {
-        rmax(a, -b, self.r)
-    }
-    fn mixnormal(&self,
-                 a: Float,
-                 b: Float,
-                 get_an: &Fn() -> Vector,
-                 get_bn: &Fn() -> Vector)
-                 -> Vector {
-        if a > -b {
-            get_an()
-        } else {
-            get_bn() * -1.
-        }
-    }
-    fn r(&self) -> Float {
-        self.r
-    }
-}
-
-pub type Subtraction = Bool<SubtractionMixer>;
-
-impl Bool<SubtractionMixer> {
-    pub fn subtraction_from_vec(mut v: Vec<Box<Object>>, r: Float) -> Option<Box<Object>> {
-        match v.len() {
-            0 => None,
-            1 => Some(v.pop().unwrap()),
-            _ => {
-                let v_rest = v.split_off(1);
-                Some(Subtraction::new(v.pop().unwrap(), Union::from_vec(v_rest, r).unwrap(), r))
+fn rvmax(v: &[Float], r: Float) -> Float {
+    let mut close_max = false;
+    let maximum = v.iter().fold(f64::NEG_INFINITY, |max, x| {
+        if x > &max {
+            if (x - max) < r {
+                close_max = true;
+            } else {
+                close_max = false;
             }
+            *x
+        } else {
+            if (max - x) < r {
+                close_max = true;
+            }
+            max
         }
+    });
+    if !close_max {
+        return maximum;
     }
+    let max_minus_r = maximum - r;
+    let r4 = r / 4.;
+    let exp_sum = v.iter().filter(|&x| x > &max_minus_r).fold(0., |sum, x| sum + (x / r4).exp());
+    return exp_sum.ln() * r4;
 }
