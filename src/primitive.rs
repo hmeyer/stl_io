@@ -329,8 +329,8 @@ fn rvmin(v: &[Float], r: Float) -> Float {
 fn rmax(a: Float, b: Float, r: Float) -> Float {
     if (a - b).abs() < r {
         let r = r / 4.;
+        // Inpired by http://iquilezles.org/www/articles/smin/smin.htm
         return ((a / r).exp() + (b / r).exp()).ln() * r;
-        // return b - r * (f64::consts::PI / 4. - ((a - b) / r / 2_f64.sqrt()).asin()).sin() + r;
     }
     a.max(b)
 }
