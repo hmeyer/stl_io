@@ -204,6 +204,18 @@ impl Intersection {
             _ => Some(Box::new(Intersection { objs: v, r: r })),
         }
     }
+    pub fn difference_from_vec(mut v: Vec<Box<Object>>, r: Float) -> Option<Box<Object>> {
+        match v.len() {
+            0 => None,
+            1 => Some(v.pop().unwrap()),
+            _ => {
+                let neg_rest = Negation::from_vec(v.split_off(1));
+                v.extend(neg_rest);
+                return Some(Box::new(Intersection { objs: v, r: r }));
+            }
+        }
+
+    }
 }
 
 impl ImplicitFunction for Intersection {
@@ -247,55 +259,28 @@ impl Object for Intersection {
 }
 
 #[derive(Clone, Debug)]
-pub struct Difference {
-    a: Box<Object>,
-    b: Box<Object>,
-    r: Float,
+pub struct Negation {
+    object: Box<Object>,
 }
 
-impl Difference {
-    pub fn from_vec(mut v: Vec<Box<Object>>, r: Float) -> Option<Box<Object>> {
-        match v.len() {
-            0 => None,
-            1 => Some(v.pop().unwrap()),
-            _ => {
-                let rest = v.split_off(1);
-                return Some(Box::new(Difference {
-                    a: v.get_mut(0).unwrap().clone(),
-                    b: Union::from_vec(rest, r).unwrap(),
-                    r: r,
-                }));
-            }
-        }
+impl Negation {
+    pub fn from_vec(v: Vec<Box<Object>>) -> Vec<Box<Object>> {
+        v.iter().map(|o| Box::new(Negation { object: o.clone() }) as Box<Object>).collect()
     }
 }
 
-impl ImplicitFunction for Difference {
+impl ImplicitFunction for Negation {
     fn value(&self, p: &Point) -> Float {
-        rmax(self.a.value(p), -self.b.value(p), self.r)
+        -self.object.value(p)
     }
-
     fn normal(&self, p: &Point) -> Vector {
-        let va = self.a.value(p);
-        let vb = -self.b.value(p);
-        // if they are far apart, use the max's normal
-        if (va - vb).abs() >= self.r {
-            if va > vb {
-                self.a.normal(p)
-            } else {
-                self.b.normal(p) * -1.
-            }
-        } else {
-            // else, calc normal from full implicit
-            normal_from_implicit(self, p)
-        }
+        self.object.normal(p) * -1.
     }
 }
 
-impl Object for Difference {
+impl Object for Negation {
     fn apply_transform(&mut self, other: &Transform) {
-        self.a.apply_transform(other);
-        self.b.apply_transform(other);
+        self.object.apply_transform(other);
     }
 }
 
@@ -324,15 +309,6 @@ fn rvmin(v: &[Float], r: Float) -> Float {
     // Inpired by http://iquilezles.org/www/articles/smin/smin.htm
     let exp_sum = v.iter().filter(|&x| x < &min_plus_r).fold(0., |sum, x| sum + (-x / r4).exp());
     return exp_sum.ln() * -r4;
-}
-
-fn rmax(a: Float, b: Float, r: Float) -> Float {
-    if (a - b).abs() < r {
-        let r = r / 4.;
-        // Inpired by http://iquilezles.org/www/articles/smin/smin.htm
-        return ((a / r).exp() + (b / r).exp()).ln() * r;
-    }
-    a.max(b)
 }
 
 fn rvmax(v: &[Float], r: Float) -> Float {
