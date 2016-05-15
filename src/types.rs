@@ -6,7 +6,7 @@ use cgmath::EuclideanVector;
 use Float;
 
 type CGPoint3 = ::cgmath::Point3<Float>;
-type CGVector3 = ::cgmath::Vector3<Float>;
+pub type CGVector3 = ::cgmath::Vector3<Float>;
 type CGRotation3 = ::cgmath::Basis3<Float>;
 type CGDecomposed3 = ::cgmath::Decomposed<CGVector3, CGRotation3>;
 
@@ -56,7 +56,7 @@ impl PartialEq for Point {
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Vector {
-    v: CGVector3,
+    pub v: CGVector3,
 }
 
 impl Add for Vector {

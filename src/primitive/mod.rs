@@ -10,6 +10,9 @@ pub use self::boolean::{Union, Intersection};
 mod sphere;
 pub use self::sphere::Sphere;
 
+mod cylinder;
+pub use self::cylinder::InfiniteCylinder;
+
 
 pub trait ImplicitFunction {
     fn value(&self, p: &Point) -> Float;

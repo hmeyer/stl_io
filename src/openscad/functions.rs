@@ -41,6 +41,13 @@ pub fn add_functions(env: &mut ::std::collections::HashMap<String, Binding>) {
               r,
               Value::Number(1.),
               env);
+    add_func!("icylinder",
+              |r: Value, _, _| {
+                  Value::Objects(vec![::primitive::InfiniteCylinder::new(r.as_f64())])
+              },
+              r,
+              Value::Number(1.),
+              env);
     add_func!("translate",
               |t: Value, subs: &Vec<Box<Object>>, _| {
                   if subs.len() > 0 {
