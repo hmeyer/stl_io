@@ -18,7 +18,7 @@ impl Environment {
     }
     pub fn new() -> Environment {
         let mut basic_bindings = ::std::collections::HashMap::new();
-        functions::add_functions(&mut basic_bindings);
+        functions::add_bindings(&mut basic_bindings);
         Environment {
             vars: basic_bindings,
             objs: vec![],

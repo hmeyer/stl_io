@@ -39,8 +39,8 @@ pub trait Object: ImplicitFunction + ObjectClone + Debug {
         let trans = Transform::rotate(&r);
         self.apply_transform(&trans);
     }
-    fn scale(&mut self, s: Float) {
-        let trans = Transform::scale(s);
+    fn scale(&mut self, s: Vector) {
+        let trans = Transform::scale(&s);
         self.apply_transform(&trans);
     }
     fn to_string(&self) -> String {

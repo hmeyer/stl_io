@@ -1,4 +1,4 @@
-difference(0.2) {
+difference(0.1) {
 
 union(0.15) {
 
@@ -13,5 +13,5 @@ sphere(0.4);
 translate([0.45,0,0]) sphere(0.3);
 translate([0.3,0.25,0]) sphere(0.1);
 }
-icylinder(0.2);
+rotate([0,TAU/4,0]) icylinder(0.15);
 }

@@ -187,15 +187,15 @@ impl Transform {
             },
         }
     }
-    pub fn scale(s: Float) -> Transform {
+    pub fn scale(s: &Vector) -> Transform {
         Transform {
             t: CGDecomposed3 {
-                scale: s,
+                scale: 1.,
                 rot: ::cgmath::Rotation::one(),
                 disp: CGVector3::new(0., 0., 0.),
             },
             i: CGDecomposed3 {
-                scale: 1. / s,
+                scale: 1.,
                 rot: ::cgmath::Rotation::one(),
                 disp: CGVector3::new(0., 0., 0.),
             },

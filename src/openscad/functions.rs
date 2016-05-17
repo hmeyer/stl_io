@@ -27,7 +27,9 @@ macro_rules! add_func {
 }
 
 
-pub fn add_functions(env: &mut ::std::collections::HashMap<String, Binding>) {
+pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
+    env.insert("TAU".to_string(),
+               Binding::Val(Value::Number(::std::f64::consts::PI * 2.)));
     add_func!("echo",
               |text: Value, _, msg: &mut Write| {
                   writeln!(msg, "echo: {:?}", text).unwrap();
@@ -63,6 +65,52 @@ pub fn add_functions(env: &mut ::std::collections::HashMap<String, Binding>) {
                           let mut union_of_subs = ::primitive::Union::from_vec(subs.clone(), 0.)
                                                       .unwrap();
                           union_of_subs.translate(::types::Vector::new(v[0], v[1], v[2]));
+                          return Value::Objects(vec![union_of_subs]);
+                      }
+                  }
+                  return Value::Undef;
+              },
+              t,
+              Value::Vector(vec![Value::Number(0.), Value::Number(0.), Value::Number(0.)]),
+              env);
+    add_func!("rotate",
+              |t: Value, subs: &Vec<Box<Object>>, _| {
+                  if subs.len() > 0 {
+                      if let Value::Vector(tv) = t {
+                          let mut v = Vec::new();
+                          for i in 0..3 {
+                              v.push(if let Some(x) = tv.get(i) {
+                                  x.as_f64_or(0.)
+                              } else {
+                                  0.
+                              });
+                          }
+                          let mut union_of_subs = ::primitive::Union::from_vec(subs.clone(), 0.)
+                                                      .unwrap();
+                          union_of_subs.rotate(::types::Vector::new(v[0], v[1], v[2]));
+                          return Value::Objects(vec![union_of_subs]);
+                      }
+                  }
+                  return Value::Undef;
+              },
+              t,
+              Value::Vector(vec![Value::Number(0.), Value::Number(0.), Value::Number(0.)]),
+              env);
+    add_func!("scale",
+              |t: Value, subs: &Vec<Box<Object>>, _| {
+                  if subs.len() > 0 {
+                      if let Value::Vector(tv) = t {
+                          let mut v = Vec::new();
+                          for i in 0..3 {
+                              v.push(if let Some(x) = tv.get(i) {
+                                  x.as_f64_or(0.)
+                              } else {
+                                  0.
+                              });
+                          }
+                          let mut union_of_subs = ::primitive::Union::from_vec(subs.clone(), 0.)
+                                                      .unwrap();
+                          union_of_subs.scale(::types::Vector::new(v[0], v[1], v[2]));
                           return Value::Objects(vec![union_of_subs]);
                       }
                   }
