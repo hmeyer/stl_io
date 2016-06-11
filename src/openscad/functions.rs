@@ -44,9 +44,7 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
               Value::Number(1.),
               env);
     add_func!("icylinder",
-              |r: Value, _, _| {
-                  Value::Objects(vec![::primitive::InfiniteCylinder::new(r.as_f64())])
-              },
+              |r: Value, _, _| Value::Objects(vec![::primitive::Cylinder::new(r.as_f64())]),
               r,
               Value::Number(1.),
               env);
@@ -62,10 +60,12 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                                   0.
                               });
                           }
-                          let mut union_of_subs = ::primitive::Union::from_vec(subs.clone(), 0.)
-                                                      .unwrap();
-                          union_of_subs.translate(::types::Vector::new(v[0], v[1], v[2]));
-                          return Value::Objects(vec![union_of_subs]);
+                          let union_of_subs = ::primitive::Union::from_vec(subs.clone(), 0.)
+                                                  .unwrap();
+                          let translated = union_of_subs.translate(::types::Vector::new(v[0],
+                                                                                        v[1],
+                                                                                        v[2]));
+                          return Value::Objects(vec![translated]);
                       }
                   }
                   return Value::Undef;
@@ -85,10 +85,12 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                                   0.
                               });
                           }
-                          let mut union_of_subs = ::primitive::Union::from_vec(subs.clone(), 0.)
-                                                      .unwrap();
-                          union_of_subs.rotate(::types::Vector::new(v[0], v[1], v[2]));
-                          return Value::Objects(vec![union_of_subs]);
+                          let union_of_subs = ::primitive::Union::from_vec(subs.clone(), 0.)
+                                                  .unwrap();
+                          let rotated = union_of_subs.rotate(::types::Vector::new(v[0],
+                                                                                  v[1],
+                                                                                  v[2]));
+                          return Value::Objects(vec![rotated]);
                       }
                   }
                   return Value::Undef;
@@ -108,16 +110,16 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                                   0.
                               });
                           }
-                          let mut union_of_subs = ::primitive::Union::from_vec(subs.clone(), 0.)
-                                                      .unwrap();
-                          union_of_subs.scale(::types::Vector::new(v[0], v[1], v[2]));
-                          return Value::Objects(vec![union_of_subs]);
+                          let union_of_subs = ::primitive::Union::from_vec(subs.clone(), 0.)
+                                                  .unwrap();
+                          let scaled = union_of_subs.scale(::types::Vector::new(v[0], v[1], v[2]));
+                          return Value::Objects(vec![scaled]);
                       }
                   }
                   return Value::Undef;
               },
               t,
-              Value::Vector(vec![Value::Number(0.), Value::Number(0.), Value::Number(0.)]),
+              Value::Vector(vec![Value::Number(1.), Value::Number(1.), Value::Number(0.)]),
               env);
     add_func!("union",
               |r: Value, subs: &Vec<Box<Object>>, _| {
@@ -138,7 +140,7 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                   if subs.len() > 0 {
                       if let Value::Number(rf) = r {
                           return Value::Objects(vec![::primitive::Intersection::from_vec(subs.clone(), rf)
-                                                              .unwrap()]);
+    .unwrap()]);
                       }
                   }
                   return Value::Undef;

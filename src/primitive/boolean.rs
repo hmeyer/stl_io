@@ -1,6 +1,6 @@
 use std::f64;
-use primitive::{ImplicitFunction, Object, normal_from_implicit};
-use types::{Point, Vector, Transform};
+use primitive::{Object, normal_from_object};
+use types::{Point, Vector};
 use Float;
 
 #[derive(Clone, Debug)]
@@ -19,13 +19,13 @@ impl Union {
     }
 }
 
-impl ImplicitFunction for Union {
-    fn value(&self, p: &Point) -> Float {
+impl Object for Union {
+    fn value(&self, p: Point) -> Float {
         rvmin(&self.objs.iter().map(|o| o.value(p)).collect::<Vec<f64>>(),
               self.r)
     }
 
-    fn normal(&self, p: &Point) -> Vector {
+    fn normal(&self, p: Point) -> Vector {
         // Find the two smallest values with their indices.
         let (v0, v1) = self.objs
                            .iter()
@@ -44,16 +44,8 @@ impl ImplicitFunction for Union {
         if (v1.1 - v0.1) >= self.r {
             self.objs[v0.0].normal(p)
         } else {
-            // else, calc normal from full implicit
-            normal_from_implicit(self, p)
-        }
-    }
-}
-
-impl Object for Union {
-    fn apply_transform(&mut self, other: &Transform) {
-        for x in &mut self.objs {
-            x.apply_transform(other);
+            // else, calc normal from full object
+            normal_from_object(self, p)
         }
     }
 }
@@ -86,13 +78,13 @@ impl Intersection {
     }
 }
 
-impl ImplicitFunction for Intersection {
-    fn value(&self, p: &Point) -> Float {
+impl Object for Intersection {
+    fn value(&self, p: Point) -> Float {
         rvmax(&self.objs.iter().map(|o| o.value(p)).collect::<Vec<f64>>(),
               self.r)
     }
 
-    fn normal(&self, p: &Point) -> Vector {
+    fn normal(&self, p: Point) -> Vector {
         // Find the two largest values with their indices.
         let (v0, v1) = self.objs
                            .iter()
@@ -112,16 +104,8 @@ impl ImplicitFunction for Intersection {
         if (v0.1 - v1.1) >= self.r {
             self.objs[v0.0].normal(p)
         } else {
-            // else, calc normal from full implicit
-            normal_from_implicit(self, p)
-        }
-    }
-}
-
-impl Object for Intersection {
-    fn apply_transform(&mut self, other: &Transform) {
-        for x in &mut self.objs {
-            x.apply_transform(other);
+            // else, calc normal from full object
+            normal_from_object(self, p)
         }
     }
 }
@@ -137,18 +121,12 @@ impl Negation {
     }
 }
 
-impl ImplicitFunction for Negation {
-    fn value(&self, p: &Point) -> Float {
+impl Object for Negation {
+    fn value(&self, p: Point) -> Float {
         -self.object.value(p)
     }
-    fn normal(&self, p: &Point) -> Vector {
+    fn normal(&self, p: Point) -> Vector {
         self.object.normal(p) * -1.
-    }
-}
-
-impl Object for Negation {
-    fn apply_transform(&mut self, other: &Transform) {
-        self.object.apply_transform(other);
     }
 }
 

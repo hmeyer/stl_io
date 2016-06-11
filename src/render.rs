@@ -5,8 +5,9 @@
 // pub type Point = Point<float>;
 use std::cmp;
 use Float;
-use types::{Point, Vector, Ray, Transform};
+use types::{Point, Vector, Ray, Matrix};
 use primitive::Object;
+use cgmath::{InnerSpace, SquareMatrix, Transform};
 
 const EPSILON: Float = 0.003;
 const MAXVAL: Float = 100.;
@@ -15,7 +16,7 @@ const MAXVAL: Float = 100.;
 #[derive(Clone)]
 pub struct Renderer {
     light_dir: Vector,
-    trans: Transform,
+    trans: Matrix,
     pub object: Option<Box<Object>>,
 }
 
@@ -23,20 +24,22 @@ impl Renderer {
     pub fn new() -> Renderer {
         Renderer {
             light_dir: Vector::new(-2. / 3., 2. / 3., -1. / 3.),
-            trans: Transform::identity(),
+            trans: Matrix::identity(),
             object: None,
         }
     }
 
     pub fn rotate_from_screen(&mut self, x: f64, y: f64) {
-        let v = Vector::new(y as Float, x as Float, 0.);
-        let other = Transform::rotate(&v);
+        let euler = ::cgmath::Euler::new(::cgmath::Rad { s: y },
+                                         ::cgmath::Rad { s: x },
+                                         ::cgmath::Rad { s: 0. });
+        let other = Matrix::from(euler);
         self.trans = self.trans.concat(&other);
     }
 
     pub fn translate_from_screen(&mut self, x: f64, y: f64) {
         let v = Vector::new(-x as Float, y as Float, 0.);
-        let other = Transform::translate(&v);
+        let other = Matrix::from_translation(v);
         self.trans = self.trans.concat(&other);
     }
 
@@ -53,7 +56,7 @@ impl Renderer {
         loop {
             cr.dir = cr.dir.normalize();
             cr.origin = cr.origin + cr.dir * value;
-            value = obj.value(&cr.origin);
+            value = obj.value(cr.origin);
             iter += 1;
             if value > MAXVAL {
                 return (iter, 0.);
@@ -63,7 +66,7 @@ impl Renderer {
                 break;
             }
         }
-        let norm = obj.normal(&cr.origin);
+        let norm = obj.normal(cr.origin);
         let dot = norm.dot(*light_dir);
         if dot < 0. {
             return (iter, 0.);
@@ -76,17 +79,15 @@ impl Renderer {
         let w2 = width / 2;
         let h2 = height / 2;
 
-        let dir_front = self.trans.t_vector(Vector::new(0., 0., 1.));
-        let dir_rl = self.trans.t_vector(Vector::new(1., 0., 0.));
-        let dir_tb = self.trans.t_vector(Vector::new(0., -1., 0.));
-
-        let light_dir = self.trans.t_vector(self.light_dir);
-
-        let ray_origin = self.trans.t_point(Point::new(0., 0., -2.));
+        let dir_front = self.trans.transform_vector(Vector::new(0., 0., 1.));
+        let dir_rl = self.trans.transform_vector(Vector::new(1., 0., 0.));
+        let dir_tb = self.trans.transform_vector(Vector::new(0., -1., 0.));
+        let light_dir = self.trans.transform_vector(self.light_dir);
+        let ray_origin = self.trans.transform_point(Point::new(0., 0., -2.));
         let mut ray = Ray::new(ray_origin, dir_front);
 
         if let Some(ref my_obj) = self.object {
-            let origin_value = my_obj.value(&ray.origin);
+            let origin_value = my_obj.value(ray.origin);
 
 
             let mut index = 0 as usize;

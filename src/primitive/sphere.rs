@@ -1,36 +1,24 @@
 use Float;
-use primitive::{ImplicitFunction, Primitive, PrimitiveWrapper};
-use types::{Point, Vector, Transform};
+use primitive::Object;
+use types::{Point, Vector};
+use cgmath::{EuclideanSpace, InnerSpace};
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct SpherePrimitive {
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
+pub struct Sphere {
     radius: Float,
 }
 
-impl SpherePrimitive {
-    pub fn new(r: Float) -> Box<SpherePrimitive> {
-        Box::new(SpherePrimitive { radius: r })
-    }
-}
-
-impl ImplicitFunction for SpherePrimitive {
-    fn value(&self, p: &Point) -> Float {
-        return p.to_vec().length() - self.radius;
-    }
-    fn normal(&self, p: &Point) -> Vector {
-        return p.to_vec().normalize();
-    }
-}
-
-impl Primitive for SpherePrimitive {}
-
-pub type Sphere = PrimitiveWrapper<SpherePrimitive>;
-
 impl Sphere {
     pub fn new(r: Float) -> Box<Sphere> {
-        Box::new(Sphere {
-            primitive: SpherePrimitive::new(r),
-            transform: Transform::identity(),
-        })
+        Box::new(Sphere { radius: r })
+    }
+}
+
+impl Object for Sphere {
+    fn value(&self, p: Point) -> Float {
+        return p.to_vec().magnitude() - self.radius;
+    }
+    fn normal(&self, p: Point) -> Vector {
+        return p.to_vec().normalize();
     }
 }

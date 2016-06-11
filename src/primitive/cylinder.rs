@@ -1,40 +1,28 @@
 use Float;
-use primitive::{ImplicitFunction, Primitive, PrimitiveWrapper};
-use types::{Point, Vector, Transform};
+use primitive::Object;
+use types::{Point, Vector};
+use cgmath::{EuclideanSpace, InnerSpace};
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct CylinderPrimitive {
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
+pub struct Cylinder {
     radius: Float,
 }
 
-impl CylinderPrimitive {
-    pub fn new(r: Float) -> Box<CylinderPrimitive> {
-        Box::new(CylinderPrimitive { radius: r })
+impl Cylinder {
+    pub fn new(r: Float) -> Box<Cylinder> {
+        Box::new(Cylinder { radius: r })
     }
 }
 
-impl ImplicitFunction for CylinderPrimitive {
-    fn value(&self, p: &Point) -> Float {
+impl Object for Cylinder {
+    fn value(&self, p: Point) -> Float {
         let mut pv = p.to_vec();
-        pv.v.z = 0.;
-        return pv.length() - self.radius;
+        pv.z = 0.;
+        return pv.magnitude() - self.radius;
     }
-    fn normal(&self, p: &Point) -> Vector {
+    fn normal(&self, p: Point) -> Vector {
         let mut pv = p.to_vec();
-        pv.v.z = 0.;
+        pv.z = 0.;
         return pv.normalize();
-    }
-}
-
-impl Primitive for CylinderPrimitive {}
-
-pub type InfiniteCylinder = PrimitiveWrapper<CylinderPrimitive>;
-
-impl InfiniteCylinder {
-    pub fn new(r: Float) -> Box<InfiniteCylinder> {
-        Box::new(InfiniteCylinder {
-            primitive: CylinderPrimitive::new(r),
-            transform: Transform::identity(),
-        })
     }
 }

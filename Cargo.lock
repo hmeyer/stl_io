@@ -3,7 +3,7 @@ name = "xplicit"
 version = "0.0.1"
 dependencies = [
  "cairo-rs 0.0.8 (git+https://github.com/gtk-rs/cairo.git)",
- "cgmath 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cgmath 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "gdk 0.3.0 (git+https://github.com/gtk-rs/gdk.git)",
  "glib 0.0.8 (git+https://github.com/gtk-rs/glib.git)",
  "gtk 0.0.7 (git+https://github.com/gtk-rs/gtk.git)",
@@ -55,10 +55,10 @@ dependencies = [
 
 [[package]]
 name = "cgmath"
-version = "0.7.0"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "num 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num-traits 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.18 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -205,13 +205,9 @@ version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "num"
-version = "0.1.31"
+name = "num-traits"
+version = "0.1.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "rand 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
- "rustc-serialize 0.3.18 (registry+https://github.com/rust-lang/crates.io-index)",
-]
 
 [[package]]
 name = "pango"
