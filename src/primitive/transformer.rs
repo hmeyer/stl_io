@@ -22,9 +22,32 @@ impl Object for AffineTransformer {
                                               .transform_point(p)))
             .normalize()
     }
+
+    fn translate(&self, v: Vector) -> Box<Object> {
+        let other = Matrix::from_translation(v);
+        let new_trans = self.transform.concat(&other);
+        AffineTransformer::new_with_scaler(self.object.clone(), new_trans, self.value_scaler)
+    }
+    fn rotate(&self, r: Vector) -> Box<Object> {
+        let euler = ::cgmath::Euler::new(::cgmath::Rad { s: r.x },
+                                         ::cgmath::Rad { s: r.y },
+                                         ::cgmath::Rad { s: r.z });
+        let new_trans = self.transform.concat(&Matrix::from(euler));
+        AffineTransformer::new_with_scaler(self.object.clone(), new_trans, self.value_scaler)
+    }
+    fn scale(&self, s: Vector) -> Box<Object> {
+        let new_trans = self.transform
+                            .concat(&Matrix::from_nonuniform_scale(1. / s.x, 1. / s.y, 1. / s.z));
+        AffineTransformer::new_with_scaler(self.object.clone(),
+                                           new_trans,
+                                           self.value_scaler * s.x.min(s.y.min(s.z)))
+    }
 }
 
 impl AffineTransformer {
+    fn identity(o: Box<Object>) -> Box<Object> {
+        AffineTransformer::new(o, Matrix::identity())
+    }
     fn new(o: Box<Object>, t: Matrix) -> Box<AffineTransformer> {
         AffineTransformer::new_with_scaler(o, t, 1.)
     }
@@ -38,20 +61,13 @@ impl AffineTransformer {
             value_scaler: scaler,
         })
     }
-    pub fn new_translate(o: Box<Object>, v: Vector) -> Box<AffineTransformer> {
-        AffineTransformer::new(o, Matrix::from_translation(v))
+    pub fn new_translate(o: Box<Object>, v: Vector) -> Box<Object> {
+        AffineTransformer::identity(o).translate(v)
     }
-    pub fn new_rotate(o: Box<Object>, r: Vector) -> Box<AffineTransformer> {
-        let euler = ::cgmath::Euler::new(::cgmath::Rad { s: r.x },
-                                         ::cgmath::Rad { s: r.y },
-                                         ::cgmath::Rad { s: r.z });
-        AffineTransformer::new(o, Matrix::from(euler))
+    pub fn new_rotate(o: Box<Object>, r: Vector) -> Box<Object> {
+        AffineTransformer::identity(o).rotate(r)
     }
-    pub fn new_scale(o: Box<Object>, s: Vector) -> Box<AffineTransformer> {
-        AffineTransformer::new_with_scaler(o,
-                                           Matrix::from_nonuniform_scale(1. / s.x,
-                                                                         1. / s.y,
-                                                                         1. / s.z),
-                                           s.x.min(s.y.min(s.z)))
+    pub fn new_scale(o: Box<Object>, s: Vector) -> Box<Object> {
+        AffineTransformer::identity(o).scale(s)
     }
 }
