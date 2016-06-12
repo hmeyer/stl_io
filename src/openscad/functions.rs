@@ -48,6 +48,29 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
               r,
               Value::Number(1.),
               env);
+    add_func!("box",
+              |dim: Value, _, _| {
+                  if let Value::Vector(dimv) = dim {
+                      let mut v = Vec::new();
+                      for i in 0..3 {
+                          v.push(if let Some(x) = dimv.get(i) {
+                              x.as_f64_or(0.)
+                          } else {
+                              0.
+                          });
+                      }
+                      return Value::Objects(vec![::primitive::Intersection::from_vec(vec![
+                      ::primitive::SlabX::new(v[0]),
+                      ::primitive::SlabY::new(v[1]),
+                      ::primitive::SlabZ::new(v[2]) ],
+                                                                                     0.)
+                                                     .unwrap()]);
+                  }
+                  return Value::Undef;
+              },
+              t,
+              Value::Vector(vec![Value::Number(1.), Value::Number(1.), Value::Number(1.)]),
+              env);
     add_func!("translate",
               |t: Value, subs: &Vec<Box<Object>>, _| {
                   if subs.len() > 0 {

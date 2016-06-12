@@ -16,6 +16,9 @@ pub use self::sphere::Sphere;
 mod cylinder;
 pub use self::cylinder::Cylinder;
 
+mod slab;
+pub use self::slab::{SlabX, SlabY, SlabZ};
+
 pub fn normal_from_object(f: &Object, p: Point) -> Vector {
     let center = f.value(p);
     let dx = f.value(p + EPSILON_X) - center;
