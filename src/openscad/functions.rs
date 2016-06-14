@@ -3,19 +3,25 @@ use super::super::primitive::Object;
 use std::io::Write;
 use std::rc::Rc;
 
-macro_rules! add_func {
-    ( $func_name:expr, $closure:expr, $param:ident, $default:expr, $vars:expr ) => {
+macro_rules! add_func_multi_param {
+    ( $func_name:expr, $closure:expr, $( P $param:expr => $default:expr )*, $vars:expr ) => {
         {
             let mut interface = Vec::new();
-            const PARAM_NAME: &'static str = stringify!($param);
             let func_closure: Rc<ExpressionFn> = Rc::new(|env, msg| {
-                if let &Binding::Val(ref $param) = env.vars.get(PARAM_NAME).unwrap() {
-                    ($closure)($param.clone(), &env.objs, msg)
-                } else {
-                    panic!("did not find expected param!");
-                }
+                let mut params = vec![];
+                $(
+                    if let &Binding::Val(ref value) = env.vars.get($param).unwrap() {
+                        params.push(value.clone())
+                    } else {
+                        panic!("did not find expected param!");
+                    }
+
+                )*
+                ($closure)(params, &env.objs, msg)
             });
-            interface.push((PARAM_NAME.to_string(), Some(Box::new($default) as Box<Expression>)));
+            $(
+                interface.push(($param.to_string(), Some(Box::new($default) as Box<Expression>)));
+            )*
             $vars.insert($func_name.to_string(),
                                   Binding::Call(Callable {
                                       interface: interface,
@@ -26,31 +32,36 @@ macro_rules! add_func {
     };
 }
 
+macro_rules! add_func {
+    ( $func_name:expr, $closure:expr, $param:expr => $default:expr, $vars:expr ) => {
+        add_func_multi_param!($func_name,
+            |params: Vec<Value>, subs: &Vec<Box<Object>>, msg: &mut Write| {
+                ($closure)(params.get(0).unwrap(), subs, msg)
+            }, P $param => $default, $vars);
+    };
+}
 
 pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
     env.insert("TAU".to_string(),
                Binding::Val(Value::Number(::std::f64::consts::PI * 2.)));
     add_func!("echo",
-              |text: Value, _, msg: &mut Write| {
+              |text: &Value, _, msg: &mut Write| {
                   writeln!(msg, "echo: {:?}", text).unwrap();
                   Value::Undef
               },
-              text,
-              Value::String("".to_string()),
+              "text" => Value::String("".to_string()),
               env);
     add_func!("sphere",
-              |r: Value, _, _| Value::Objects(vec![::primitive::Sphere::new(r.as_f64())]),
-              r,
-              Value::Number(1.),
+              |r: &Value, _, _| Value::Objects(vec![::primitive::Sphere::new(r.as_f64())]),
+              "r" => Value::Number(1.),
               env);
     add_func!("icylinder",
-              |r: Value, _, _| Value::Objects(vec![::primitive::Cylinder::new(r.as_f64())]),
-              r,
-              Value::Number(1.),
+              |r: &Value, _, _| Value::Objects(vec![::primitive::Cylinder::new(r.as_f64())]),
+              "r" => Value::Number(1.),
               env);
-    add_func!("box",
-              |dim: Value, _, _| {
-                  if let Value::Vector(dimv) = dim {
+    add_func_multi_param!("box",
+              |dim_and_r: Vec<Value>, _, _| {
+                  if let &Value::Vector(ref dimv) = dim_and_r.get(0).unwrap() {
                       let mut v = Vec::new();
                       for i in 0..3 {
                           v.push(if let Some(x) = dimv.get(i) {
@@ -62,19 +73,20 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                       return Value::Objects(vec![::primitive::Intersection::from_vec(vec![
                       ::primitive::SlabX::new(v[0]),
                       ::primitive::SlabY::new(v[1]),
-                      ::primitive::SlabZ::new(v[2]) ],
-                                                                                     0.)
+                      ::primitive::SlabZ::new(v[2]) ], dim_and_r.get(1).unwrap().as_f64())
                                                      .unwrap()]);
                   }
                   return Value::Undef;
               },
-              t,
-              Value::Vector(vec![Value::Number(1.), Value::Number(1.), Value::Number(1.)]),
+              P "t" => Value::Vector(vec![Value::Number(1.),
+                                          Value::Number(1.),
+                                          Value::Number(1.)])
+              P "r" => Value::Number(0.),
               env);
     add_func!("translate",
-              |t: Value, subs: &Vec<Box<Object>>, _| {
+              |t: &Value, subs: &Vec<Box<Object>>, _| {
                   if subs.len() > 0 {
-                      if let Value::Vector(tv) = t {
+                      if let &Value::Vector(ref tv) = t {
                           let mut v = Vec::new();
                           for i in 0..3 {
                               v.push(if let Some(x) = tv.get(i) {
@@ -93,13 +105,12 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                   }
                   return Value::Undef;
               },
-              t,
-              Value::Vector(vec![Value::Number(0.), Value::Number(0.), Value::Number(0.)]),
+              "t" => Value::Vector(vec![Value::Number(0.), Value::Number(0.), Value::Number(0.)]),
               env);
     add_func!("rotate",
-              |t: Value, subs: &Vec<Box<Object>>, _| {
+              |t: &Value, subs: &Vec<Box<Object>>, _| {
                   if subs.len() > 0 {
-                      if let Value::Vector(tv) = t {
+                      if let &Value::Vector(ref tv) = t {
                           let mut v = Vec::new();
                           for i in 0..3 {
                               v.push(if let Some(x) = tv.get(i) {
@@ -118,13 +129,12 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                   }
                   return Value::Undef;
               },
-              t,
-              Value::Vector(vec![Value::Number(0.), Value::Number(0.), Value::Number(0.)]),
+              "t" => Value::Vector(vec![Value::Number(0.), Value::Number(0.), Value::Number(0.)]),
               env);
     add_func!("scale",
-              |t: Value, subs: &Vec<Box<Object>>, _| {
+              |t: &Value, subs: &Vec<Box<Object>>, _| {
                   if subs.len() > 0 {
-                      if let Value::Vector(tv) = t {
+                      if let &Value::Vector(ref tv) = t {
                           let mut v = Vec::new();
                           for i in 0..3 {
                               v.push(if let Some(x) = tv.get(i) {
@@ -141,13 +151,12 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                   }
                   return Value::Undef;
               },
-              t,
-              Value::Vector(vec![Value::Number(1.), Value::Number(1.), Value::Number(0.)]),
+              "t" => Value::Vector(vec![Value::Number(1.), Value::Number(1.), Value::Number(0.)]),
               env);
     add_func!("union",
-              |r: Value, subs: &Vec<Box<Object>>, _| {
+              |r: &Value, subs: &Vec<Box<Object>>, _| {
                   if subs.len() > 0 {
-                      if let Value::Number(rf) = r {
+                      if let &Value::Number(rf) = r {
                           return Value::Objects(vec![::primitive::Union::from_vec(subs.clone(),
                                                                                   rf)
                                                          .unwrap()]);
@@ -155,32 +164,32 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                   }
                   return Value::Undef;
               },
-              r,
-              Value::Number(0.),
+              "r" => Value::Number(0.),
               env);
     add_func!("intersection",
-              |r: Value, subs: &Vec<Box<Object>>, _| {
+              |r: &Value, subs: &Vec<Box<Object>>, _| {
                   if subs.len() > 0 {
-                      if let Value::Number(rf) = r {
-                          return Value::Objects(vec![::primitive::Intersection::from_vec(subs.clone(), rf)
-    .unwrap()]);
+                      if let &Value::Number(rf) = r {
+                          return Value::Objects(
+                              vec![::primitive::Intersection::from_vec(
+                                  subs.clone(), rf).unwrap()]);
                       }
                   }
                   return Value::Undef;
               },
-              r,
-              Value::Number(0.),
+              "r" => Value::Number(0.),
               env);
     add_func!("difference",
-              |r: Value, subs: &Vec<Box<Object>>, _| {
+              |r: &Value, subs: &Vec<Box<Object>>, _| {
                   if subs.len() > 0 {
-                      if let Value::Number(rf) = r {
-                          return Value::Objects(vec![::primitive::Intersection::difference_from_vec(subs.clone(), rf).unwrap()]);
+                      if let &Value::Number(rf) = r {
+                          return Value::Objects(
+                              vec![::primitive::Intersection::difference_from_vec(
+                                  subs.clone(), rf).unwrap()]);
                       }
                   }
                   return Value::Undef;
               },
-              r,
-              Value::Number(0.),
+              "r" => Value::Number(0.),
               env);
 }
