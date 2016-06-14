@@ -3,6 +3,9 @@ use super::super::primitive::Object;
 use std::io::Write;
 use std::rc::Rc;
 
+// Macro to create a function binding with multple params.
+// The closure that is passed in is expected to take params as a Vec<Value>, with all values in
+// the order they were defined in $param => $default.
 macro_rules! add_func_multi_param {
     ( $func_name:expr, $closure:expr, $( P $param:expr => $default:expr )*, $vars:expr ) => {
         {
@@ -32,6 +35,7 @@ macro_rules! add_func_multi_param {
     };
 }
 
+// Shorthand macro to create a function binding, for closures that only accept a single parameter.
 macro_rules! add_func {
     ( $func_name:expr, $closure:expr, $param:expr => $default:expr, $vars:expr ) => {
         add_func_multi_param!($func_name,
@@ -78,7 +82,7 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                   }
                   return Value::Undef;
               },
-              P "t" => Value::Vector(vec![Value::Number(1.),
+              P "dim" => Value::Vector(vec![Value::Number(1.),
                                           Value::Number(1.),
                                           Value::Number(1.)])
               P "r" => Value::Number(0.),
