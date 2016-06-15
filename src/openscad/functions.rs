@@ -60,9 +60,13 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
               "r" => Value::Number(1.),
               env);
     add_func!("icylinder",
-              |r: &Value, _, _| Value::Objects(vec![::primitive::Cylinder::new(r.as_f64())]),
-              "r" => Value::Number(1.),
-              env);
+                        |r: &Value, _, _| Value::Objects(vec![::primitive::Cylinder::new(r.as_f64())]),
+                        "r" => Value::Number(1.),
+                        env);
+    add_func!("icone",
+                                  |r: &Value, _, _| Value::Objects(vec![::primitive::Cone::new(r.as_f64(), 0.)]),
+                                  "slope" => Value::Number(1.),
+                                  env);
     add_func_multi_param!("box",
               |dim_and_r: Vec<Value>, _, _| {
                   if let &Value::Vector(ref dimv) = dim_and_r.get(0).unwrap() {

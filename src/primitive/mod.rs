@@ -14,7 +14,7 @@ mod sphere;
 pub use self::sphere::Sphere;
 
 mod cylinder;
-pub use self::cylinder::Cylinder;
+pub use self::cylinder::{Cone, Cylinder};
 
 mod slab;
 pub use self::slab::{SlabX, SlabY, SlabZ};
