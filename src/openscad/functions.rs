@@ -60,21 +60,25 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
               "r" => Value::Number(1.),
               env);
     add_func!("icylinder",
-                        |r: &Value, _, _| Value::Objects(vec![::primitive::Cylinder::new(r.as_f64())]),
-                        "r" => Value::Number(1.),
+                        |r: &Value, _, _| Value::Objects(
+                            vec![::primitive::Cylinder::new(r.as_f64())]),
+                        "s" => Value::Number(1.),
                         env);
     add_func!("icone",
-                                  |r: &Value, _, _| Value::Objects(vec![::primitive::Cone::new(r.as_f64(), 0.)]),
+                                  |r: &Value, _, _| Value::Objects(
+                                      vec![::primitive::Cone::new(r.as_f64(), 0.)]),
                                   "slope" => Value::Number(1.),
                                   env);
-    add_func_multi_param!("box",
-              |dim_and_r: Vec<Value>, _, _| {
+    add_func_multi_param!("cube",
+              |dim_and_r: Vec<Value>, _,  msg: &mut Write| {
                   if let &Value::Vector(ref dimv) = dim_and_r.get(0).unwrap() {
                       let mut v = Vec::new();
                       for i in 0..3 {
-                          v.push(if let Some(x) = dimv.get(i) {
-                              x.as_f64_or(0.)
+                          v.push(if let Some(&Value::Number(ref x)) = dimv.get(i) {
+                              *x
                           } else {
+                              writeln!(msg, "invalid dimension value: {:?}, using 0",
+                                       dimv.get(i)).unwrap();
                               0.
                           });
                       }
@@ -84,13 +88,60 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                       ::primitive::SlabZ::new(v[2]) ], dim_and_r.get(1).unwrap().as_f64())
                                                      .unwrap()]);
                   }
+                  writeln!(msg, "invalid dimension vector: {:?}, using undef",
+                           dim_and_r.get(0)).unwrap();
                   return Value::Undef;
               },
               P "dim" => Value::Vector(vec![Value::Number(1.),
                                           Value::Number(1.),
                                           Value::Number(1.)])
-              P "r" => Value::Number(0.),
+              P "s" => Value::Number(0.),
               env);
+    add_func_multi_param!("cylinder",
+                        |h_r_r1_r2_s: Vec<Value>, _, msg: &mut Write| {
+                            if let &Value::Number(ref h) = h_r_r1_r2_s.get(0).unwrap() {
+                                let mut r1 = ::std::f64::NAN; let mut r2 = ::std::f64::NAN;
+                                if let &Value::Number(ref r) = h_r_r1_r2_s.get(1).unwrap() {
+                                    r1 = *r; r2 = *r;
+                                }
+                                if let &Value::Number(ref pr1) = h_r_r1_r2_s.get(2).unwrap() {
+                                    r1 = *pr1;
+                                }
+                                if let &Value::Number(ref pr2) = h_r_r1_r2_s.get(3).unwrap() {
+                                    r2 = *pr2;
+                                }
+                                if r1.is_nan() || r2.is_nan() {
+                                    writeln!(msg, "invalid radius, returning undef").unwrap();
+                                    return Value::Undef;
+                                }
+                                let conie;
+                                if r1 == r2 {
+                                    conie = ::primitive::Cylinder::new(r1) as Box<Object>;
+                                } else {
+                                    let slope = (r2 - r1).abs() / *h;
+                                    let offset;
+                                    if r1 < r2 {
+                                        offset = -r1/ slope - h * 0.5;
+                                    } else {
+                                        offset = r2/ slope + h * 0.5;
+                                    }
+                                    conie = ::primitive::Cone::new(slope, offset) as Box<Object>;
+                                }
+                                Value::Objects(vec![::primitive::Intersection::from_vec(vec![
+                                  conie,
+                                  ::primitive::SlabZ::new(*h) ],
+                                h_r_r1_r2_s.get(4).unwrap().as_f64()).unwrap()])
+                            } else {
+                                writeln!(msg, "invalid height, returning undef").unwrap();
+                                Value::Undef
+                            }
+                        },
+                        P "h" => Value::Number(1.)
+                        P "r" => Value::Number(1.)
+                        P "r1" => Value::Undef
+                        P "r2" => Value::Undef
+                        P "s" => Value::Number(0.),
+                        env);
     add_func!("translate",
               |t: &Value, subs: &Vec<Box<Object>>, _| {
                   if subs.len() > 0 {
@@ -172,7 +223,7 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                   }
                   return Value::Undef;
               },
-              "r" => Value::Number(0.),
+              "s" => Value::Number(0.),
               env);
     add_func!("intersection",
               |r: &Value, subs: &Vec<Box<Object>>, _| {
@@ -185,7 +236,7 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                   }
                   return Value::Undef;
               },
-              "r" => Value::Number(0.),
+              "s" => Value::Number(0.),
               env);
     add_func!("difference",
               |r: &Value, subs: &Vec<Box<Object>>, _| {
@@ -198,6 +249,6 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                   }
                   return Value::Undef;
               },
-              "r" => Value::Number(0.),
+              "s" => Value::Number(0.),
               env);
 }

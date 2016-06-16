@@ -57,10 +57,10 @@ impl Object for Cone {
     }
     fn normal(&self, p: Point) -> Vector {
         let mut pv = p.to_vec();
-        let s = pv.z.signum();
+        let s = (pv.z + self.offset).signum();
         pv.z = 0.;
-        pv = pv.normalize_to(self.normal_multiplier);
-        pv.z = -s * self.distance_multiplier;
+        pv = pv.normalize_to(self.distance_multiplier);
+        pv.z = -s * self.normal_multiplier;
         return pv;
     }
 }
