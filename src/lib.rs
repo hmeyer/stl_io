@@ -6,6 +6,8 @@ extern crate gdk;
 extern crate cgmath;
 
 pub type Float = f64;
+pub use ::std::f64::INFINITY;
+pub use ::std::f64::NEG_INFINITY;
 
 pub mod render;
 pub mod types;

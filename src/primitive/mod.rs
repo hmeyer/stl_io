@@ -4,6 +4,8 @@ use types::{Point, Vector, EPSILON_X, EPSILON_Y, EPSILON_Z};
 
 use cgmath::InnerSpace;
 
+mod bounding_box;
+
 mod transformer;
 pub use self::transformer::AffineTransformer;
 
@@ -28,7 +30,15 @@ pub fn normal_from_object(f: &Object, p: Point) -> Vector {
 }
 
 pub trait Object: ObjectClone + Debug {
+    // Value is 0 on object surfaces, negative inside and positive outside of objects.
+    // If positive, value is guarateed to be the minimum distance to the object surface.
     fn value(&self, p: Point) -> Float;
+    // Get approximate value from e.g. bounding box. Or none, if it cannot be calculated
+    // efficiently.
+    // invariant: value(p) >= approx_value(p)
+    fn approx_value(&self, p: Point) -> (Float, bool) {
+        (self.value(p), false)
+    }
     fn normal(&self, p: Point) -> Vector {
         let center = self.value(p);
         let dx = self.value(p + EPSILON_X) - center;

@@ -1,7 +1,6 @@
-use std::f64;
 use primitive::{Object, normal_from_object};
 use types::{Point, Vector};
-use Float;
+use {Float, INFINITY, NEG_INFINITY};
 
 #[derive(Clone, Debug)]
 pub struct Union {
@@ -30,7 +29,7 @@ impl Object for Union {
         let (v0, v1) = self.objs
                            .iter()
                            .enumerate()
-                           .fold(((0, f64::INFINITY), (0, f64::INFINITY)), |(v0, v1), x| {
+                           .fold(((0, INFINITY), (0, INFINITY)), |(v0, v1), x| {
                                let t = x.1.value(p);
                                if t < v0.1 {
                                    ((x.0, t), v0)
@@ -89,17 +88,16 @@ impl Object for Intersection {
         let (v0, v1) = self.objs
                            .iter()
                            .enumerate()
-                           .fold(((0, f64::NEG_INFINITY), (0, f64::NEG_INFINITY)),
-                                 |(v0, v1), x| {
-                                     let t = x.1.value(p);
-                                     if t > v0.1 {
-                                         ((x.0, t), v0)
-                                     } else if t > v1.1 {
-                                         (v0, (x.0, t))
-                                     } else {
-                                         (v0, v1)
-                                     }
-                                 });
+                           .fold(((0, NEG_INFINITY), (0, NEG_INFINITY)), |(v0, v1), x| {
+                               let t = x.1.value(p);
+                               if t > v0.1 {
+                                   ((x.0, t), v0)
+                               } else if t > v1.1 {
+                                   (v0, (x.0, t))
+                               } else {
+                                   (v0, v1)
+                               }
+                           });
         // if they are far apart, use the min's normal
         if (v0.1 - v1.1) >= self.r {
             self.objs[v0.0].normal(p)
@@ -132,7 +130,7 @@ impl Object for Negation {
 
 fn rvmin(v: &[Float], r: Float) -> Float {
     let mut close_min = false;
-    let minimum = v.iter().fold(f64::INFINITY, |min, x| {
+    let minimum = v.iter().fold(INFINITY, |min, x| {
         if x < &min {
             if (min - x) < r {
                 close_min = true;
@@ -159,7 +157,7 @@ fn rvmin(v: &[Float], r: Float) -> Float {
 
 fn rvmax(v: &[Float], r: Float) -> Float {
     let mut close_max = false;
-    let maximum = v.iter().fold(f64::NEG_INFINITY, |max, x| {
+    let maximum = v.iter().fold(NEG_INFINITY, |max, x| {
         if x > &max {
             if (x - max) < r {
                 close_max = true;
