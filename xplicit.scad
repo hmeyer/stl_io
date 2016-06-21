@@ -1,8 +1,7 @@
 difference(0.1) {
 
 union(0.15) {
-translate([0,-.5,0])
-rotate([TAU/4,0,0]) 
+
 difference(0.25) {
   intersection(0.02) {
     translate([-.5,0,0]) sphere(.6);
