@@ -1,5 +1,6 @@
 use Float;
 use primitive::Object;
+use primitive::bounding_box::BoundingBox;
 use types::{Point, Vector, Matrix};
 use cgmath::{InnerSpace, SquareMatrix, Transform};
 
@@ -9,11 +10,15 @@ pub struct AffineTransformer {
     transform: Matrix,
     transposed: Matrix,
     value_scaler: Float,
+    bbox: BoundingBox,
 }
 
 impl Object for AffineTransformer {
-    fn value(&self, p: Point) -> Float {
-        self.object.value(self.transform.transform_point(p)) * self.value_scaler
+    fn precise_value(&self, p: Point) -> Float {
+        self.object.precise_value(self.transform.transform_point(p)) * self.value_scaler
+    }
+    fn bbox(&self) -> &BoundingBox {
+        &self.bbox
     }
     fn normal(&self, p: Point) -> Vector {
         self.transposed
@@ -22,9 +27,8 @@ impl Object for AffineTransformer {
                                               .transform_point(p)))
             .normalize()
     }
-
     fn translate(&self, v: Vector) -> Box<Object> {
-        let other = Matrix::from_translation(v);
+        let other = Matrix::from_translation(-v);
         let new_trans = self.transform.concat(&other);
         AffineTransformer::new_with_scaler(self.object.clone(), new_trans, self.value_scaler)
     }
@@ -54,11 +58,13 @@ impl AffineTransformer {
     fn new_with_scaler(o: Box<Object>, t: Matrix, scaler: Float) -> Box<AffineTransformer> {
         let mut transposed = t.clone();
         transposed.transpose_self();
+        let bbox = o.bbox().transform(&t.invert().unwrap());
         Box::new(AffineTransformer {
             object: o,
             transform: t,
             transposed: transposed,
             value_scaler: scaler,
+            bbox: bbox,
         })
     }
     pub fn new_translate(o: Box<Object>, v: Vector) -> Box<Object> {

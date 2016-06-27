@@ -22,28 +22,33 @@ mod slab;
 pub use self::slab::{SlabX, SlabY, SlabZ};
 
 pub fn normal_from_object(f: &Object, p: Point) -> Vector {
-    let center = f.value(p);
-    let dx = f.value(p + EPSILON_X) - center;
-    let dy = f.value(p + EPSILON_Y) - center;
-    let dz = f.value(p + EPSILON_Z) - center;
+    let center = f.precise_value(p);
+    let dx = f.precise_value(p + EPSILON_X) - center;
+    let dy = f.precise_value(p + EPSILON_Y) - center;
+    let dz = f.precise_value(p + EPSILON_Z) - center;
     Vector::new(dx, dy, dz).normalize()
 }
 
 pub trait Object: ObjectClone + Debug {
     // Value is 0 on object surfaces, negative inside and positive outside of objects.
     // If positive, value is guarateed to be the minimum distance to the object surface.
-    fn value(&self, p: Point) -> Float;
-    // Get approximate value from e.g. bounding box. Or none, if it cannot be calculated
-    // efficiently.
-    // invariant: value(p) >= approx_value(p)
-    fn approx_value(&self, p: Point) -> (Float, bool) {
-        (self.value(p), false)
+    fn precise_value(&self, p: Point) -> Float;
+    fn bbox(&self) -> &bounding_box::BoundingBox {
+        &bounding_box::INFINITY_BOX
+    }
+    fn value(&self, p: Point, precision: Float) -> Float {
+        let approx = self.bbox().value(p);
+        if approx < precision {
+            self.precise_value(p)
+        } else {
+            approx
+        }
     }
     fn normal(&self, p: Point) -> Vector {
-        let center = self.value(p);
-        let dx = self.value(p + EPSILON_X) - center;
-        let dy = self.value(p + EPSILON_Y) - center;
-        let dz = self.value(p + EPSILON_Z) - center;
+        let center = self.precise_value(p);
+        let dx = self.precise_value(p + EPSILON_X) - center;
+        let dy = self.precise_value(p + EPSILON_Y) - center;
+        let dz = self.precise_value(p + EPSILON_Z) - center;
         Vector::new(dx, dy, dz).normalize()
     }
     fn translate(&self, v: Vector) -> Box<Object> {

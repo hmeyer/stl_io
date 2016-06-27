@@ -1,25 +1,34 @@
-use Float;
+use {Float, INFINITY, NEG_INFINITY /* ); */};
 use primitive::Object;
+use primitive::bounding_box::BoundingBox;
 use types::{Point, Vector};
 use cgmath::{EuclideanSpace, InnerSpace};
 
+
 // A cylinder along the Z-Axis
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Cylinder {
     radius: Float,
+    bbox: BoundingBox,
 }
 
 impl Cylinder {
     pub fn new(r: Float) -> Box<Cylinder> {
-        Box::new(Cylinder { radius: r })
+        Box::new(Cylinder {
+            radius: r,
+            bbox: BoundingBox::new(Point::new(-r, -r, NEG_INFINITY), Point::new(r, r, INFINITY)),
+        })
     }
 }
 
 impl Object for Cylinder {
-    fn value(&self, p: Point) -> Float {
+    fn precise_value(&self, p: Point) -> Float {
         let mut pv = p.to_vec();
         pv.z = 0.;
         return pv.magnitude() - self.radius;
+    }
+    fn bbox(&self) -> &BoundingBox {
+        &self.bbox
     }
     fn normal(&self, p: Point) -> Vector {
         let mut pv = p.to_vec();
@@ -49,7 +58,7 @@ impl Cone {
 }
 
 impl Object for Cone {
-    fn value(&self, p: Point) -> Float {
+    fn precise_value(&self, p: Point) -> Float {
         let mut pv = p.to_vec();
         let radius = self.slope * (pv.z + self.offset).abs();
         pv.z = 0.;

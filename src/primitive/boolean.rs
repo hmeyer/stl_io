@@ -1,4 +1,5 @@
 use primitive::{Object, normal_from_object};
+use primitive::bounding_box::{BoundingBox, INFINITY_BOX, NEG_INFINITY_BOX};
 use types::{Point, Vector};
 use {Float, INFINITY, NEG_INFINITY};
 
@@ -6,6 +7,7 @@ use {Float, INFINITY, NEG_INFINITY};
 pub struct Union {
     objs: Vec<Box<Object>>,
     r: Float,
+    bbox: BoundingBox,
 }
 
 impl Union {
@@ -13,24 +15,34 @@ impl Union {
         match v.len() {
             0 => None,
             1 => Some(v.pop().unwrap()),
-            _ => Some(Box::new(Union { objs: v, r: r })),
+            _ => {
+                let bbox = v.iter().fold(NEG_INFINITY_BOX.clone(),
+                                         |union_box, x| union_box.union(x.bbox()));
+                Some(Box::new(Union {
+                    objs: v,
+                    r: r,
+                    bbox: bbox,
+                }))
+            }
         }
     }
 }
 
 impl Object for Union {
-    fn value(&self, p: Point) -> Float {
-        rvmin(&self.objs.iter().map(|o| o.value(p)).collect::<Vec<f64>>(),
+    fn precise_value(&self, p: Point) -> Float {
+        rvmin(&self.objs.iter().map(|o| o.precise_value(p)).collect::<Vec<f64>>(),
               self.r)
     }
-
+    fn bbox(&self) -> &BoundingBox {
+        &self.bbox
+    }
     fn normal(&self, p: Point) -> Vector {
         // Find the two smallest values with their indices.
         let (v0, v1) = self.objs
                            .iter()
                            .enumerate()
                            .fold(((0, INFINITY), (0, INFINITY)), |(v0, v1), x| {
-                               let t = x.1.value(p);
+                               let t = x.1.precise_value(p);
                                if t < v0.1 {
                                    ((x.0, t), v0)
                                } else if t < v1.1 {
@@ -53,6 +65,7 @@ impl Object for Union {
 pub struct Intersection {
     objs: Vec<Box<Object>>,
     r: Float,
+    bbox: BoundingBox,
 }
 
 impl Intersection {
@@ -60,7 +73,15 @@ impl Intersection {
         match v.len() {
             0 => None,
             1 => Some(v.pop().unwrap()),
-            _ => Some(Box::new(Intersection { objs: v, r: r })),
+            _ => {
+                let bbox = v.iter().fold(INFINITY_BOX.clone(),
+                                         |union_box, x| union_box.intersection(x.bbox()));
+                Some(Box::new(Intersection {
+                    objs: v,
+                    r: r,
+                    bbox: bbox,
+                }))
+            }
         }
     }
     pub fn difference_from_vec(mut v: Vec<Box<Object>>, r: Float) -> Option<Box<Object>> {
@@ -70,7 +91,7 @@ impl Intersection {
             _ => {
                 let neg_rest = Negation::from_vec(v.split_off(1));
                 v.extend(neg_rest);
-                return Some(Box::new(Intersection { objs: v, r: r }));
+                Intersection::from_vec(v, r)
             }
         }
 
@@ -78,18 +99,20 @@ impl Intersection {
 }
 
 impl Object for Intersection {
-    fn value(&self, p: Point) -> Float {
-        rvmax(&self.objs.iter().map(|o| o.value(p)).collect::<Vec<f64>>(),
+    fn precise_value(&self, p: Point) -> Float {
+        rvmax(&self.objs.iter().map(|o| o.precise_value(p)).collect::<Vec<f64>>(),
               self.r)
     }
-
+    fn bbox(&self) -> &BoundingBox {
+        &self.bbox
+    }
     fn normal(&self, p: Point) -> Vector {
         // Find the two largest values with their indices.
         let (v0, v1) = self.objs
                            .iter()
                            .enumerate()
                            .fold(((0, NEG_INFINITY), (0, NEG_INFINITY)), |(v0, v1), x| {
-                               let t = x.1.value(p);
+                               let t = x.1.precise_value(p);
                                if t > v0.1 {
                                    ((x.0, t), v0)
                                } else if t > v1.1 {
@@ -115,13 +138,15 @@ pub struct Negation {
 
 impl Negation {
     pub fn from_vec(v: Vec<Box<Object>>) -> Vec<Box<Object>> {
-        v.iter().map(|o| Box::new(Negation { object: o.clone() }) as Box<Object>).collect()
+        v.iter()
+         .map(|o| Box::new(Negation { object: o.clone() }) as Box<Object>)
+         .collect()
     }
 }
 
 impl Object for Negation {
-    fn value(&self, p: Point) -> Float {
-        -self.object.value(p)
+    fn precise_value(&self, p: Point) -> Float {
+        -self.object.precise_value(p)
     }
     fn normal(&self, p: Point) -> Vector {
         self.object.normal(p) * -1.

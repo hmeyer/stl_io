@@ -1,21 +1,31 @@
-use Float;
+use {Float, INFINITY, NEG_INFINITY};
 use primitive::Object;
+use primitive::bounding_box::BoundingBox;
 use types::{Point, Vector};
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SlabX {
     distance_from_zero: Float,
+    bbox: BoundingBox,
 }
 
 impl SlabX {
     pub fn new(thickness: Float) -> Box<SlabX> {
-        Box::new(SlabX { distance_from_zero: thickness * 0.5 })
+        let d = thickness * 0.5;
+        Box::new(SlabX {
+            distance_from_zero: d,
+            bbox: BoundingBox::new(Point::new(-d, NEG_INFINITY, NEG_INFINITY),
+                                   Point::new(d, INFINITY, INFINITY)),
+        })
     }
 }
 
 impl Object for SlabX {
-    fn value(&self, p: Point) -> Float {
+    fn precise_value(&self, p: Point) -> Float {
         return p.x.abs() - self.distance_from_zero;
+    }
+    fn bbox(&self) -> &BoundingBox {
+        &self.bbox
     }
     fn normal(&self, p: Point) -> Vector {
         if p.x.abs() > self.distance_from_zero && p.x > 0. {
@@ -26,20 +36,29 @@ impl Object for SlabX {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SlabY {
     distance_from_zero: Float,
+    bbox: BoundingBox,
 }
 
 impl SlabY {
     pub fn new(thickness: Float) -> Box<SlabY> {
-        Box::new(SlabY { distance_from_zero: thickness * 0.5 })
+        let d = thickness * 0.5;
+        Box::new(SlabY {
+            distance_from_zero: d,
+            bbox: BoundingBox::new(Point::new(NEG_INFINITY, -d, NEG_INFINITY),
+                                   Point::new(INFINITY, d, INFINITY)),
+        })
     }
 }
 
 impl Object for SlabY {
-    fn value(&self, p: Point) -> Float {
+    fn precise_value(&self, p: Point) -> Float {
         return p.y.abs() - self.distance_from_zero;
+    }
+    fn bbox(&self) -> &BoundingBox {
+        &self.bbox
     }
     fn normal(&self, p: Point) -> Vector {
         if p.y.abs() > self.distance_from_zero && p.y > 0. {
@@ -50,20 +69,29 @@ impl Object for SlabY {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SlabZ {
     distance_from_zero: Float,
+    bbox: BoundingBox,
 }
 
 impl SlabZ {
     pub fn new(thickness: Float) -> Box<SlabZ> {
-        Box::new(SlabZ { distance_from_zero: thickness * 0.5 })
+        let d = thickness * 0.5;
+        Box::new(SlabZ {
+            distance_from_zero: d,
+            bbox: BoundingBox::new(Point::new(NEG_INFINITY, NEG_INFINITY, -d),
+                                   Point::new(INFINITY, INFINITY, d)),
+        })
     }
 }
 
 impl Object for SlabZ {
-    fn value(&self, p: Point) -> Float {
+    fn precise_value(&self, p: Point) -> Float {
         return p.z.abs() - self.distance_from_zero;
+    }
+    fn bbox(&self) -> &BoundingBox {
+        &self.bbox
     }
     fn normal(&self, p: Point) -> Vector {
         if p.z.abs() > self.distance_from_zero && p.z > 0. {
