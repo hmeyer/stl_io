@@ -21,7 +21,7 @@ impl Sphere {
 }
 
 impl Object for Sphere {
-    fn precise_value(&self, p: Point) -> Float {
+    fn value(&self, p: Point) -> Float {
         return p.to_vec().magnitude() - self.radius;
     }
     fn bbox(&self) -> &BoundingBox {

@@ -22,7 +22,7 @@ impl Cylinder {
 }
 
 impl Object for Cylinder {
-    fn precise_value(&self, p: Point) -> Float {
+    fn value(&self, p: Point) -> Float {
         let mut pv = p.to_vec();
         pv.z = 0.;
         return pv.magnitude() - self.radius;
@@ -58,7 +58,7 @@ impl Cone {
 }
 
 impl Object for Cone {
-    fn precise_value(&self, p: Point) -> Float {
+    fn value(&self, p: Point) -> Float {
         let mut pv = p.to_vec();
         let radius = self.slope * (pv.z + self.offset).abs();
         pv.z = 0.;

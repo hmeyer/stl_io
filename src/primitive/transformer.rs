@@ -14,8 +14,8 @@ pub struct AffineTransformer {
 }
 
 impl Object for AffineTransformer {
-    fn precise_value(&self, p: Point) -> Float {
-        self.object.precise_value(self.transform.transform_point(p)) * self.value_scaler
+    fn value(&self, p: Point) -> Float {
+        self.object.value(self.transform.transform_point(p)) * self.value_scaler
     }
     fn bbox(&self) -> &BoundingBox {
         &self.bbox

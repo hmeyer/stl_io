@@ -21,7 +21,7 @@ impl SlabX {
 }
 
 impl Object for SlabX {
-    fn precise_value(&self, p: Point) -> Float {
+    fn value(&self, p: Point) -> Float {
         return p.x.abs() - self.distance_from_zero;
     }
     fn bbox(&self) -> &BoundingBox {
@@ -54,7 +54,7 @@ impl SlabY {
 }
 
 impl Object for SlabY {
-    fn precise_value(&self, p: Point) -> Float {
+    fn value(&self, p: Point) -> Float {
         return p.y.abs() - self.distance_from_zero;
     }
     fn bbox(&self) -> &BoundingBox {
@@ -87,7 +87,7 @@ impl SlabZ {
 }
 
 impl Object for SlabZ {
-    fn precise_value(&self, p: Point) -> Float {
+    fn value(&self, p: Point) -> Float {
         return p.z.abs() - self.distance_from_zero;
     }
     fn bbox(&self) -> &BoundingBox {
