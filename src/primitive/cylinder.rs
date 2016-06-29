@@ -22,10 +22,15 @@ impl Cylinder {
 }
 
 impl Object for Cylinder {
-    fn value(&self, p: Point) -> Float {
-        let mut pv = p.to_vec();
-        pv.z = 0.;
-        return pv.magnitude() - self.radius;
+    fn approx_value(&self, p: Point, precision: Float) -> Float {
+        let approx = self.bbox.value(p);
+        if approx < precision {
+            let mut pv = p.to_vec();
+            pv.z = 0.;
+            return pv.magnitude() - self.radius;
+        } else {
+            approx
+        }
     }
     fn bbox(&self) -> &BoundingBox {
         &self.bbox
@@ -58,7 +63,7 @@ impl Cone {
 }
 
 impl Object for Cone {
-    fn value(&self, p: Point) -> Float {
+    fn approx_value(&self, p: Point, _: Float) -> Float {
         let mut pv = p.to_vec();
         let radius = self.slope * (pv.z + self.offset).abs();
         pv.z = 0.;

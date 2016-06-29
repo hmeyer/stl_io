@@ -1,4 +1,4 @@
-use primitive::{Object, normal_from_object};
+use primitive::{Object, normal_from_object, ALWAYS_PRECISE};
 use primitive::bounding_box::{BoundingBox, INFINITY_BOX, NEG_INFINITY_BOX};
 use types::{Point, Vector};
 use {Float, INFINITY, NEG_INFINITY};
@@ -16,8 +16,10 @@ impl Union {
             0 => None,
             1 => Some(v.pop().unwrap()),
             _ => {
-                let bbox = v.iter().fold(NEG_INFINITY_BOX.clone(),
-                                         |union_box, x| union_box.union(x.bbox()));
+                let bbox = v.iter()
+                            .fold(NEG_INFINITY_BOX.clone(),
+                                  |union_box, x| union_box.union(x.bbox()))
+                            .dilate(r * 0.2); // dilate by some factor of r
                 Some(Box::new(Union {
                     objs: v,
                     r: r,
@@ -29,9 +31,17 @@ impl Union {
 }
 
 impl Object for Union {
-    fn value(&self, p: Point) -> Float {
-        rvmin(&self.objs.iter().map(|o| o.value(p)).collect::<Vec<f64>>(),
-              self.r)
+    fn approx_value(&self, p: Point, precision: Float) -> Float {
+        let approx = self.bbox.value(p);
+        if approx < precision {
+            rvmin(&self.objs
+                       .iter()
+                       .map(|o| o.approx_value(p, precision + self.r))
+                       .collect::<Vec<f64>>(),
+                  self.r)
+        } else {
+            approx
+        }
     }
     fn bbox(&self) -> &BoundingBox {
         &self.bbox
@@ -42,7 +52,7 @@ impl Object for Union {
                            .iter()
                            .enumerate()
                            .fold(((0, INFINITY), (0, INFINITY)), |(v0, v1), x| {
-                               let t = x.1.value(p);
+                               let t = x.1.approx_value(p, ALWAYS_PRECISE);
                                if t < v0.1 {
                                    ((x.0, t), v0)
                                } else if t < v1.1 {
@@ -99,10 +109,22 @@ impl Intersection {
 }
 
 impl Object for Intersection {
-    fn value(&self, p: Point) -> Float {
-        rvmax(&self.objs.iter().map(|o| o.value(p)).collect::<Vec<f64>>(),
-              self.r)
+    fn approx_value(&self, p: Point, precision: Float) -> Float {
+        let approx = self.bbox.value(p);
+        if approx < precision {
+            rvmax(&self.objs
+                       .iter()
+                       .map(|o| o.approx_value(p, precision + self.r))
+                       .collect::<Vec<f64>>(),
+                  self.r)
+        } else {
+            approx
+        }
     }
+    // fn value(&self, p: Point) -> Float {
+    //     rvmax(&self.objs.iter().map(|o| o.value(p)).collect::<Vec<f64>>(),
+    //           self.r)
+    // }
     fn bbox(&self) -> &BoundingBox {
         &self.bbox
     }
@@ -112,7 +134,7 @@ impl Object for Intersection {
                            .iter()
                            .enumerate()
                            .fold(((0, NEG_INFINITY), (0, NEG_INFINITY)), |(v0, v1), x| {
-                               let t = x.1.value(p);
+                               let t = x.1.approx_value(p, ALWAYS_PRECISE);
                                if t > v0.1 {
                                    ((x.0, t), v0)
                                } else if t > v1.1 {
@@ -145,8 +167,8 @@ impl Negation {
 }
 
 impl Object for Negation {
-    fn value(&self, p: Point) -> Float {
-        -self.object.value(p)
+    fn approx_value(&self, p: Point, precision: Float) -> Float {
+        -self.object.approx_value(p, precision)
     }
     fn normal(&self, p: Point) -> Vector {
         self.object.normal(p) * -1.

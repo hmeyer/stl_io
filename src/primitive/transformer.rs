@@ -14,8 +14,14 @@ pub struct AffineTransformer {
 }
 
 impl Object for AffineTransformer {
-    fn value(&self, p: Point) -> Float {
-        self.object.value(self.transform.transform_point(p)) * self.value_scaler
+    fn approx_value(&self, p: Point, precision: Float) -> Float {
+        let approx = self.bbox.value(p);
+        if approx < precision {
+            self.object.approx_value(self.transform.transform_point(p),
+                                     precision / self.value_scaler) * self.value_scaler
+        } else {
+            approx
+        }
     }
     fn bbox(&self) -> &BoundingBox {
         &self.bbox

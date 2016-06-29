@@ -93,6 +93,12 @@ impl BoundingBox {
             max: point_max(&corners),
         }
     }
+    pub fn dilate(&self, d: Float) -> BoundingBox {
+        BoundingBox {
+            min: Point::new(self.min.x - d, self.min.y - d, self.min.z - d),
+            max: Point::new(self.max.x + d, self.max.y + d, self.max.z + d),
+        }
+    }
     pub fn value(&self, p: Point) -> Float {
         // If p is not inside (neg), then it is outside (pos) on only one side.
         // So so calculating the max of the diffs on both sides should result in the true value,
