@@ -5,6 +5,7 @@ use types::{Point, Vector, EPSILON_X, EPSILON_Y, EPSILON_Z};
 use cgmath::InnerSpace;
 
 mod bounding_box;
+pub use self::bounding_box::BoundingBox;
 
 mod transformer;
 pub use self::transformer::AffineTransformer;
@@ -35,6 +36,9 @@ pub fn normal_from_object(f: &Object, p: Point) -> Vector {
 pub trait Object: ObjectClone + Debug {
     fn bbox(&self) -> &bounding_box::BoundingBox {
         &bounding_box::INFINITY_BOX
+    }
+    fn set_bbox(&mut self, _: bounding_box::BoundingBox) {
+        unimplemented!();
     }
     // Value is 0 on object surfaces, negative inside and positive outside of objects.
     // If positive, value is guarateed to be the minimum distance to the object surface.

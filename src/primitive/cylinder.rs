@@ -1,6 +1,6 @@
 use {Float, INFINITY, NEG_INFINITY /* ); */};
 use primitive::Object;
-use primitive::bounding_box::BoundingBox;
+use primitive::bounding_box::{BoundingBox, INFINITY_BOX};
 use types::{Point, Vector};
 use cgmath::{EuclideanSpace, InnerSpace};
 
@@ -43,12 +43,13 @@ impl Object for Cylinder {
 }
 
 // A cone along the Z-Axis
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Cone {
     slope: Float,
     distance_multiplier: Float,
     offset: Float, // Offset the singularity from Z-zero
     normal_multiplier: Float, // muliplier for the normal caclulation
+    bbox: BoundingBox,
 }
 
 impl Cone {
@@ -58,11 +59,18 @@ impl Cone {
             distance_multiplier: 1. / (slope * slope + 1.).sqrt(), // cos(atan(slope))
             offset: offset,
             normal_multiplier: slope / (slope * slope + 1.).sqrt(), // sin(atan(slope))
+            bbox: INFINITY_BOX.clone(),
         })
     }
 }
 
 impl Object for Cone {
+    fn bbox(&self) -> &BoundingBox {
+        &self.bbox
+    }
+    fn set_bbox(&mut self, bbox: BoundingBox) {
+        self.bbox = bbox
+    }
     fn approx_value(&self, p: Point, _: Float) -> Float {
         let mut pv = p.to_vec();
         let radius = self.slope * (pv.z + self.offset).abs();

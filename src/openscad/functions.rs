@@ -1,7 +1,11 @@
 use super::ast::{Binding, Callable, Expression, ExpressionFn, Value};
+use super::super::primitive::BoundingBox;
 use super::super::primitive::Object;
+use super::super::types::Point;
 use std::io::Write;
 use std::rc::Rc;
+use {INFINITY, NEG_INFINITY};
+
 
 // Macro to create a function binding with multple params.
 // The closure that is passed in is expected to take params as a Vec<Value>, with all values in
@@ -114,7 +118,7 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                                     writeln!(msg, "invalid radius, returning undef").unwrap();
                                     return Value::Undef;
                                 }
-                                let conie;
+                                let mut conie;
                                 if r1 == r2 {
                                     conie = ::primitive::Cylinder::new(r1) as Box<Object>;
                                 } else {
@@ -126,6 +130,10 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                                         offset = r2/ slope + h * 0.5;
                                     }
                                     conie = ::primitive::Cone::new(slope, offset) as Box<Object>;
+                                    let rmax = r1.max(r2);
+                                    let conie_box = BoundingBox::new(Point::new(-rmax, -rmax, NEG_INFINITY),
+                                                                     Point::new(rmax, rmax, INFINITY));
+                                    conie.set_bbox(conie_box);
                                 }
                                 Value::Objects(vec![::primitive::Intersection::from_vec(vec![
                                   conie,
