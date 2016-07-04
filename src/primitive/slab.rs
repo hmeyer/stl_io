@@ -28,7 +28,7 @@ impl Object for SlabX {
         &self.bbox
     }
     fn normal(&self, p: Point) -> Vector {
-        if p.x.abs() > self.distance_from_zero && p.x > 0. {
+        if p.x > 0. {
             return Vector::new(1., 0., 0.);
         } else {
             return Vector::new(-1., 0., 0.);
@@ -61,7 +61,7 @@ impl Object for SlabY {
         &self.bbox
     }
     fn normal(&self, p: Point) -> Vector {
-        if p.y.abs() > self.distance_from_zero && p.y > 0. {
+        if p.y > 0. {
             return Vector::new(0., 1., 0.);
         } else {
             return Vector::new(0., -1., 0.);
@@ -94,7 +94,7 @@ impl Object for SlabZ {
         &self.bbox
     }
     fn normal(&self, p: Point) -> Vector {
-        if p.z.abs() > self.distance_from_zero && p.z > 0. {
+        if p.z > 0. {
             return Vector::new(0., 0., 1.);
         } else {
             return Vector::new(0., 0., -1.);
