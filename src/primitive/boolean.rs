@@ -121,10 +121,6 @@ impl Object for Intersection {
             approx
         }
     }
-    // fn value(&self, p: Point) -> Float {
-    //     rvmax(&self.objs.iter().map(|o| o.value(p)).collect::<Vec<f64>>(),
-    //           self.r)
-    // }
     fn bbox(&self) -> &BoundingBox {
         &self.bbox
     }
