@@ -10,6 +10,9 @@ pub use self::bounding_box::BoundingBox;
 mod transformer;
 pub use self::transformer::AffineTransformer;
 
+mod twister;
+pub use self::twister::Twister;
+
 mod boolean;
 pub use self::boolean::{Union, Intersection};
 

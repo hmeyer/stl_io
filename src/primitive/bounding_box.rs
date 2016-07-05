@@ -30,8 +30,8 @@ pub static NEG_INFINITY_BOX: BoundingBox = BoundingBox {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BoundingBox {
-    min: Point,
-    max: Point,
+    pub min: Point,
+    pub max: Point,
 }
 
 fn point_min(p: &[Point]) -> Point {

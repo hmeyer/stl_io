@@ -220,6 +220,21 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
               },
               "t" => Value::Vector(vec![Value::Number(1.), Value::Number(1.), Value::Number(0.)]),
               env);
+    add_func!("twist",
+                        |h: &Value, subs: &Vec<Box<Object>>, _| {
+                            if subs.len() > 0 {
+                                if let &Value::Number(ref height) = h {
+                                    let union_of_subs = ::primitive::Union::from_vec(
+                                        subs.clone(), 0.).unwrap();
+                                    let twisted = ::primitive::Twister::new(
+                                        union_of_subs, *height);
+                                    return Value::Objects(vec![twisted]);
+                                }
+                            }
+                            return Value::Undef;
+                        },
+                        "h" => Value::Number(1.),
+                        env);
     add_func!("union",
               |r: &Value, subs: &Vec<Box<Object>>, _| {
                   if subs.len() > 0 {
