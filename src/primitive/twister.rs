@@ -39,13 +39,19 @@ impl Twister {
         let mx = o.bbox().min.x.abs().max(o.bbox().max.x.abs());
         let my = o.bbox().min.y.abs().max(o.bbox().max.y.abs());
         let r = (mx * mx + my * my).sqrt();
+
+        // The ratio of height and circumference (slope on the outer edge).
+        let tan_a = h / (2. * ::std::f64::consts::PI * r);
+        // The scaler is 1 / sin(a)
+        // sin(atan(x)) =   x / sqrt(x^2 + 1)
+        let scaler = tan_a / (tan_a * tan_a + 1.).sqrt();
+
         let bbox = BoundingBox::new(Point::new(-r, -r, o.bbox().min.z),
                                     Point::new(r, r, o.bbox().max.z));
-        let v = 1.;
         Box::new(Twister {
             object: o,
             height_scaler: ::std::f64::consts::PI * 2. / h,
-            value_scaler: v,
+            value_scaler: scaler,
             bbox: bbox,
         })
     }
