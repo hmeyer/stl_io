@@ -66,7 +66,7 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
     add_func!("icylinder",
                         |r: &Value, _, _| Value::Objects(
                             vec![::primitive::Cylinder::new(r.as_f64())]),
-                        "s" => Value::Number(1.),
+                        "r" => Value::Number(1.),
                         env);
     add_func!("icone",
                                   |r: &Value, _, _| Value::Objects(

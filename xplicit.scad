@@ -1,2 +1,2 @@
-twist(2)
-cube([1,.3,1],s=0.1);
+twist(0.2) 
+translate([0.01,0,0]) cylinder(r=0.2,s=0.1);
