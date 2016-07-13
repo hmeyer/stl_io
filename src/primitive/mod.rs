@@ -13,6 +13,9 @@ pub use self::transformer::AffineTransformer;
 mod twister;
 pub use self::twister::Twister;
 
+mod bender;
+pub use self::bender::Bender;
+
 mod boolean;
 pub use self::boolean::{Union, Intersection};
 

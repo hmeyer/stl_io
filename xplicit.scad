@@ -1,2 +1,8 @@
-twist(0.2) 
-translate([0.01,0,0]) cylinder(r=0.2,s=0.1);
+
+bend()
+translate([0,0.5,0])
+scale([1,0.3,1])
+rotate([0,TAU/4,0])
+twist(TAU*2/3)
+cube([.1,0.2,TAU+1],s=.05);
+
