@@ -65,20 +65,25 @@ impl Twister {
     }
     // Apply tilt to the vector.
     // Since Surfaces are twisted, all normals will be tilted, depending on the radius.
-    fn tilt_vector(&self, v: Vector, p: Point) -> Vector {
-        let planar_v = ::cgmath::Vector2::new(v.x, v.y);
+    fn tilt_normal(&self, normal: Vector, p: Point) -> Vector {
         let radius_v = ::cgmath::Vector2::new(p.x, p.y);
         let radius = radius_v.magnitude();
         let radius_v = radius_v / radius;
+        // Calculate tangential unit vector at p.
         let tangent_v = ::cgmath::Vector2::new(radius_v.y, -radius_v.x);
 
-        let tangential_projection = tangent_v.dot(planar_v);
+        // Project the in plane component of normal onto tangent.
+        let planar_normal = ::cgmath::Vector2::new(normal.x, normal.y);
+        let tangential_projection = tangent_v.dot(planar_normal);
 
+        // Calculate the shear at p.
         let tangential_shear = radius * self.height_scaler;
 
-        let mut result = v.clone();
+        // Subtract from normal.z.
+        let mut result = normal.clone();
         result.z -= tangential_shear * tangential_projection;
 
+        // Normalize.
         return result.normalize();
     }
     fn untwist_vector(&self, v: Vector, p: Point) -> Vector {
@@ -86,6 +91,6 @@ impl Twister {
         let angle = ::cgmath::Rad { s: -p.z * self.height_scaler };
         let trans = ::cgmath::Basis2::from_angle(angle);
         let rv2 = trans.rotate_vector(v2);
-        self.tilt_vector(Vector::new(rv2.x, rv2.y, v.z), p)
+        self.tilt_normal(Vector::new(rv2.x, rv2.y, v.z), p)
     }
 }
