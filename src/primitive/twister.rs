@@ -30,7 +30,7 @@ impl Object for Twister {
         &self.bbox
     }
     fn normal(&self, p: Point) -> Vector {
-        self.untwist_vector(self.object.normal(self.twist_point(p)), p)
+        self.untwist_normal(self.object.normal(self.twist_point(p)), p)
     }
 }
 
@@ -86,7 +86,7 @@ impl Twister {
         // Normalize.
         return result.normalize();
     }
-    fn untwist_vector(&self, v: Vector, p: Point) -> Vector {
+    fn untwist_normal(&self, v: Vector, p: Point) -> Vector {
         let v2 = ::cgmath::Vector2::new(v.x, v.y);
         let angle = ::cgmath::Rad { s: -p.z * self.height_scaler };
         let trans = ::cgmath::Basis2::from_angle(angle);
