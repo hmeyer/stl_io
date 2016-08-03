@@ -67,7 +67,6 @@ impl AffineTransformer {
         AffineTransformer::new(o, Matrix::identity())
     }
     fn new(o: Box<Object>, t: Matrix) -> Box<AffineTransformer> {
-        let f = t.x;
         AffineTransformer::new_with_scaler(o, t, 1., 1.)
     }
     fn new_with_scaler(o: Box<Object>,
@@ -75,6 +74,12 @@ impl AffineTransformer {
                        scale_min: Float,
                        scale_max: Float)
                        -> Box<AffineTransformer> {
+        // TODO: Calculate scale_min and scale_max from t.
+        // This should be something similar to
+        // 1./Vector::new(t.x.x, t.y.x, t.z.x).magnitude().min(
+        // 1./Vector::new(t.x.y, t.y.y, t.z.y).magnitude().min(
+        // 1./Vector::new(t.x.z, t.y.z, t.z.z).magnitude()))
+
         let mut transposed = t.clone();
         transposed.transpose_self();
         let bbox = o.bbox().transform(&t.invert().unwrap());
