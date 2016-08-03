@@ -9,7 +9,8 @@ pub struct AffineTransformer {
     object: Box<Object>,
     transform: Matrix,
     transposed: Matrix,
-    value_scaler: Float,
+    scale_min: Float,
+    scale_max: Float,
     bbox: BoundingBox,
 }
 
@@ -18,7 +19,7 @@ impl Object for AffineTransformer {
         let approx = self.bbox.value(p);
         if approx < precision {
             self.object.approx_value(self.transform.transform_point(p),
-                                     precision / self.value_scaler) * self.value_scaler
+                                     precision / self.scale_max) * self.scale_min
         } else {
             approx
         }
@@ -36,21 +37,28 @@ impl Object for AffineTransformer {
     fn translate(&self, v: Vector) -> Box<Object> {
         let other = Matrix::from_translation(-v);
         let new_trans = self.transform.concat(&other);
-        AffineTransformer::new_with_scaler(self.object.clone(), new_trans, self.value_scaler)
+        AffineTransformer::new_with_scaler(self.object.clone(),
+                                           new_trans,
+                                           self.scale_min,
+                                           self.scale_max)
     }
     fn rotate(&self, r: Vector) -> Box<Object> {
         let euler = ::cgmath::Euler::new(::cgmath::Rad { s: r.x },
                                          ::cgmath::Rad { s: r.y },
                                          ::cgmath::Rad { s: r.z });
         let new_trans = self.transform.concat(&Matrix::from(euler));
-        AffineTransformer::new_with_scaler(self.object.clone(), new_trans, self.value_scaler)
+        AffineTransformer::new_with_scaler(self.object.clone(),
+                                           new_trans,
+                                           self.scale_min,
+                                           self.scale_max)
     }
     fn scale(&self, s: Vector) -> Box<Object> {
         let new_trans = self.transform
                             .concat(&Matrix::from_nonuniform_scale(1. / s.x, 1. / s.y, 1. / s.z));
         AffineTransformer::new_with_scaler(self.object.clone(),
                                            new_trans,
-                                           self.value_scaler * s.x.min(s.y.min(s.z)))
+                                           self.scale_min * s.x.min(s.y.min(s.z)),
+                                           self.scale_max * s.x.max(s.y.max(s.z)))
     }
 }
 
@@ -59,9 +67,14 @@ impl AffineTransformer {
         AffineTransformer::new(o, Matrix::identity())
     }
     fn new(o: Box<Object>, t: Matrix) -> Box<AffineTransformer> {
-        AffineTransformer::new_with_scaler(o, t, 1.)
+        let f = t.x;
+        AffineTransformer::new_with_scaler(o, t, 1., 1.)
     }
-    fn new_with_scaler(o: Box<Object>, t: Matrix, scaler: Float) -> Box<AffineTransformer> {
+    fn new_with_scaler(o: Box<Object>,
+                       t: Matrix,
+                       scale_min: Float,
+                       scale_max: Float)
+                       -> Box<AffineTransformer> {
         let mut transposed = t.clone();
         transposed.transpose_self();
         let bbox = o.bbox().transform(&t.invert().unwrap());
@@ -69,7 +82,8 @@ impl AffineTransformer {
             object: o,
             transform: t,
             transposed: transposed,
-            value_scaler: scaler,
+            scale_min: scale_min,
+            scale_max: scale_max,
             bbox: bbox,
         })
     }
