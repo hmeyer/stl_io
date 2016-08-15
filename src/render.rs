@@ -10,6 +10,7 @@ use primitive::Object;
 use cgmath::{InnerSpace, SquareMatrix, Transform};
 
 const EPSILON: Float = 0.003;
+const APPROX_SLACK: Float = 0.1;
 const MAXVAL: Float = 100.;
 // Normalized Vector for diagonally left above
 
@@ -56,7 +57,7 @@ impl Renderer {
         loop {
             cr.dir = cr.dir.normalize();
             cr.origin = cr.origin + cr.dir * value;
-            value = obj.approx_value(cr.origin, EPSILON);
+            value = obj.approx_value(cr.origin, APPROX_SLACK);
             iter += 1;
             if value > MAXVAL {
                 return (iter, 0.);
@@ -87,7 +88,7 @@ impl Renderer {
         let mut ray = Ray::new(ray_origin, dir_front);
 
         if let Some(ref my_obj) = self.object {
-            let origin_value = my_obj.approx_value(ray.origin, EPSILON);
+            let origin_value = my_obj.approx_value(ray.origin, APPROX_SLACK);
 
 
             let mut index = 0 as usize;
