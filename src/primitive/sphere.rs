@@ -21,9 +21,9 @@ impl Sphere {
 }
 
 impl Object for Sphere {
-    fn approx_value(&self, p: Point, precision: Float) -> Float {
+    fn approx_value(&self, p: Point, slack: Float) -> Float {
         let approx = self.bbox.value(p);
-        if approx < precision {
+        if approx <= slack {
             return p.to_vec().magnitude() - self.radius;
         } else {
             approx

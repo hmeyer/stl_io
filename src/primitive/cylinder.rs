@@ -22,9 +22,9 @@ impl Cylinder {
 }
 
 impl Object for Cylinder {
-    fn approx_value(&self, p: Point, precision: Float) -> Float {
+    fn approx_value(&self, p: Point, slack: Float) -> Float {
         let approx = self.bbox.value(p);
-        if approx < precision {
+        if approx <= slack {
             let mut pv = p.to_vec();
             pv.z = 0.;
             return pv.magnitude() - self.radius;

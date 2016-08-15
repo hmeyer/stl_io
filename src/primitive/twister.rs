@@ -17,10 +17,10 @@ pub struct Twister {
 }
 
 impl Object for Twister {
-    fn approx_value(&self, p: Point, precision: Float) -> Float {
+    fn approx_value(&self, p: Point, slack: Float) -> Float {
         let approx = self.bbox.value(p);
-        if approx < precision {
-            self.object.approx_value(self.twist_point(p), precision / self.value_scaler) *
+        if approx <= slack {
+            self.object.approx_value(self.twist_point(p), slack / self.value_scaler) *
             self.value_scaler
         } else {
             approx

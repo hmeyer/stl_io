@@ -48,8 +48,8 @@ pub trait Object: ObjectClone + Debug {
     }
     // Value is 0 on object surfaces, negative inside and positive outside of objects.
     // If positive, value is guarateed to be the minimum distance to the object surface.
-    // return some approximation (which is always larger then the real value).
-    // Only do a proper calculation, for values smaller then precision.
+    // return some approximation (which is always larger then the proper value).
+    // Only do a proper calculation, for values smaller then slack.
     fn approx_value(&self, _: Point, _: Float) -> Float {
         unimplemented!();
     }

@@ -31,12 +31,12 @@ impl Union {
 }
 
 impl Object for Union {
-    fn approx_value(&self, p: Point, precision: Float) -> Float {
+    fn approx_value(&self, p: Point, slack: Float) -> Float {
         let approx = self.bbox.value(p);
-        if approx < precision {
+        if approx <= slack {
             rvmin(&self.objs
                        .iter()
-                       .map(|o| o.approx_value(p, precision + self.r))
+                       .map(|o| o.approx_value(p, slack + self.r))
                        .collect::<Vec<f64>>(),
                   self.r)
         } else {
@@ -109,12 +109,12 @@ impl Intersection {
 }
 
 impl Object for Intersection {
-    fn approx_value(&self, p: Point, precision: Float) -> Float {
+    fn approx_value(&self, p: Point, slack: Float) -> Float {
         let approx = self.bbox.value(p);
-        if approx < precision {
+        if approx <= slack {
             rvmax(&self.objs
                        .iter()
-                       .map(|o| o.approx_value(p, precision + self.r))
+                       .map(|o| o.approx_value(p, slack + self.r))
                        .collect::<Vec<f64>>(),
                   self.r)
         } else {
@@ -163,8 +163,8 @@ impl Negation {
 }
 
 impl Object for Negation {
-    fn approx_value(&self, p: Point, precision: Float) -> Float {
-        -self.object.approx_value(p, precision)
+    fn approx_value(&self, p: Point, slack: Float) -> Float {
+        -self.object.approx_value(p, slack)
     }
     fn normal(&self, p: Point) -> Vector {
         self.object.normal(p) * -1.
