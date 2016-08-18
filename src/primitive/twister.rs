@@ -2,7 +2,7 @@ use Float;
 use primitive::Object;
 use primitive::bounding_box::BoundingBox;
 use types::{Point, Vector};
-use cgmath::{EuclideanSpace, InnerSpace, Rotation, Rotation2};
+use cgmath::{InnerSpace, Rotation, Rotation2};
 
 type Point2 = ::cgmath::Point2<Float>;
 type Vector2 = ::cgmath::Vector2<Float>;
