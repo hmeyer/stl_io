@@ -18,10 +18,10 @@ keyword
     = "mod" / "if" / "function" / "true" / "false" / "undef"
 
 spacing
-    = (space / end_of_line / comment)*
+    = (space / end_of_line / (comment end_of_line))*
 
 comment
-    = "//" (!end_of_line .)* end_of_line
+    = "//" (!end_of_line .)*
 
 string_literal -> String
     = doublequote c:(DQChar)* doublequote { c.join("") }
@@ -67,7 +67,7 @@ index -> Box<Expression>
 	= '[' e:expression ']' { e }
 
 index_expression -> Box<Expression>
-	= e:primary_expression i:index* {
+	= spacing e:primary_expression i:index* spacing {
 		let mut c = e;
 		for index_ex in i {
 			c = Box::new(IndexExpression{index: index_ex, ex: c});
@@ -237,7 +237,7 @@ logical_or_expression -> Box<Expression>
 
 #[pub]
 program -> Box<Expression>
-	= spacing l:statement_list spacing { Box::new(CompoundExpression{v: l}) }
+	= spacing l:statement_list spacing comment? { Box::new(CompoundExpression{v: l}) }
 
 statement -> Box<Expression>
 	= call_statement
@@ -249,7 +249,7 @@ call_with_sub -> Box<CallExpression>
 	= e:call_expression spacing { e }
 
 maybe_statement -> Option<Box<Expression>>
-  = s:statement { Some(s) }
+  = spacing s:statement spacing { Some(s) }
 	/ ';' { None }
 
 call_statement -> Box<Expression>
@@ -287,4 +287,4 @@ function_definition_statement -> Box<Expression>
 	}
 
 statement_list -> Vec<Box<Expression>>
-	= s:statement ++ spacing { s }
+	= s:statement ** spacing { s }
