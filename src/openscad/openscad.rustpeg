@@ -80,7 +80,7 @@ argument -> (String, Box<Expression>)
 	/ e:assignment_expression { (String::new(), e) }
 
 call_expression -> Box<CallExpression>
-	= i:identifier '(' a:argument ** (spacing ',') spacing ')' {
+	= i:identifier '(' spacing a:argument ** (spacing ',' spacing) spacing ')' {
 		Box::new(CallExpression{id:i, arguments: a, sub: None})
 	}
 
@@ -277,7 +277,7 @@ single_parameter -> (String, Option<Box<Expression>>)
 	= name:identifier default:(spacing '=' expression)? { (name, default) }
 
 parameter_list -> Vec<(String, Option<Box<Expression>>)>
-    = '(' spacing list:single_parameter ** (spacing ',') spacing ')' { list }
+    = '(' spacing list:single_parameter ** (spacing ',' spacing) spacing ')' { list }
 
 function_definition_statement -> Box<Expression>
 	= "function" spacing id:identifier p:parameter_list spacing "=" spacing st:statement {
