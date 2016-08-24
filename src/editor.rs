@@ -4,7 +4,7 @@ use std::fs::File;
 use openscad;
 use primitive;
 use xplicit_widget;
-use gtk::{Inhibit, WidgetSignals};
+use gtk::Inhibit;
 use gtk::traits::*;
 
 

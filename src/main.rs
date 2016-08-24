@@ -3,7 +3,7 @@ extern crate gtk;
 extern crate gdk;
 extern crate xplicit;
 
-use gtk::{Inhibit, WidgetSignals};
+use gtk::Inhibit;
 use gtk::traits::*;
 use xplicit::xplicit_widget;
 

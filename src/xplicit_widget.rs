@@ -2,7 +2,7 @@
 use std::rc::Rc;
 use std::cell::{Cell, RefCell};
 
-use gtk::{Inhibit, WidgetSignals};
+use gtk::Inhibit;
 use gtk::traits::*;
 use gtk::DrawingArea;
 use cairo::{Context, Format, ImageSurface};
@@ -33,9 +33,9 @@ impl XplicitWidget {
                 Inhibit(false)
             });
         }
-        xw.drawing_area.add_events(::gdk::enums::modifier_type::Button1Mask.bits() as i32);
-        xw.drawing_area.add_events(::gdk::enums::modifier_type::Button2Mask.bits() as i32);
-        xw.drawing_area.add_events(::gdk::enums::modifier_type::Button3Mask.bits() as i32);
+        xw.drawing_area.add_events(::gdk::BUTTON1_MASK.bits() as i32);
+        xw.drawing_area.add_events(::gdk::BUTTON2_MASK.bits() as i32);
+        xw.drawing_area.add_events(::gdk::BUTTON3_MASK.bits() as i32);
         xw.drawing_area.add_events(1 << 4);
 
         {
@@ -48,12 +48,12 @@ impl XplicitWidget {
                 let (dx, dy) = ((nx - ox) / da_alloc.width as f64, (ny - oy) / da_alloc.height as f64);
                 mouse_pos_clone.set(em.get_position());
                 match em.get_state() {
-                    ::gdk::enums::modifier_type::Button1Mask => {
+                    ::gdk::BUTTON1_MASK => {
                         renderer_clone.borrow_mut().rotate_from_screen(dx, dy);
                         da.queue_draw();
                     },
-//                    ::gdk::enums::modifier_type::Button2Mask => renderer_clone.get().rotate_from_screen(nx - ox, ny - oy),
-                    ::gdk::enums::modifier_type::Button3Mask => {
+//                    ::gdk::BUTTON2_MASK => renderer_clone.get().rotate_from_screen(nx - ox, ny - oy),
+                    ::gdk::BUTTON3_MASK => {
                         renderer_clone.borrow_mut().translate_from_screen(dx, dy);
                         da.queue_draw();
                     }
