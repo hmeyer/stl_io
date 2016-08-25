@@ -15,3 +15,4 @@ pub mod primitive;
 pub mod xplicit_widget;
 pub mod editor;
 pub mod openscad;
+pub mod menu;

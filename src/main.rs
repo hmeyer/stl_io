@@ -6,6 +6,7 @@ extern crate xplicit;
 use gtk::Inhibit;
 use gtk::traits::*;
 use xplicit::xplicit_widget;
+use xplicit::menu;
 
 fn main() {
     if gtk::init().is_err() {
@@ -20,6 +21,11 @@ fn main() {
     window.connect_delete_event(|_, _| {
         gtk::main_quit();
         Inhibit(false)
+    });
+
+    let v_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    let menu = menu::create_menu(|| {
+        gtk::main_quit();
     });
 
     let v_pane = gtk::Paned::new(gtk::Orientation::Vertical);
@@ -37,7 +43,10 @@ fn main() {
     let editor = ::xplicit::editor::Editor::new("xplicit.scad".to_string(), &xw, &debug_text);
     h_pane.add1(&editor.text_view);
 
-    window.add(&v_pane);
+    v_box.pack_start(&menu, false, false, 0);
+    v_box.pack_start(&v_pane, true, true, 0);
+
+    window.add(&v_box);
     window.show_all();
 
     v_pane.set_position(v_pane.get_allocated_height() * 80 / 100);
