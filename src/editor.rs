@@ -39,9 +39,11 @@ impl Editor {
         let renderer = xw.renderer.clone();
         let drawing_area = xw.drawing_area.clone();
         let debug_buffer_clone = debug_buffer.clone();
-        tv.connect_key_release_event(move |tv: &::gtk::TextView,
-                                           key: &::gdk::EventKey|
-                                           -> Inhibit {
+        let editor = Editor { text_view: tv };
+
+        editor.text_view.connect_key_release_event(move |tv: &::gtk::TextView,
+                                                         key: &::gdk::EventKey|
+                                                         -> Inhibit {
             match key.get_keyval() {
                 ::gdk::enums::key::F5 => {
                     // compile
@@ -69,19 +71,7 @@ impl Editor {
                     }
                 }
                 ::gdk::enums::key::F2 => {
-                    let open_result = File::create(&input_filename);
-                    if let Ok(f) = open_result {
-                        let code_buffer = tv.get_buffer().unwrap();
-                        let code_text = code_buffer.get_text(&code_buffer.get_start_iter(),
-                                                             &code_buffer.get_end_iter(),
-                                                             true)
-                                                   .unwrap();
-                        let mut writer = BufWriter::new(f);
-                        let write_result = writer.write(code_text.as_bytes());
-                        println!("writing {:?}: {:?}", &input_filename, write_result);
-                    } else {
-                        println!("opening for write {:?}: {:?}", &input_filename, open_result);
-                    }
+                    save_from_textview(tv, &input_filename);
                 }
                 _ => {
                     // println!("unbound key release: {:?}", x);
@@ -89,6 +79,27 @@ impl Editor {
             }
             Inhibit(false)
         });
-        Editor { text_view: tv }
+        editor
+    }
+    pub fn save(&self, filename: &String) {
+        save_from_textview(&self.text_view, filename);
+    }
+}
+
+fn save_from_textview(text_view: &::gtk::TextView, filename: &String) {
+    let open_result = File::create(filename);
+    if let Ok(f) = open_result {
+        let code_buffer = text_view.get_buffer().unwrap();
+        let code_text = code_buffer.get_text(&code_buffer.get_start_iter(),
+                                             &code_buffer.get_end_iter(),
+                                             true)
+                                   .unwrap();
+        let mut writer = BufWriter::new(f);
+        let write_result = writer.write(code_text.as_bytes());
+        println!("writing {:?}: {:?}", &filename, write_result);
+    } else {
+        println!("opening for write {:?} failed: {:?}",
+                 &filename,
+                 open_result);
     }
 }
