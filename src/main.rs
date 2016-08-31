@@ -36,8 +36,13 @@ fn main() {
     h_pane.add2(&xw.drawing_area);
     h_pane.add1(&editor.text_view);
 
+    let editor_clone1 = editor.clone();
+    let editor_clone2 = editor.clone();
     let menu = menu::create_menu(move || {
-                                     editor.save(&FILENAME.to_string());
+                                     editor_clone1.tesselate();
+                                 },
+                                 move || {
+                                     editor_clone2.save(&FILENAME.to_string());
                                  },
                                  || {
                                      gtk::main_quit();

@@ -1,13 +1,14 @@
 use std::io::prelude::*;
 use std::io::{BufReader, BufWriter};
 use std::fs::File;
+use mesh_view;
 use openscad;
 use primitive;
 use xplicit_widget;
 use gtk::Inhibit;
 use gtk::traits::*;
 
-
+#[derive(Clone)]
 pub struct Editor {
     pub text_view: ::gtk::TextView,
 }
@@ -83,6 +84,9 @@ impl Editor {
     }
     pub fn save(&self, filename: &String) {
         save_from_textview(&self.text_view, filename);
+    }
+    pub fn tesselate(&self) {
+        mesh_view::show_mesh();
     }
 }
 

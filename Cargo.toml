@@ -12,6 +12,9 @@ cairo-rs = "0.1.0"#{ git = "https://github.com/gtk-rs/cairo.git" }#"^0"
 cgmath = "0.10.0"
 peg = "0.3.14"
 
+[dependencies.kiss3d]
+git = "https://github.com/sebcrozet/kiss3d"
+
 [features]
 gtk_3_10 = []
 gtk_3_14 = ["gtk_3_10"]
