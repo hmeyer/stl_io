@@ -63,7 +63,7 @@ impl Editor {
                         if let openscad::ast::Value::Objects(objs) = result {
                             let union = primitive::Union::from_vec(objs, 0.);
                             out.append(&mut format!("\n\nrendering : {:?}", union).into_bytes());
-                            renderer.borrow_mut().object = union;
+                            renderer.borrow_mut().set_object(union);
                             drawing_area.queue_draw();
                         }
                         debug_buffer_clone.set_text(&String::from_utf8(out).unwrap());

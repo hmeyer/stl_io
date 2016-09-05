@@ -12,13 +12,16 @@ use cgmath::{InnerSpace, SquareMatrix, Transform};
 const EPSILON: Float = 0.003;
 const APPROX_SLACK: Float = 0.1;
 const MAXVAL: Float = 100.;
+
+const FOCAL_FACTOR: Float = 36. /* 36 mm film */ / 50.;
+
 // Normalized Vector for diagonally left above
 
 #[derive(Clone)]
 pub struct Renderer {
     light_dir: Vector,
     trans: Matrix,
-    pub object: Option<Box<Object>>,
+    object: Option<Box<Object>>,
 }
 
 impl Renderer {
@@ -28,6 +31,10 @@ impl Renderer {
             trans: Matrix::identity(),
             object: None,
         }
+    }
+
+    pub fn set_object(&mut self, object: Option<Box<Object>>) {
+        self.object = object
     }
 
     pub fn rotate_from_screen(&mut self, x: f64, y: f64) {
@@ -76,18 +83,39 @@ impl Renderer {
     }
 
     pub fn draw_on_buf(&self, buf: &mut [u8], width: i32, height: i32) {
-        let scale = 1. / cmp::min(width, height) as Float;
-        let w2 = width / 2;
-        let h2 = height / 2;
-
-        let dir_front = self.trans.transform_vector(Vector::new(0., 0., 1.));
-        let dir_rl = self.trans.transform_vector(Vector::new(1., 0., 0.));
-        let dir_tb = self.trans.transform_vector(Vector::new(0., -1., 0.));
-        let light_dir = self.trans.transform_vector(self.light_dir);
-        let ray_origin = self.trans.transform_point(Point::new(0., 0., -2.));
-        let mut ray = Ray::new(ray_origin, dir_front);
-
         if let Some(ref my_obj) = self.object {
+
+            let object_width = my_obj.bbox()
+                                     .max
+                                     .x
+                                     .abs()
+                                     .max(my_obj.bbox().min.x.abs())
+                                     .max(my_obj.bbox()
+                                                .max
+                                                .y
+                                                .abs()
+                                                .max(my_obj.bbox().min.y.abs()))
+                                     .max(my_obj.bbox()
+                                                .max
+                                                .z
+                                                .abs()
+                                                .max(my_obj.bbox().min.z.abs())) *
+                               2.;
+            let viewer_dist = FOCAL_FACTOR * object_width * 3.;
+
+            let scale = 1. / cmp::min(width, height) as Float;
+            let w2 = width / 2;
+            let h2 = height / 2;
+
+            let dir_front = self.trans.transform_vector(Vector::new(0., 0., 1.));
+            let dir_rl = self.trans.transform_vector(Vector::new(FOCAL_FACTOR, 0., 0.));
+            let dir_tb = self.trans.transform_vector(Vector::new(0., -FOCAL_FACTOR, 0.));
+            let light_dir = self.trans.transform_vector(self.light_dir);
+            let ray_origin = self.trans.transform_point(Point::new(0., 0., -viewer_dist));
+            let mut ray = Ray::new(ray_origin, dir_front);
+
+
+
             let origin_value = my_obj.approx_value(ray.origin, APPROX_SLACK);
 
 
