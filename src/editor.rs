@@ -7,6 +7,7 @@ use primitive;
 use xplicit_widget;
 use gtk::Inhibit;
 use gtk::traits::*;
+use tesselation::DualMarchingCubes;
 
 #[derive(Clone)]
 pub struct Editor {
@@ -41,6 +42,7 @@ impl Editor {
         let drawing_area = xw.drawing_area.clone();
         let debug_buffer_clone = debug_buffer.clone();
         let editor = Editor { text_view: tv };
+        let editor_clone = editor.clone();
 
         editor.text_view.connect_key_release_event(move |tv: &::gtk::TextView,
                                                          key: &::gdk::EventKey|
@@ -48,28 +50,11 @@ impl Editor {
             match key.get_keyval() {
                 ::gdk::enums::key::F5 => {
                     // compile
-                    let code_buffer = tv.get_buffer().unwrap();
-                    let code_text = code_buffer.get_text(&code_buffer.get_start_iter(),
-                                                         &code_buffer.get_end_iter(),
-                                                         true)
-                                               .unwrap();
-                    let maybe_pgm = openscad::program(&code_text);
-                    if let Ok(pgm) = maybe_pgm {
-                        let mut out = format!("parsed : {:?}\n", pgm).into_bytes();
-                        let mut env = openscad::ast::Environment::new();
-                        let result = pgm.eval(&mut env, &mut out);
-                        out.append(&mut format!("\nexecuted : {:?}", result).into_bytes());
-
-                        if let openscad::ast::Value::Objects(objs) = result {
-                            let union = primitive::Union::from_vec(objs, 0.);
-                            out.append(&mut format!("\n\nrendering : {:?}", union).into_bytes());
-                            renderer.borrow_mut().set_object(union);
-                            drawing_area.queue_draw();
-                        }
-                        debug_buffer_clone.set_text(&String::from_utf8(out).unwrap());
-                    } else {
-                        debug_buffer_clone.set_text(&format!("{:?}", maybe_pgm));
-                    }
+                    let mut output = Vec::new();
+                    let obj = editor_clone.get_object(&mut output);
+                    debug_buffer_clone.set_text(&String::from_utf8(output).unwrap());
+                    renderer.borrow_mut().set_object(obj);
+                    drawing_area.queue_draw();
                 }
                 ::gdk::enums::key::F2 => {
                     save_from_textview(tv, &input_filename);
@@ -82,11 +67,34 @@ impl Editor {
         });
         editor
     }
+    fn get_object(&self, msg: &mut Write) -> Option<Box<primitive::Object>> {
+        let code_buffer = self.text_view.get_buffer().unwrap();
+        let code_text = code_buffer.get_text(&code_buffer.get_start_iter(),
+                                             &code_buffer.get_end_iter(),
+                                             true)
+                                   .unwrap();
+        let maybe_pgm = openscad::program(&code_text);
+        if let Ok(pgm) = maybe_pgm {
+            writeln!(msg, "\nparsed : {:?}", pgm).unwrap();
+            let mut env = openscad::ast::Environment::new();
+            let result = pgm.eval(&mut env, msg);
+            writeln!(msg, "\nexecuted : {:?}", result).unwrap();
+            if let openscad::ast::Value::Objects(objs) = result {
+                return primitive::Union::from_vec(objs, 0.);
+            }
+        } else {
+            writeln!(msg, "{:?}", maybe_pgm).unwrap()
+        }
+        None
+    }
     pub fn save(&self, filename: &String) {
         save_from_textview(&self.text_view, filename);
     }
     pub fn tesselate(&self) {
-        mesh_view::show_mesh();
+        let maybe_obj = self.get_object(&mut ::std::io::stdout());
+        if let Some(obj) = maybe_obj {
+            mesh_view::show_mesh(DualMarchingCubes::new(obj).tesselate());
+        }
     }
 }
 
