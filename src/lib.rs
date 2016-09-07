@@ -17,4 +17,4 @@ pub mod editor;
 pub mod openscad;
 pub mod menu;
 pub mod mesh_view;
-pub mod tesselation;
+pub mod tessellation;
