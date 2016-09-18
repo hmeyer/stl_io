@@ -93,7 +93,7 @@ impl Editor {
     pub fn tesselate(&self) {
         let maybe_obj = self.get_object(&mut ::std::io::stdout());
         if let Some(obj) = maybe_obj {
-            mesh_view::show_mesh(&DualMarchingCubes::new(obj).tesselate());
+            mesh_view::show_mesh(&DualMarchingCubes::new(obj, 1.).tesselate());
         }
     }
 }

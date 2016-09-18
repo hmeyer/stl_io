@@ -6,6 +6,7 @@ pub type Matrix = ::cgmath::Matrix4<Float>;
 
 
 pub const EPSILON: Float = 1e-10;
+pub const MIN_POSITIVE: Float = ::std::f64::MIN_POSITIVE;
 pub const EPSILON_X: Vector = Vector {
     x: EPSILON,
     y: 0.,

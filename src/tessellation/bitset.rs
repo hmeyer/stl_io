@@ -1,4 +1,4 @@
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct BitSet(u32);
 
 impl BitSet {
@@ -8,8 +8,11 @@ impl BitSet {
     pub fn set(&mut self, index: usize) {
         self.0 |= 1 << index;
     }
+    pub fn merge(&self, other: BitSet) -> BitSet {
+        return BitSet(self.0 | other.0);
+    }
     pub fn get(&self, index: usize) -> bool {
-        (self.0 & 1 << index) == 0
+        (self.0 & (1 << index)) != 0
     }
     pub fn empty(&self) -> bool {
         self.0 == 0
@@ -38,6 +41,9 @@ impl BitSet {
             }
             Some(num)
         }
+    }
+    pub fn as_usize(&self) -> usize {
+        self.0 as usize
     }
 }
 
@@ -90,6 +96,20 @@ impl Iterator for BitSet {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn merge() {
+        assert_eq!(super::BitSet::new(0b00).merge(super::BitSet::new(0b00)),
+                   super::BitSet::new(0b00));
+        assert_eq!(super::BitSet::new(0b01).merge(super::BitSet::new(0b00)),
+                   super::BitSet::new(0b01));
+        assert_eq!(super::BitSet::new(0b00).merge(super::BitSet::new(0b10)),
+                   super::BitSet::new(0b10));
+        assert_eq!(super::BitSet::new(0b01).merge(super::BitSet::new(0b10)),
+                   super::BitSet::new(0b11));
+        assert_eq!(super::BitSet::new(0b11).merge(super::BitSet::new(0b11)),
+                   super::BitSet::new(0b11));
+    }
 
     #[test]
     fn empty() {

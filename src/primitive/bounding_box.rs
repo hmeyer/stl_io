@@ -1,5 +1,5 @@
 use {Float, INFINITY, NEG_INFINITY};
-use types::{Point, Matrix};
+use types::{Point, Matrix, Vector};
 use cgmath::Transform;
 
 pub static INFINITY_BOX: BoundingBox = BoundingBox {
@@ -98,6 +98,9 @@ impl BoundingBox {
             min: Point::new(self.min.x - d, self.min.y - d, self.min.z - d),
             max: Point::new(self.max.x + d, self.max.y + d, self.max.z + d),
         }
+    }
+    pub fn dim(&self) -> Vector {
+        self.max - self.min
     }
     pub fn value(&self, p: Point) -> Float {
         // If p is not inside (neg), then it is outside (pos) on only one side.
