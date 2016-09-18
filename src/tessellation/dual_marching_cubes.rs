@@ -175,7 +175,7 @@ impl DualMarchingCubes {
     // obj: Object to tessellate
     // res: resolution
     pub fn new(obj: Box<Object>, res: Float) -> DualMarchingCubes {
-        let bbox = obj.bbox().dilate(res * 1.1);
+        let bbox = obj.bbox().dilate(res * 1.000000000001);
         DualMarchingCubes {
             object: obj,
             bbox: bbox,
@@ -207,7 +207,11 @@ impl DualMarchingCubes {
                 let mut values_x = Vec::with_capacity(dim[0]);
                 p.x = self.bbox.min.x;
                 for _ in 0..dim[0] {
-                    values_x.push(self.object.approx_value(p, res));
+                    let val = self.object.approx_value(p, res);
+                    assert!(val != 0.,
+                            "Ugh. Cell corner hit exactly the surface. This should be handled by \
+                             slightly resizing the grid.");
+                    values_x.push(val);
                     p.x += res;
                 }
                 values_xy.push(values_x);
