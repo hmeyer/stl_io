@@ -255,6 +255,9 @@ impl DualMarchingCubes {
             self.compute_quad(edge_index, *idx);
         }
 
+        println!("computed mesh with {:?} faces.",
+                 self.mesh.borrow().faces.len());
+
         self.mesh.borrow().clone()
     }
 
