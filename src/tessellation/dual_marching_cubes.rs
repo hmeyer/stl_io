@@ -6,6 +6,7 @@ use types::{Point, Vector};
 use std::collections::HashMap;
 use std::cell::RefCell;
 use cgmath::EuclideanSpace;
+use rand;
 
 // How accurately find zero crossings.
 const PRECISION: Float = 0.01;
@@ -175,13 +176,13 @@ impl DualMarchingCubes {
     // obj: Object to tessellate
     // res: resolution
     pub fn new(obj: Box<Object>, res: Float) -> DualMarchingCubes {
-        let bbox = obj.bbox().dilate(res * 1.000000000001);
+        let bbox = obj.bbox().dilate(res * 1.1);
         DualMarchingCubes {
             object: obj,
             bbox: bbox,
             mesh: RefCell::new(Mesh {
-                vertices: vec![],
-                faces: vec![],
+                vertices: Vec::new(),
+                faces: Vec::new(),
             }),
             vertex_map: RefCell::new(HashMap::new()),
             res: res,
@@ -190,8 +191,25 @@ impl DualMarchingCubes {
             cell_configs: get_dmc_cell_configs(),
         }
     }
-    // This method does the main work of tessellation.
     pub fn tesselate(&mut self) -> Mesh {
+        loop {
+            match self.try_tesselate() {
+                Ok(mesh) => return mesh,
+                Err(x) => {
+                    let padding = self.res / (1. + rand::random::<f64>().abs());
+                    println!("Error: {:?}. Padding bbox by {:?} and retrying.",
+                             x,
+                             padding);
+                    self.bbox = self.bbox.dilate(padding);
+                    self.value_grid.clear();
+                    self.mesh.borrow_mut().vertices.clear();
+                    self.mesh.borrow_mut().faces.clear();
+                }
+            }
+        }
+    }
+    // This method does the main work of tessellation.
+    fn try_tesselate(&mut self) -> Result<Mesh, String> {
         let res = self.res;
         let dim = [(self.bbox.dim().x / res).ceil() as usize,
                    (self.bbox.dim().y / res).ceil() as usize,
@@ -208,9 +226,9 @@ impl DualMarchingCubes {
                 p.x = self.bbox.min.x;
                 for _ in 0..dim[0] {
                     let val = self.object.approx_value(p, res);
-                    assert!(val != 0.,
-                            "Ugh. Cell corner hit exactly the surface. This should be handled by \
-                             slightly resizing the grid.");
+                    if val == 0. {
+                        return Err(format!("Hit zero on grid position {:?}", p));
+                    }
                     values_x.push(val);
                     p.x += res;
                 }
@@ -229,6 +247,7 @@ impl DualMarchingCubes {
         let mut p = Point::new(0., 0., self.bbox.min.z);
         {
             let mut edge_grid = self.edge_grid.borrow_mut();
+            edge_grid.clear();
             for z in 0..dim[2] - 1 {
                 p.y = self.bbox.min.y;
                 for y in 0..dim[1] - 1 {
@@ -254,7 +273,6 @@ impl DualMarchingCubes {
             }
         }
 
-
         for (&(edge_index, ref idx), _) in self.edge_grid.borrow().iter() {
             self.compute_quad(edge_index, *idx);
         }
@@ -262,7 +280,7 @@ impl DualMarchingCubes {
         println!("computed mesh with {:?} faces.",
                  self.mesh.borrow().faces.len());
 
-        self.mesh.borrow().clone()
+        Ok(self.mesh.borrow().clone())
     }
 
     fn offset(idx: Index, offset: Index) -> Index {

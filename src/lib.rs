@@ -4,6 +4,7 @@ extern crate cairo;
 extern crate gtk;
 extern crate gdk;
 extern crate cgmath;
+extern crate rand;
 
 pub type Float = f64;
 pub const INFINITY: Float = 1e10;
