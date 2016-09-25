@@ -1,8 +1,7 @@
-use Float;
-use primitive::Object;
-use types::{Point, Vector};
+use Object;
+use xplicit_types::{Float, Point, Vector};
 use cgmath::{EuclideanSpace, InnerSpace};
-use primitive::bounding_box::BoundingBox;
+use bounding_box::BoundingBox;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Sphere {

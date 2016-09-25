@@ -1,5 +1,5 @@
-use tessellation::BitSet;
-use tessellation::dual_marching_cubes::{CORNER_CONNS, Edge, EDGE_DEF};
+use BitSet;
+use dual_marching_cubes::{CORNER_CONNS, EDGE_DEF, Edge};
 
 
 // DualMarchingCubesCellConfigs stores the different cell configurations as suggested by Nielson.

@@ -1,7 +1,7 @@
 [package]
 name = "xplicit"
 version = "0.0.1"
-authors = ["Xplicit CAD"]
+authors = ["Henning Meyer <tutmann@gmail.com>"]
 
 [dependencies]
 libc = "0.1"
@@ -13,6 +13,10 @@ cgmath = "0.10.0"
 peg = "=0.3.14"
 nalgebra = "0.9.*"
 rand = "0.3"
+rulinalg="0.3.2"
+xplicit_tessellation = { path = "tessellation", version = "0.0.*" }
+xplicit_types = { path = "types", version = "0.0.*" }
+xplicit_primitive = { path = "primitive", version = "0.0.*" }
 
 [dependencies.kiss3d]
 git = "https://github.com/sebcrozet/kiss3d"

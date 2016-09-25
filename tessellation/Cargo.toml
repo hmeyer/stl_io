@@ -1,0 +1,17 @@
+[package]
+name = "xplicit_tessellation"
+version = "0.0.1"
+authors = ["Henning Meyer <tutmann@gmail.com>"]
+
+[lib]
+name = "xplicit_tessellation"
+path = "lib.rs"
+
+[dependencies]
+cgmath = "0.10.0"
+nalgebra = "0.10"
+nalgebra-lapack = "0.4.0"
+rand = "0.3"
+
+xplicit_types = { path = "../types", version = "0.0.*" }
+xplicit_primitive = { path = "../primitive", version = "0.0.*" }

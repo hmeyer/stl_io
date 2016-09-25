@@ -1,0 +1,13 @@
+[package]
+name = "xplicit_primitive"
+version = "0.0.1"
+authors = ["Henning Meyer <tutmann@gmail.com>"]
+
+[lib]
+name = "xplicit_primitive"
+path = "lib.rs"
+
+[dependencies]
+cgmath = "0.10.0"
+
+xplicit_types = { path = "../types", version = "0.0.*" }

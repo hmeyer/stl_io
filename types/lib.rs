@@ -1,9 +1,13 @@
-use Float;
+extern crate cgmath;
 
+pub type Float = f64;
 pub type Point = ::cgmath::Point3<Float>;
 pub type Vector = ::cgmath::Vector3<Float>;
 pub type Matrix = ::cgmath::Matrix4<Float>;
 
+
+pub const INFINITY: Float = 1e10;
+pub const NEG_INFINITY: Float = -1e10;
 
 pub const EPSILON: Float = 1e-10;
 pub const MIN_POSITIVE: Float = ::std::f64::MIN_POSITIVE;

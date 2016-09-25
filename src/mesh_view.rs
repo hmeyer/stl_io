@@ -1,13 +1,12 @@
-extern crate kiss3d;
-extern crate nalgebra as na;
 use std::rc::Rc;
 use std::cell::RefCell;
-use self::kiss3d::window::Window;
-use self::kiss3d::light::Light;
-use self::kiss3d::resource::Mesh;
-use tessellation;
+use nalgebra as na;
+use kiss3d::window::Window;
+use kiss3d::light::Light;
+use kiss3d::resource::Mesh;
+use xplicit_tessellation;
 
-pub fn show_mesh(mesh: &tessellation::Mesh) {
+pub fn show_mesh(mesh: &xplicit_tessellation::Mesh) {
     let mut window = Window::new("MeshView");
     let scale = na::Vector3::new(1.0, 1.0, 1.0);
     let mut c = window.add_mesh(tessellation_to_kiss3d_mesh(mesh), scale);
@@ -17,10 +16,9 @@ pub fn show_mesh(mesh: &tessellation::Mesh) {
     window.set_light(Light::StickToCamera);
 
     while window.render() {}
-
 }
 
-fn tessellation_to_kiss3d_mesh(mesh: &tessellation::Mesh) -> Rc<RefCell<Mesh>> {
+fn tessellation_to_kiss3d_mesh(mesh: &xplicit_tessellation::Mesh) -> Rc<RefCell<Mesh>> {
     let mut na_verts = Vec::new();
     let mut na_faces = Vec::new();
     for face in mesh.faces.iter() {

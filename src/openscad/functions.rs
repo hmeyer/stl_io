@@ -1,10 +1,9 @@
 use super::ast::{Binding, Callable, Expression, ExpressionFn, Value};
-use super::super::primitive::BoundingBox;
-use super::super::primitive::Object;
-use super::super::types::Point;
+use super::super::xplicit_primitive::BoundingBox;
+use super::super::xplicit_primitive::{Intersection, Object, Union};
+use super::super::xplicit_types::{INFINITY, NEG_INFINITY, Point, Vector};
 use std::io::Write;
 use std::rc::Rc;
-use {INFINITY, NEG_INFINITY};
 
 
 // Macro to create a function binding with multple params.
@@ -60,17 +59,17 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
               "text" => Value::String("".to_string()),
               env);
     add_func!("sphere",
-              |r: &Value, _, _| Value::Objects(vec![::primitive::Sphere::new(r.as_f64())]),
+              |r: &Value, _, _| Value::Objects(vec![::xplicit_primitive::Sphere::new(r.as_f64())]),
               "r" => Value::Number(1.),
               env);
     add_func!("icylinder",
                         |r: &Value, _, _| Value::Objects(
-                            vec![::primitive::Cylinder::new(r.as_f64())]),
+                            vec![::xplicit_primitive::Cylinder::new(r.as_f64())]),
                         "r" => Value::Number(1.),
                         env);
     add_func!("icone",
                                   |r: &Value, _, _| Value::Objects(
-                                      vec![::primitive::Cone::new(r.as_f64(), 0.)]),
+                                      vec![::xplicit_primitive::Cone::new(r.as_f64(), 0.)]),
                                   "slope" => Value::Number(1.),
                                   env);
     add_func_multi_param!("cube",
@@ -86,10 +85,10 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                               0.
                           });
                       }
-                      return Value::Objects(vec![::primitive::Intersection::from_vec(vec![
-                      ::primitive::SlabX::new(v[0]),
-                      ::primitive::SlabY::new(v[1]),
-                      ::primitive::SlabZ::new(v[2]) ], dim_and_r.get(1).unwrap().as_f64())
+                      return Value::Objects(vec![Intersection::from_vec(vec![
+                      ::xplicit_primitive::SlabX::new(v[0]),
+                      ::xplicit_primitive::SlabY::new(v[1]),
+                      ::xplicit_primitive::SlabZ::new(v[2]) ], dim_and_r.get(1).unwrap().as_f64())
                                                      .unwrap()]);
                   }
                   writeln!(msg, "invalid dimension vector: {:?}, using undef",
@@ -120,7 +119,7 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                                 }
                                 let mut conie;
                                 if r1 == r2 {
-                                    conie = ::primitive::Cylinder::new(r1) as Box<Object>;
+                                    conie = ::xplicit_primitive::Cylinder::new(r1) as Box<Object>;
                                 } else {
                                     let slope = (r2 - r1).abs() / *h;
                                     let offset;
@@ -129,15 +128,15 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                                     } else {
                                         offset = r2/ slope + h * 0.5;
                                     }
-                                    conie = ::primitive::Cone::new(slope, offset) as Box<Object>;
+                                    conie = ::xplicit_primitive::Cone::new(slope, offset) as Box<Object>;
                                     let rmax = r1.max(r2);
                                     let conie_box = BoundingBox::new(Point::new(-rmax, -rmax, NEG_INFINITY),
                                                                      Point::new(rmax, rmax, INFINITY));
                                     conie.set_bbox(conie_box);
                                 }
-                                Value::Objects(vec![::primitive::Intersection::from_vec(vec![
+                                Value::Objects(vec![Intersection::from_vec(vec![
                                   conie,
-                                  ::primitive::SlabZ::new(*h) ],
+                                  ::xplicit_primitive::SlabZ::new(*h) ],
                                 h_r_r1_r2_s.get(4).unwrap().as_f64()).unwrap()])
                             } else {
                                 writeln!(msg, "invalid height, returning undef").unwrap();
@@ -162,9 +161,9 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                                   0.
                               });
                           }
-                          let union_of_subs = ::primitive::Union::from_vec(subs.clone(), 0.)
+                          let union_of_subs = Union::from_vec(subs.clone(), 0.)
                                                   .unwrap();
-                          let translated = union_of_subs.translate(::types::Vector::new(v[0],
+                          let translated = union_of_subs.translate(Vector::new(v[0],
                                                                                         v[1],
                                                                                         v[2]));
                           return Value::Objects(vec![translated]);
@@ -186,9 +185,9 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                                   0.
                               });
                           }
-                          let union_of_subs = ::primitive::Union::from_vec(subs.clone(), 0.)
+                          let union_of_subs = Union::from_vec(subs.clone(), 0.)
                                                   .unwrap();
-                          let rotated = union_of_subs.rotate(::types::Vector::new(v[0],
+                          let rotated = union_of_subs.rotate(Vector::new(v[0],
                                                                                   v[1],
                                                                                   v[2]));
                           return Value::Objects(vec![rotated]);
@@ -210,9 +209,9 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                                   0.
                               });
                           }
-                          let union_of_subs = ::primitive::Union::from_vec(subs.clone(), 0.)
+                          let union_of_subs = Union::from_vec(subs.clone(), 0.)
                                                   .unwrap();
-                          let scaled = union_of_subs.scale(::types::Vector::new(v[0], v[1], v[2]));
+                          let scaled = union_of_subs.scale(Vector::new(v[0], v[1], v[2]));
                           return Value::Objects(vec![scaled]);
                       }
                   }
@@ -224,9 +223,9 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                         |w: &Value, subs: &Vec<Box<Object>>, _| {
                             if subs.len() > 0 {
                                 if let &Value::Number(ref width) = w {
-                                    let union_of_subs = ::primitive::Union::from_vec(
+                                    let union_of_subs = Union::from_vec(
                                         subs.clone(), 0.).unwrap();
-                                    let bended = ::primitive::Bender::new(
+                                    let bended = ::xplicit_primitive::Bender::new(
                                         union_of_subs, *width);
                                     return Value::Objects(vec![bended]);
                                 }
@@ -239,9 +238,9 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                                             |h: &Value, subs: &Vec<Box<Object>>, _| {
                                                 if subs.len() > 0 {
                                                     if let &Value::Number(ref height) = h {
-                                                        let union_of_subs = ::primitive::Union::from_vec(
+                                                        let union_of_subs = Union::from_vec(
                                                             subs.clone(), 0.).unwrap();
-                                                        let twisted = ::primitive::Twister::new(
+                                                        let twisted = ::xplicit_primitive::Twister::new(
                                                             union_of_subs, *height);
                                                         return Value::Objects(vec![twisted]);
                                                     }
@@ -254,7 +253,7 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
               |r: &Value, subs: &Vec<Box<Object>>, _| {
                   if subs.len() > 0 {
                       if let &Value::Number(rf) = r {
-                          return Value::Objects(vec![::primitive::Union::from_vec(subs.clone(),
+                          return Value::Objects(vec![Union::from_vec(subs.clone(),
                                                                                   rf)
                                                          .unwrap()]);
                       }
@@ -268,7 +267,7 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                   if subs.len() > 0 {
                       if let &Value::Number(rf) = r {
                           return Value::Objects(
-                              vec![::primitive::Intersection::from_vec(
+                              vec![Intersection::from_vec(
                                   subs.clone(), rf).unwrap()]);
                       }
                   }
@@ -281,7 +280,7 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                   if subs.len() > 0 {
                       if let &Value::Number(rf) = r {
                           return Value::Objects(
-                              vec![::primitive::Intersection::difference_from_vec(
+                              vec![Intersection::difference_from_vec(
                                   subs.clone(), rf).unwrap()]);
                       }
                   }

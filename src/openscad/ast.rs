@@ -1,12 +1,12 @@
 use std::fmt::Debug;
 use std::io::Write;
 use std::rc::Rc;
-use primitive::Object;
+use xplicit_primitive::Object;
 use super::functions;
 
 pub struct Environment {
     pub vars: ::std::collections::HashMap<String, Binding>,
-    pub objs: Vec<Box<::primitive::Object>>,
+    pub objs: Vec<Box<::xplicit_primitive::Object>>,
 }
 
 impl Environment {
@@ -640,7 +640,7 @@ impl Expression for CompoundExpression {
         for ex in &self.v {
             v = ex.eval(&mut env_copy, msg);
             if let Value::Objects(o) = v {
-                if let Some(union) = ::primitive::Union::from_vec(o, 0.) {
+                if let Some(union) = ::xplicit_primitive::Union::from_vec(o, 0.) {
                     objs.push(union);
                 }
                 v = Value::Undef;

@@ -1,7 +1,6 @@
-use primitive::{Object, normal_from_object, ALWAYS_PRECISE};
-use primitive::bounding_box::{BoundingBox, INFINITY_BOX, NEG_INFINITY_BOX};
-use types::{Point, Vector};
-use {Float, INFINITY, NEG_INFINITY};
+use {ALWAYS_PRECISE, Object, normal_from_object};
+use bounding_box::{BoundingBox, INFINITY_BOX, NEG_INFINITY_BOX};
+use xplicit_types::{Float, INFINITY, NEG_INFINITY, Point, Vector};
 
 #[derive(Clone, Debug)]
 pub struct Union {

@@ -1,4 +1,11 @@
-use Float;
+extern crate cgmath;
+extern crate rand;
+extern crate nalgebra as na;
+extern crate nalgebra_lapack;
+extern crate xplicit_types;
+extern crate xplicit_primitive;
+
+pub use xplicit_types::Float;
 
 #[derive(Clone, Debug)]
 pub struct Mesh {

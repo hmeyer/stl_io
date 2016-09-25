@@ -3,11 +3,11 @@ use std::io::{BufReader, BufWriter};
 use std::fs::File;
 use mesh_view;
 use openscad;
-use primitive;
+use xplicit_primitive;
 use xplicit_widget;
 use gtk::Inhibit;
 use gtk::traits::*;
-use tessellation::DualMarchingCubes;
+use xplicit_tessellation::DualMarchingCubes;
 
 #[derive(Clone)]
 pub struct Editor {
@@ -67,7 +67,7 @@ impl Editor {
         });
         editor
     }
-    fn get_object(&self, msg: &mut Write) -> Option<Box<primitive::Object>> {
+    fn get_object(&self, msg: &mut Write) -> Option<Box<xplicit_primitive::Object>> {
         let code_buffer = self.text_view.get_buffer().unwrap();
         let code_text = code_buffer.get_text(&code_buffer.get_start_iter(),
                                              &code_buffer.get_end_iter(),
@@ -80,7 +80,7 @@ impl Editor {
             let result = pgm.eval(&mut env, msg);
             writeln!(msg, "\nexecuted : {:?}", result).unwrap();
             if let openscad::ast::Value::Objects(objs) = result {
-                return primitive::Union::from_vec(objs, 0.);
+                return xplicit_primitive::Union::from_vec(objs, 0.);
             }
         } else {
             writeln!(msg, "{:?}", maybe_pgm).unwrap()

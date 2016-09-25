@@ -1,7 +1,6 @@
-use Float;
-use primitive::Object;
-use primitive::bounding_box::BoundingBox;
-use types::{Point, Vector, Matrix};
+use Object;
+use bounding_box::BoundingBox;
+use xplicit_types::{Float, Matrix, Point, Vector};
 use cgmath::{InnerSpace, SquareMatrix, Transform};
 
 #[derive(Clone, Debug)]

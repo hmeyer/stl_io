@@ -1,7 +1,6 @@
-use Float;
-use primitive::Object;
-use primitive::bounding_box::BoundingBox;
-use types::{Point, Vector};
+use Object;
+use bounding_box::BoundingBox;
+use xplicit_types::{Float, Point, Vector};
 use cgmath::{InnerSpace, Rotation, Rotation2};
 
 type Point2 = ::cgmath::Point2<Float>;

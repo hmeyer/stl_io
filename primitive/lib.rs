@@ -1,6 +1,7 @@
+extern crate cgmath;
+extern crate xplicit_types;
 use std::fmt::Debug;
-use Float;
-use types::{Point, Vector, EPSILON_X, EPSILON_Y, EPSILON_Z};
+pub use xplicit_types::{Float, Point, Vector, EPSILON_X, EPSILON_Y, EPSILON_Z};
 
 use cgmath::InnerSpace;
 

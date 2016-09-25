@@ -1,7 +1,6 @@
-use {Float, INFINITY, NEG_INFINITY};
-use primitive::Object;
-use primitive::bounding_box::BoundingBox;
-use types::{Point, Vector};
+use Object;
+use bounding_box::BoundingBox;
+use xplicit_types::{Float, INFINITY, NEG_INFINITY, Point, Vector};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SlabX {

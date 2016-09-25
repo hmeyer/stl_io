@@ -1,7 +1,6 @@
-use {Float, INFINITY, NEG_INFINITY /* ); */};
-use primitive::Object;
-use primitive::bounding_box::{BoundingBox, INFINITY_BOX};
-use types::{Point, Vector};
+use Object;
+use bounding_box::{BoundingBox, INFINITY_BOX};
+use xplicit_types::{Float, INFINITY, NEG_INFINITY, Point, Vector};
 use cgmath::{EuclideanSpace, InnerSpace};
 
 
