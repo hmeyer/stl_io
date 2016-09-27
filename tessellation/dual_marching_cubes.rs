@@ -1,7 +1,7 @@
 use na;
-use na::{Diagonal, IterableMut, Transpose};
+use na::{Iterable, IterableMut, Transpose};
 use nalgebra_lapack::SVD;
-use cgmath::{InnerSpace, MetricSpace};
+use cgmath::InnerSpace;
 use xplicit_primitive::{BoundingBox, Object};
 use {BitSet, Mesh};
 use dual_marching_cubes_cell_configs::get_dmc_cell_configs;
@@ -302,34 +302,69 @@ impl DualMarchingCubes {
     }
 
     // Return the Point index (in self.mesh.vertices) the the point belonging to edge/idx.
-    fn compute_cell_point(&self, edge: Edge, idx: Index) -> usize {
+    fn lookup_cell_point(&self, edge: Edge, idx: Index) -> usize {
         let edge_set = self.get_connected_edges(edge, self.bitset_for_cell(idx));
         // Try to lookup the edge_set for this index.
         if let Some(index) = self.vertex_map.borrow().get(&(edge_set, idx)) {
             return *index;
         }
         // It does not exist. So calculate all edge crossings and their normals.
-        let v: Vec<_> = edge_set.into_iter()
-                                .map(|edge| {
-                                    self.get_edge_tangent_plane(Edge::from_usize(edge), idx)
-                                })
-                                .collect();
+        let point = self.compute_cell_point(edge_set, idx);
 
-        let mean = Point::from_vec(&v.iter()
-                                     .fold(Vector::new(0., 0., 0.), |sum, x| sum + x.p.to_vec()) /
-                                   v.len() as Float);
-        // And fit the point to them.
-        let mut point = mean.clone();
-        if let Some(better_point) = DualMarchingCubes::optimize_qef(&v, mean) {
-            if self.is_in_cell(&idx, &better_point) {
-                point = better_point;
-            } else {
-            }
-        }
         let ref mut vertex_list = self.mesh.borrow_mut().vertices;
         let result = vertex_list.len();
         vertex_list.push([point.x, point.y, point.z]);
         return result;
+    }
+
+    fn compute_cell_point(&self, edge_set: BitSet, idx: Index) -> Point {
+        let tangent_planes: Vec<_> = edge_set.into_iter()
+                                             .map(|edge| {
+                                                 self.get_edge_tangent_plane(Edge::from_usize(edge),
+                                                                             idx)
+                                             })
+                                             .collect();
+
+        let mean = Point::from_vec(&tangent_planes.iter()
+                                                  .fold(Vector::new(0., 0., 0.),
+                                                        |sum, x| sum + x.p.to_vec()) /
+                                   tangent_planes.len() as Float);
+        // And fit the point to them.
+        if let Some(best_point) = DualMarchingCubes::optimize_qef(&tangent_planes, mean) {
+            if self.is_in_cell(&idx, &best_point) {
+                return best_point;
+            }
+        }
+        // Proper calculation landed us outside the cell.
+        // Revert to binary search in 3 dimensions.
+        return self.binary_search_minimal_qef(&tangent_planes, &idx);
+    }
+
+    fn binary_search_minimal_qef(&self, planes: &[Plane], idx: &Index) -> Point {
+        let mut result = self.bbox.min +
+                         Vector::new(PRECISION + self.res * idx[0] as Float,
+                                     PRECISION + self.res * idx[1] as Float,
+                                     PRECISION + self.res * idx[2] as Float);
+        for i in 0..3 {
+            let mut a = result;
+            let mut b = result;
+            b[i] += self.res - PRECISION * 2.0;
+            let mut ma = a;
+            let mut mb = b;
+            while a[i] + PRECISION < b[i] {
+                ma[i] = (a[i] + b[i]) * 0.5;
+                mb[i] = (a[i] + b[i]) * 0.5 + PRECISION / 100.0;
+                let qef_ma = DualMarchingCubes::qef(planes, &ma);
+                let qef_mb = DualMarchingCubes::qef(planes, &mb);
+                if qef_ma < qef_mb {
+                    b = mb;
+                } else {
+                    a = ma;
+                }
+            }
+            result[i] = ma[i];
+        }
+        result
     }
 
     fn is_in_cell(&self, idx: &Index, p: &Point) -> bool {
@@ -339,28 +374,33 @@ impl DualMarchingCubes {
         })
     }
 
-    fn qef(planes: &[(Point, Vector)], p: &Point) -> Float {
+    fn qef(planes: &[Plane], p: &Point) -> Float {
         planes.iter().fold(0., |sum, plane| {
-            let d = plane.1.dot(p - plane.0);
+            let d = plane.n.dot(p - plane.p);
             d * d + sum
         })
     }
 
     fn pseudoinverse(m: na::DMatrix<Float>) -> Option<na::DMatrix<Float>> {
+        let truncation_threshold = 0.1;
         match m.svd() {
             Err(e) => {
                 println!("Error during SVD: {:?}", e);
                 None
             }
-            Ok((mut u, mut s, mut vt)) => {
-                for e in s.iter_mut() {
-                    *e = 1. / *e;
-                }
-                let mut sm = na::DMatrix::from_fn(vt.ncols(), u.ncols(), |c, r| {
+            Ok((mut u, s, mut vt)) => {
+                let mut truncations = 0usize;
+                let sm = na::DMatrix::from_fn(vt.ncols(), u.ncols(), |c, r| {
                     if c != r {
                         0.
                     } else {
-                        s[c]
+                        let v = s[c];
+                        if v > truncation_threshold {
+                            1. / v
+                        } else {
+                            truncations += 1;
+                            0.
+                        }
                     }
                 });
                 vt.transpose_mut();
@@ -375,13 +415,13 @@ impl DualMarchingCubes {
     fn optimize_qef(planes: &[Plane], mean: Point) -> Option<Point> {
         let a = na::DMatrix::from_fn(3, planes.len(), |c, r| planes[r].n[c]);
         match DualMarchingCubes::pseudoinverse(a) {
-            None => None,
+            None => return None,
             Some(pseudo) => {
-
                 let b = na::DVector::from_fn(planes.len(),
                                              |i| (planes[i].p - mean).dot(planes[i].n));
                 let least_squares = b * pseudo;
-                Some(mean + Vector::new(least_squares[0], least_squares[1], least_squares[2]))
+                return Some(mean +
+                            Vector::new(least_squares[0], least_squares[1], least_squares[2]));
             }
         }
     }
@@ -419,8 +459,8 @@ impl DualMarchingCubes {
 
         let mut p = Vec::with_capacity(4);
         for quad_egde in QUADS[edge as usize].iter() {
-            p.push(self.compute_cell_point(*quad_egde,
-                                           neg_offset(idx, EDGE_OFFSET[*quad_egde as usize])));
+            p.push(self.lookup_cell_point(*quad_egde,
+                                          neg_offset(idx, EDGE_OFFSET[*quad_egde as usize])))
         }
         let ref mut face_list = self.mesh.borrow_mut().faces;
         if self.value_grid[idx[2]][idx[1]][idx[0]] > 0. {
