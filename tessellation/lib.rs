@@ -4,6 +4,7 @@ extern crate nalgebra as na;
 extern crate nalgebra_lapack;
 extern crate xplicit_types;
 extern crate xplicit_primitive;
+extern crate time;
 
 pub use xplicit_types::Float;
 

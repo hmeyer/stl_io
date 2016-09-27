@@ -1,5 +1,5 @@
 use na;
-use na::{Iterable, IterableMut, Transpose};
+use na::Transpose;
 use nalgebra_lapack::SVD;
 use cgmath::InnerSpace;
 use xplicit_primitive::{BoundingBox, Object};
@@ -218,6 +218,7 @@ impl DualMarchingCubes {
                    (self.bbox.dim().y / res).ceil() as usize,
                    (self.bbox.dim().z / res).ceil() as usize];
 
+        let t1 = ::time::precise_time_s();
         // Store object values in value_grid
         let mut p = Point::new(0., 0., self.bbox.min.z);
         self.value_grid.reserve(dim[2]);
@@ -241,6 +242,8 @@ impl DualMarchingCubes {
             self.value_grid.push(values_xy);
             p.z += res;
         }
+        let t2 = ::time::precise_time_s();
+        println!("generated value_grid: {:?} s", t2 - t1);
 
         let edge_end_offset: [Vector; 3] = [EDGE_END_OFFSET_VECTOR[0] * res,
                                             EDGE_END_OFFSET_VECTOR[1] * res,
@@ -275,10 +278,14 @@ impl DualMarchingCubes {
                 p.z += res;
             }
         }
+        let t3 = ::time::precise_time_s();
+        println!("generated edge_grid: {:?} s", t3 - t2);
 
         for &(edge_index, ref idx) in self.edge_grid.borrow().keys() {
             self.compute_quad(edge_index, *idx);
         }
+        let t4 = ::time::precise_time_s();
+        println!("generated quads: {:?} s", t4 - t3);
 
         println!("computed mesh with {:?} faces.",
                  self.mesh.borrow().faces.len());
@@ -462,16 +469,12 @@ impl DualMarchingCubes {
             p.push(self.lookup_cell_point(*quad_egde,
                                           neg_offset(idx, EDGE_OFFSET[*quad_egde as usize])))
         }
-        let ref mut face_list = self.mesh.borrow_mut().faces;
-        if self.value_grid[idx[2]][idx[1]][idx[0]] > 0. {
-            // Normal order, if vertex is outside.
-            face_list.push([p[0], p[1], p[2]]);
-            face_list.push([p[2], p[3], p[0]]);
-        } else {
-            // Reverse order, if vertex is inside.
-            face_list.push([p[2], p[1], p[0]]);
-            face_list.push([p[0], p[3], p[2]]);
+        if self.value_grid[idx[2]][idx[1]][idx[0]] < 0. {
+            p.reverse();
         }
+        let ref mut face_list = self.mesh.borrow_mut().faces;
+        face_list.push([p[0], p[1], p[2]]);
+        face_list.push([p[2], p[3], p[0]]);
     }
 
     // If a is inside the object and b outside - this method return the point on the line between
