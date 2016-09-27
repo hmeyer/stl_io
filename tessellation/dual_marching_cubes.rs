@@ -218,7 +218,7 @@ impl DualMarchingCubes {
                    (self.bbox.dim().y / res).ceil() as usize,
                    (self.bbox.dim().z / res).ceil() as usize];
 
-        let t1 = ::time::precise_time_s();
+        let t1 = ::time::now();
         // Store object values in value_grid
         let mut p = Point::new(0., 0., self.bbox.min.z);
         self.value_grid.reserve(dim[2]);
@@ -242,8 +242,8 @@ impl DualMarchingCubes {
             self.value_grid.push(values_xy);
             p.z += res;
         }
-        let t2 = ::time::precise_time_s();
-        println!("generated value_grid: {:?} s", t2 - t1);
+        let t2 = ::time::now();
+        println!("generated value_grid: {:}", t2 - t1);
 
         let edge_end_offset: [Vector; 3] = [EDGE_END_OFFSET_VECTOR[0] * res,
                                             EDGE_END_OFFSET_VECTOR[1] * res,
@@ -278,14 +278,14 @@ impl DualMarchingCubes {
                 p.z += res;
             }
         }
-        let t3 = ::time::precise_time_s();
-        println!("generated edge_grid: {:?} s", t3 - t2);
+        let t3 = ::time::now();
+        println!("generated edge_grid: {:}", t3 - t2);
 
         for &(edge_index, ref idx) in self.edge_grid.borrow().keys() {
             self.compute_quad(edge_index, *idx);
         }
-        let t4 = ::time::precise_time_s();
-        println!("generated quads: {:?} s", t4 - t3);
+        let t4 = ::time::now();
+        println!("generated quads: {:}", t4 - t3);
 
         println!("computed mesh with {:?} faces.",
                  self.mesh.borrow().faces.len());
