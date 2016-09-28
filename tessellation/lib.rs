@@ -5,6 +5,7 @@ extern crate nalgebra_lapack;
 extern crate xplicit_types;
 extern crate xplicit_primitive;
 extern crate time;
+extern crate byteorder;
 
 pub use xplicit_types::Float;
 
@@ -19,3 +20,5 @@ pub use self::bitset::BitSet;
 mod dual_marching_cubes;
 pub use self::dual_marching_cubes::DualMarchingCubes;
 mod dual_marching_cubes_cell_configs;
+mod stl_writer;
+pub use self::stl_writer::write_stl;

@@ -13,6 +13,7 @@ nalgebra = "0.10"
 nalgebra-lapack = "0.4.0"
 rand = "0.3"
 time = "0.1"
+byteorder = "0.5"
 
 xplicit_types = { path = "../types", version = "0.0.*" }
 xplicit_primitive = { path = "../primitive", version = "0.0.*" }
