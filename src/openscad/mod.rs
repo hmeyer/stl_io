@@ -10,7 +10,8 @@ pub use self::grammar::program;
 mod tests {
 	use super::ast::*;
 	use super::grammar::*;
-	use ::primitive::Object;
+	use xplicit_primitive::{Object, Sphere};
+	use xplicit_types::Vector;
 
 	fn assert_ex_eq(ex: &'static str, v: Value) {
 		let mut env = Environment::new();
@@ -44,6 +45,10 @@ mod tests {
 		assert_ex_eq("\"foobar\"[1+2*.5+1.2]", Value::String("b".to_owned()));
     }
 
+	fn val_to_string(val: &Value) -> String {
+		format!("{:?}", val)
+	}
+
 	fn assert_pgm_eq(pgm: &'static str, v: Value) {
 		let ppgm = program(pgm);
 		assert!(ppgm.is_ok(), format!("{:?} while parsing {:?}", ppgm, pgm));
@@ -51,7 +56,8 @@ mod tests {
 		let mut env = Environment::new();
 		let mut out = ::std::io::stdout();
 		let result = ppgm.eval(&mut env, &mut out);
-		assert!(v == result, format!("{:?} == {:?} [{:?}]", v, result, ppgm));
+			assert!(val_to_string(&v) == val_to_string(&result),
+		        format!("{:?} == {:?} [{:?}]", v, result, ppgm));
 	}
 
 	#[test]
@@ -68,10 +74,8 @@ mod tests {
 	#[test]
     fn objects() {
 		assert_pgm_eq("sphere(15);",
-		                   Value::Objects(vec![::primitive::Sphere::new(15.)]));
-
-		let mut sphere = ::primitive::Sphere::new(7.);
-		sphere.translate(::types::Vector::new(1., 2., 3.));
+		                   Value::Objects(vec![Sphere::new(15.)]));
+		let sphere = Sphere::new(7.).translate(Vector::new(1., 2., 3.));
 		assert_pgm_eq("translate([1,2,3]) sphere(7);",
 		                   Value::Objects(vec![sphere]));
 	}

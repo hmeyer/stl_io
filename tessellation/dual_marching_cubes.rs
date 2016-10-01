@@ -1,13 +1,9 @@
-use na;
-use na::Transpose;
-use nalgebra_lapack::SVD;
-use cgmath::InnerSpace;
 use xplicit_primitive::{BoundingBox, Object};
-use {BitSet, Mesh};
+use {BitSet, Mesh, Plane, qef};
 use dual_marching_cubes_cell_configs::get_dmc_cell_configs;
 use xplicit_types::{Float, Point, Vector};
 use std::collections::HashMap;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use cgmath::EuclideanSpace;
 use rand;
 
@@ -156,12 +152,6 @@ const QUADS: [[Edge; 4]; 3] = [[Edge::A, Edge::G, Edge::J, Edge::D],
                                [Edge::B, Edge::E, Edge::K, Edge::H],
                                [Edge::C, Edge::I, Edge::L, Edge::F]];
 
-#[derive(Clone, Copy, Debug)]
-struct Plane {
-    pub p: Point,
-    pub n: Vector,
-}
-
 pub struct DualMarchingCubes {
     object: Box<Object>,
     bbox: BoundingBox,
@@ -172,6 +162,8 @@ pub struct DualMarchingCubes {
     value_grid: Vec<Vec<Vec<Float>>>,
     edge_grid: RefCell<HashMap<(Edge, Index), Plane>>,
     cell_configs: Vec<Vec<BitSet>>,
+    qefs: Cell<usize>,
+    clamps: Cell<usize>,
 }
 
 impl DualMarchingCubes {
@@ -192,6 +184,8 @@ impl DualMarchingCubes {
             value_grid: Vec::new(),
             edge_grid: RefCell::new(HashMap::new()),
             cell_configs: get_dmc_cell_configs(),
+            qefs: Cell::new(0),
+            clamps: Cell::new(0),
         }
     }
     pub fn tesselate(&mut self) -> Mesh {
@@ -207,6 +201,8 @@ impl DualMarchingCubes {
                     self.value_grid.clear();
                     self.mesh.borrow_mut().vertices.clear();
                     self.mesh.borrow_mut().faces.clear();
+                    self.qefs.set(0);
+                    self.clamps.set(0);
                 }
             }
         }
@@ -287,6 +283,8 @@ impl DualMarchingCubes {
         let t4 = ::time::now();
         println!("generated quads: {:}", t4 - t3);
 
+        println!("qefs: {:?} clamps: {:?}", self.qefs, self.clamps);
+
         println!("computed mesh with {:?} faces.",
                  self.mesh.borrow().faces.len());
 
@@ -332,46 +330,24 @@ impl DualMarchingCubes {
                                              })
                                              .collect();
 
+        // Fit the point to tangent planes.
+        let qef = qef::Qef::new(&tangent_planes);
+        let qef_solution = Point::new(qef.solution[0], qef.solution[1], qef.solution[2]);
+
+        if self.is_in_cell(&idx, &qef_solution) {
+            let qefs = self.qefs.get();
+            self.qefs.set(qefs + 1);
+            return qef_solution;
+        }
         let mean = Point::from_vec(&tangent_planes.iter()
                                                   .fold(Vector::new(0., 0., 0.),
                                                         |sum, x| sum + x.p.to_vec()) /
                                    tangent_planes.len() as Float);
-        // And fit the point to them.
-        if let Some(best_point) = DualMarchingCubes::optimize_qef(&tangent_planes, mean) {
-            if self.is_in_cell(&idx, &best_point) {
-                return best_point;
-            }
-        }
         // Proper calculation landed us outside the cell.
-        // Revert to binary search in 3 dimensions.
-        return self.binary_search_minimal_qef(&tangent_planes, &idx);
-    }
-
-    fn binary_search_minimal_qef(&self, planes: &[Plane], idx: &Index) -> Point {
-        let mut result = self.bbox.min +
-                         Vector::new(PRECISION + self.res * idx[0] as Float,
-                                     PRECISION + self.res * idx[1] as Float,
-                                     PRECISION + self.res * idx[2] as Float);
-        for i in 0..3 {
-            let mut a = result;
-            let mut b = result;
-            b[i] += self.res - PRECISION * 2.0;
-            let mut ma = a;
-            let mut mb = b;
-            while a[i] + PRECISION < b[i] {
-                ma[i] = (a[i] + b[i]) * 0.5;
-                mb[i] = (a[i] + b[i]) * 0.5 + PRECISION / 100.0;
-                let qef_ma = DualMarchingCubes::qef(planes, &ma);
-                let qef_mb = DualMarchingCubes::qef(planes, &mb);
-                if qef_ma < qef_mb {
-                    b = mb;
-                } else {
-                    a = ma;
-                }
-            }
-            result[i] = ma[i];
-        }
-        result
+        // Revert mean.
+        let clamps = self.clamps.get();
+        self.clamps.set(clamps + 1);
+        return mean;
     }
 
     fn is_in_cell(&self, idx: &Index, p: &Point) -> bool {
@@ -379,58 +355,6 @@ impl DualMarchingCubes {
             let d = p[i] - self.bbox.min[i] - idx_ as Float * self.res;
             d > 0. && d < self.res
         })
-    }
-
-    fn qef(planes: &[Plane], p: &Point) -> Float {
-        planes.iter().fold(0., |sum, plane| {
-            let d = plane.n.dot(p - plane.p);
-            d * d + sum
-        })
-    }
-
-    fn pseudoinverse(m: na::DMatrix<Float>) -> Option<na::DMatrix<Float>> {
-        let truncation_threshold = 0.1;
-        match m.svd() {
-            Err(e) => {
-                println!("Error during SVD: {:?}", e);
-                None
-            }
-            Ok((mut u, s, mut vt)) => {
-                let mut truncations = 0usize;
-                let sm = na::DMatrix::from_fn(vt.ncols(), u.ncols(), |c, r| {
-                    if c != r {
-                        0.
-                    } else {
-                        let v = s[c];
-                        if v > truncation_threshold {
-                            1. / v
-                        } else {
-                            truncations += 1;
-                            0.
-                        }
-                    }
-                });
-                vt.transpose_mut();
-                let v = vt;
-                u.transpose_mut();
-                let ut = u;
-                Some(v * sm * ut)
-            }
-        }
-    }
-
-    fn optimize_qef(planes: &[Plane], mean: Point) -> Option<Point> {
-        let a = na::DMatrix::from_fn(3, planes.len(), |c, r| planes[r].n[c]);
-        match DualMarchingCubes::pseudoinverse(a) {
-            None => return None,
-            Some(pseudo) => {
-                let b = na::DVector::from_fn(planes.len(),
-                                             |i| (planes[i].p - mean).dot(planes[i].n));
-                let least_squares = b * pseudo;
-                return Some(mean +
-                            Vector::new(least_squares[0], least_squares[1], least_squares[2]));
-            }
-        }
     }
 
     fn bitset_for_cell(&self, idx: Index) -> BitSet {
