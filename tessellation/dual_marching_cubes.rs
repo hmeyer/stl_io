@@ -331,7 +331,8 @@ impl DualMarchingCubes {
                                              .collect();
 
         // Fit the point to tangent planes.
-        let qef = qef::Qef::new(&tangent_planes);
+        let mut qef = qef::Qef::new(&tangent_planes);
+        qef.solve();
         let qef_solution = Point::new(qef.solution[0], qef.solution[1], qef.solution[2]);
 
         if self.is_in_cell(&idx, &qef_solution) {
