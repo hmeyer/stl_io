@@ -2,6 +2,7 @@ use Object;
 use bounding_box::BoundingBox;
 use xplicit_types::{Float, Matrix, Point, Vector};
 use cgmath::{InnerSpace, SquareMatrix, Transform};
+use std::{error, fmt};
 
 #[derive(Clone, Debug)]
 pub struct AffineTransformer {
@@ -10,6 +11,27 @@ pub struct AffineTransformer {
     transposed: Matrix,
     scale_min: Float,
     bbox: BoundingBox,
+}
+
+#[derive(Debug)]
+enum TransformerError {
+    FailedInversion(Matrix),
+}
+
+impl error::Error for TransformerError {
+    fn description(&self) -> &str {
+        match self {
+            &TransformerError::FailedInversion(_) => "Failed to invert Matrix.",
+        }
+    }
+}
+
+impl fmt::Display for TransformerError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            &TransformerError::FailedInversion(m) => write!(f, "Failed to invert {:?}", m),
+        }
+    }
 }
 
 impl Object for AffineTransformer {
@@ -69,14 +91,19 @@ impl AffineTransformer {
 
         let mut transposed = t.clone();
         transposed.transpose_self();
-        let bbox = o.bbox().transform(&t.invert().unwrap());
-        Box::new(AffineTransformer {
-            object: o,
-            transform: t,
-            transposed: transposed,
-            scale_min: scale_min,
-            bbox: bbox,
-        })
+        match t.invert() {
+            None => panic!("Failed to invert {:?}", t),
+            Some(t_inv) => {
+                let bbox = o.bbox().transform(&t_inv);
+                Box::new(AffineTransformer {
+                    object: o,
+                    transform: t,
+                    transposed: transposed,
+                    scale_min: scale_min,
+                    bbox: bbox,
+                })
+            }
+        }
     }
     pub fn new_translate(o: Box<Object>, v: Vector) -> Box<Object> {
         AffineTransformer::identity(o).translate(v)

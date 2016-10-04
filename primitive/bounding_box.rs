@@ -1,5 +1,5 @@
 use xplicit_types::{Float, INFINITY, Matrix, NEG_INFINITY, Point, Vector};
-use cgmath::{EuclideanSpace, Transform};
+use cgmath::Transform;
 
 pub static INFINITY_BOX: BoundingBox = BoundingBox {
     min: Point {
