@@ -1,13 +1,12 @@
-use xplicit_primitive::{BoundingBox, Object};
+use xplicit_primitive::Object;
 use {BitSet, Mesh, Plane, qef};
 use dual_marching_cubes_cell_configs::get_dmc_cell_configs;
 use xplicit_types::{Float, Point, Vector};
 use std::collections::HashMap;
 use std::cell::{Cell, RefCell};
-use std::error;
-use std::fmt;
+use std::{error, fmt};
 use std::cmp;
-use cgmath::{Array, EuclideanSpace};
+use cgmath::EuclideanSpace;
 use rand;
 
 // How accurately find zero crossings.
@@ -255,7 +254,7 @@ impl DualMarchingCubes {
         if size == 0 {
             return Some(DualContouringError::ZeroDim);
         }
-        let mut val: Float;
+        let val: Float;
         if let Some(&v) = self.value_grid.get(&pos) {
             val = v;
         } else {
@@ -264,6 +263,9 @@ impl DualMarchingCubes {
                                 pos[1] as Float * self.res,
                                 pos[2] as Float * self.res);
             val = self.object.approx_value(p, self.res);
+            if val == 0. {
+                return Some(DualContouringError::HitZero(p));
+            }
             self.value_grid.insert(pos, val);
         }
         if size > 1 && val.abs() < size as Float * self.res * 3_f64.sqrt() {
