@@ -4,7 +4,10 @@ use dual_marching_cubes_cell_configs::get_dmc_cell_configs;
 use xplicit_types::{Float, Point, Vector};
 use std::collections::HashMap;
 use std::cell::{Cell, RefCell};
-use cgmath::EuclideanSpace;
+use std::error;
+use std::fmt;
+use std::cmp;
+use cgmath::{Array, EuclideanSpace};
 use rand;
 
 // How accurately find zero crossings.
@@ -152,18 +155,56 @@ const QUADS: [[Edge; 4]; 3] = [[Edge::A, Edge::G, Edge::J, Edge::D],
                                [Edge::B, Edge::E, Edge::K, Edge::H],
                                [Edge::C, Edge::I, Edge::L, Edge::F]];
 
+#[derive(Debug)]
+enum DualContouringError {
+    HitZero(Point),
+    ZeroDim,
+}
+
+impl error::Error for DualContouringError {
+    fn description(&self) -> &str {
+        match self {
+            &DualContouringError::HitZero(_) => "Hit zero value during grid sampling.",
+            &DualContouringError::ZeroDim => "Called with zero dimension.",
+        }
+    }
+}
+
+impl fmt::Display for DualContouringError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            &DualContouringError::HitZero(p) => write!(f, "Hit zero value for {:?}", p),
+            &DualContouringError::ZeroDim => write!(f, "Called with zero dimension."),
+        }
+    }
+}
+
 pub struct DualMarchingCubes {
     object: Box<Object>,
-    bbox: BoundingBox,
+    origin: Point,
+    dim: [usize; 3],
     mesh: RefCell<Mesh>,
     // Map (EdgeSet, Index) -> index in mesh.vertices
     vertex_map: RefCell<HashMap<(BitSet, Index), usize>>,
     res: Float,
-    value_grid: Vec<Vec<Vec<Float>>>,
+    value_grid: HashMap<Index, Float>,
     edge_grid: RefCell<HashMap<(Edge, Index), Plane>>,
     cell_configs: Vec<Vec<BitSet>>,
     qefs: Cell<usize>,
     clamps: Cell<usize>,
+}
+
+// Returns the next largest power of 2
+fn pow2roundup(x: usize) -> usize {
+    let mut x = x;
+    x -= 1;
+    x |= x >> 1;
+    x |= x >> 2;
+    x |= x >> 4;
+    x |= x >> 8;
+    x |= x >> 16;
+    x |= x >> 32;
+    return x + 1;
 }
 
 impl DualMarchingCubes {
@@ -171,17 +212,21 @@ impl DualMarchingCubes {
     // obj: Object to tessellate
     // res: resolution
     pub fn new(obj: Box<Object>, res: Float) -> DualMarchingCubes {
-        let bbox = obj.bbox().dilate(res * 1.1);
+        let bbox = obj.bbox().dilate(1. + res * 1.1);
+        println!("DualMarchingCubes: res: {:} {:?}", res, bbox);
         DualMarchingCubes {
             object: obj,
-            bbox: bbox,
+            origin: bbox.min,
+            dim: [(bbox.dim()[0] / res).ceil() as usize,
+                  (bbox.dim()[1] / res).ceil() as usize,
+                  (bbox.dim()[2] / res).ceil() as usize],
             mesh: RefCell::new(Mesh {
                 vertices: Vec::new(),
                 faces: Vec::new(),
             }),
             vertex_map: RefCell::new(HashMap::new()),
             res: res,
-            value_grid: Vec::new(),
+            value_grid: HashMap::new(),
             edge_grid: RefCell::new(HashMap::new()),
             cell_configs: get_dmc_cell_configs(),
             qefs: Cell::new(0),
@@ -193,11 +238,9 @@ impl DualMarchingCubes {
             match self.try_tesselate() {
                 Ok(mesh) => return mesh,
                 Err(x) => {
-                    let padding = self.res / (1. + rand::random::<f64>().abs());
-                    println!("Error: {:?}. Padding bbox by {:?} and retrying.",
-                             x,
-                             padding);
-                    self.bbox = self.bbox.dilate(padding);
+                    let padding = self.res / (10. + rand::random::<f64>().abs());
+                    println!("Error: {:?}. moving by {:?} and retrying.", x, padding);
+                    self.origin.x -= padding;
                     self.value_grid.clear();
                     self.mesh.borrow_mut().vertices.clear();
                     self.mesh.borrow_mut().faces.clear();
@@ -207,64 +250,89 @@ impl DualMarchingCubes {
             }
         }
     }
-    // This method does the main work of tessellation.
-    fn try_tesselate(&mut self) -> Result<Mesh, String> {
-        let res = self.res;
-        let dim = [(self.bbox.dim().x / res).ceil() as usize,
-                   (self.bbox.dim().y / res).ceil() as usize,
-                   (self.bbox.dim().z / res).ceil() as usize];
 
-        let t1 = ::time::now();
-        // Store object values in value_grid
-        let mut p = Point::new(0., 0., self.bbox.min.z);
-        self.value_grid.reserve(dim[2]);
-        for _ in 0..dim[2] {
-            let mut values_xy = Vec::with_capacity(dim[1]);
-            p.y = self.bbox.min.y;
-            for _ in 0..dim[1] {
-                let mut values_x = Vec::with_capacity(dim[0]);
-                p.x = self.bbox.min.x;
-                for _ in 0..dim[0] {
-                    let val = self.object.approx_value(p, res);
-                    if val == 0. {
-                        return Err(format!("Hit zero on grid position {:?}", p));
-                    }
-                    values_x.push(val);
-                    p.x += res;
-                }
-                values_xy.push(values_x);
-                p.y += res;
-            }
-            self.value_grid.push(values_xy);
-            p.z += res;
+    fn sample_value_grid(&mut self, pos: Index, size: usize) -> Option<DualContouringError> {
+        if size == 0 {
+            return Some(DualContouringError::ZeroDim);
         }
+        let mut val: Float;
+        if let Some(&v) = self.value_grid.get(&pos) {
+            val = v;
+        } else {
+            let p = self.origin +
+                    Vector::new(pos[0] as Float * self.res,
+                                pos[1] as Float * self.res,
+                                pos[2] as Float * self.res);
+            val = self.object.approx_value(p, self.res);
+            self.value_grid.insert(pos, val);
+        }
+        if size > 1 && val.abs() < size as Float * self.res * 3_f64.sqrt() {
+            let mut pos = pos;
+            let size = size / 2;
+            for _ in 0..2 {
+                for _ in 0..2 {
+                    for _ in 0..2 {
+                        if let Some(e) = self.sample_value_grid(pos, size) {
+                            return Some(e);
+                        }
+                        pos[0] += size;
+                    }
+                    pos[0] -= 2 * size;
+                    pos[1] += size;
+                }
+                pos[1] -= 2 * size;
+                pos[2] += size;
+            }
+        }
+        None
+    }
+
+    // This method does the main work of tessellation.
+    fn try_tesselate(&mut self) -> Result<Mesh, DualContouringError> {
+        let res = self.res;
+        let t1 = ::time::now();
+
+        let maxdim = cmp::max(self.dim[0], cmp::max(self.dim[1], self.dim[2]));
+
+        if let Some(e) = self.sample_value_grid([0, 0, 0], pow2roundup(maxdim)) {
+            return Err(e);
+        }
+
         let t2 = ::time::now();
         println!("generated value_grid: {:}", t2 - t1);
+        println!("value_grid with {:} for {:} cells.",
+                 self.value_grid.len(),
+                 self.dim[0] * self.dim[1] * self.dim[2]);
 
         let edge_end_offset: [Vector; 3] = [EDGE_END_OFFSET_VECTOR[0] * res,
                                             EDGE_END_OFFSET_VECTOR[1] * res,
                                             EDGE_END_OFFSET_VECTOR[2] * res];
 
         // Store crossing positions of edges in edge_grid
-        let mut p = Point::new(0., 0., self.bbox.min.z);
+        let mut p = Point::new(0., 0., self.origin.z);
         {
             let mut edge_grid = self.edge_grid.borrow_mut();
             edge_grid.clear();
-            for z in 0..dim[2] - 1 {
-                p.y = self.bbox.min.y;
-                for y in 0..dim[1] - 1 {
-                    p.x = self.bbox.min.x;
-                    for x in 0..dim[0] - 1 {
+            for z in 0..self.dim[2] - 1 {
+                p.y = self.origin.y;
+                for y in 0..self.dim[1] - 1 {
+                    p.x = self.origin.x;
+                    for x in 0..self.dim[0] - 1 {
                         for edge in [Edge::A, Edge::B, Edge::C].iter() {
                             // We don't need any start offset here, since edges 0-2 start at the
                             // current cell.
                             let eo = EDGE_END_OFFSET[*edge as usize];   // end offset
-                            if let Some(plane) =
-                                   self.find_zero(p,
-                                                  self.value_grid[z][y][x],
-                                                  p + edge_end_offset[*edge as usize],
-                                                  self.value_grid[z + eo[2]][y + eo[1]][x + eo[0]]) {
-                                edge_grid.insert((*edge, [x, y, z]), plane);
+                            if let Some(p0) = self.value_grid.get(&[x, y, z]) {
+                                if let Some(p1) = self.value_grid
+                                                      .get(&[x + eo[0], y + eo[1], z + eo[2]]) {
+                                    if let Some(plane) =
+                                           self.find_zero(p,
+                                                          *p0,
+                                                          p + edge_end_offset[*edge as usize],
+                                                          *p1) {
+                                        edge_grid.insert((*edge, [x, y, z]), plane);
+                                    }
+                                }
                             }
                         }
                         p.x += res;
@@ -353,23 +421,29 @@ impl DualMarchingCubes {
 
     fn is_in_cell(&self, idx: &Index, p: &Point) -> bool {
         idx.iter().enumerate().all(|(i, &idx_)| {
-            let d = p[i] - self.bbox.min[i] - idx_ as Float * self.res;
+            let d = p[i] - self.origin[i] - idx_ as Float * self.res;
             d > 0. && d < self.res
         })
     }
 
     fn bitset_for_cell(&self, idx: Index) -> BitSet {
+        let mut idx = idx;
         let mut result = BitSet::new(0);
         for z in 0..2 {
-            let plane = &self.value_grid[idx[2] + z];
             for y in 0..2 {
-                let row = &plane[idx[1] + y];
                 for x in 0..2 {
-                    if row[idx[0] + x] < 0. {
-                        result.set(z << 2 | y << 1 | x);
+                    if let Some(v) = self.value_grid.get(&idx) {
+                        if *v < 0. {
+                            result.set(z << 2 | y << 1 | x);
+                        }
                     }
+                    idx[0] += 1;
                 }
+                idx[0] -= 2;
+                idx[1] += 1;
             }
+            idx[1] -= 2;
+            idx[2] += 1;
         }
         result
     }
@@ -394,8 +468,10 @@ impl DualMarchingCubes {
             p.push(self.lookup_cell_point(*quad_egde,
                                           neg_offset(idx, EDGE_OFFSET[*quad_egde as usize])))
         }
-        if self.value_grid[idx[2]][idx[1]][idx[0]] < 0. {
-            p.reverse();
+        if let Some(v) = self.value_grid.get(&idx) {
+            if *v < 0. {
+                p.reverse();
+            }
         }
         let ref mut face_list = self.mesh.borrow_mut().faces;
         face_list.push([p[0], p[1], p[2]]);
