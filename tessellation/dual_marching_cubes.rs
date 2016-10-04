@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::cell::{Cell, RefCell};
 use std::{error, fmt};
 use std::cmp;
-use cgmath::EuclideanSpace;
+use cgmath::{Array, EuclideanSpace};
 use rand;
 
 // How accurately find zero crossings.
@@ -490,16 +490,16 @@ impl DualMarchingCubes {
         if av.signum() == bv.signum() {
             return None;
         }
-        if av.abs() < PRECISION * self.res {
+        let mut distance = (a - b).min().abs().max((a - b).max());
+        distance = distance.min(av.abs()).min(bv.abs());
+        if distance < PRECISION * self.res {
+            let mut result = &a;
+            if bv.abs() < av.abs() {
+                result = &b;
+            }
             return Some(Plane {
-                p: a,
-                n: self.object.normal(a),
-            });
-        }
-        if bv.abs() < PRECISION * self.res {
-            return Some(Plane {
-                p: b,
-                n: self.object.normal(b),
+                p: *result,
+                n: self.object.normal(*result),
             });
         }
         // Linear interpolation of the zero crossing.

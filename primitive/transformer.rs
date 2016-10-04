@@ -60,9 +60,9 @@ impl Object for AffineTransformer {
         AffineTransformer::new_with_scaler(self.object.clone(), new_trans, self.scale_min)
     }
     fn rotate(&self, r: Vector) -> Box<Object> {
-        let euler = ::cgmath::Euler::new(::cgmath::Rad { s: r.x },
-                                         ::cgmath::Rad { s: r.y },
-                                         ::cgmath::Rad { s: r.z });
+        let euler = ::cgmath::Euler::new(::cgmath::Rad(r.x),
+                                         ::cgmath::Rad(r.y),
+                                         ::cgmath::Rad(r.z));
         let new_trans = self.transform.concat(&Matrix::from(euler));
         AffineTransformer::new_with_scaler(self.object.clone(), new_trans, self.scale_min)
     }

@@ -8,6 +8,6 @@ name = "xplicit_primitive"
 path = "lib.rs"
 
 [dependencies]
-cgmath = "0.10.0"
+cgmath = "0.12.0"
 
 xplicit_types = { path = "../types", version = "0.0.*" }

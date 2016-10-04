@@ -57,7 +57,7 @@ impl Twister {
     }
     fn twist_point(&self, p: Point) -> Point {
         let p2 = ::cgmath::Point2::new(p.x, p.y);
-        let angle = ::cgmath::Rad { s: p.z * self.height_scaler };
+        let angle = ::cgmath::Rad(p.z * self.height_scaler);
         let trans = ::cgmath::Basis2::from_angle(angle);
         let rp2 = trans.rotate_point(p2);
         Point::new(rp2.x, rp2.y, p.z)
@@ -87,7 +87,7 @@ impl Twister {
     }
     fn untwist_normal(&self, v: Vector, p: Point) -> Vector {
         let v2 = ::cgmath::Vector2::new(v.x, v.y);
-        let angle = ::cgmath::Rad { s: -p.z * self.height_scaler };
+        let angle = ::cgmath::Rad(-p.z * self.height_scaler);
         let trans = ::cgmath::Basis2::from_angle(angle);
         let rv2 = trans.rotate_vector(v2);
         self.tilt_normal(Vector::new(rv2.x, rv2.y, v.z), p)

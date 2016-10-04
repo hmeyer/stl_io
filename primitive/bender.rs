@@ -78,7 +78,7 @@ impl Bender {
     }
     fn bend_normal(&self, v: Vector, polar_p: Point) -> Vector {
         let v = self.tilt_normal(v, polar_p);
-        let phi = ::cgmath::Rad { s: polar_p.x + ::std::f64::consts::PI };
+        let phi = ::cgmath::Rad(polar_p.x + ::std::f64::consts::PI);
         let v2 = ::cgmath::Vector2::new(v.x, v.y);
         let trans = ::cgmath::Basis2::from_angle(phi);
         let rv2 = trans.rotate_vector(v2);

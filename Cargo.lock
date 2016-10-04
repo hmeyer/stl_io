@@ -3,7 +3,7 @@ name = "xplicit"
 version = "0.0.1"
 dependencies = [
  "cairo-rs 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "cgmath 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cgmath 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "gdk 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "glib 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "gtk 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -17,6 +17,11 @@ dependencies = [
  "xplicit_tessellation 0.0.1",
  "xplicit_types 0.0.1",
 ]
+
+[[package]]
+name = "approx"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "atk-sys"
@@ -92,9 +97,10 @@ dependencies = [
 
 [[package]]
 name = "cgmath"
-version = "0.10.0"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
+ "approx 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.1.35 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.19 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -684,7 +690,7 @@ dependencies = [
 name = "xplicit_primitive"
 version = "0.0.1"
 dependencies = [
- "cgmath 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cgmath 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "xplicit_types 0.0.1",
 ]
 
@@ -693,7 +699,7 @@ name = "xplicit_tessellation"
 version = "0.0.1"
 dependencies = [
  "byteorder 0.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "cgmath 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cgmath 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "nalgebra 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.35 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -705,10 +711,11 @@ dependencies = [
 name = "xplicit_types"
 version = "0.0.1"
 dependencies = [
- "cgmath 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cgmath 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [metadata]
+"checksum approx 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "08abcc3b4e9339e33a3d0a5ed15d84a687350c05689d825e0f6655eef9e76a94"
 "checksum atk-sys 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "52dba8b14510e6d21395f6176396993782f8d1097a7b56bda448213a745311fd"
 "checksum bitflags 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "32866f4d103c4e438b1db1158aa1b1a80ee078e5d77a59a2f906fd62a577389c"
 "checksum bitflags 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "8dead7461c1127cf637931a1e50934eb6eee8bff2f74433ac7909e9afcee04a3"
@@ -720,7 +727,7 @@ dependencies = [
 "checksum c_vec 1.0.12 (registry+https://github.com/rust-lang/crates.io-index)" = "aa9e1d9f7d49e289f36f19effbf3d5a5e30163ecf9c7a3c9be94d5374dec5b9a"
 "checksum cairo-rs 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7897ceda29077c3d87f2d46a0f23ed6c552e48e8d1943ac755f8956f81a8a20d"
 "checksum cairo-sys-rs 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "e43dcd461d0b014b01443cbda24684e88060e462a757a732e30309bb5fa26c9e"
-"checksum cgmath 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)" = "6747adb0788e656a379f782b039dae6571be0b157fab45ba9b429a49e600f669"
+"checksum cgmath 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)" = "232472604dbad61c384edfc4d833315d487894826856836b7227b37fe3abe02b"
 "checksum cmake 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)" = "dfcf5bcece56ef953b8ea042509e9dcbdfe97820b7e20d86beb53df30ed94978"
 "checksum color_quant 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a475fc4af42d83d28adf72968d9bcfaf035a1a9381642d8e85d8a04957767b0d"
 "checksum enum_primitive 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f79eff5be92a4d7d5bddf7daa7d650717ea71628634efe6ca7bcda85b2183c23"

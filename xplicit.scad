@@ -1,7 +1,4 @@
-size=20;
-
-bend(5)
-translate([0,size*.5,0])
-rotate([0,TAU/4,0])
-twist(5*4)
-cube([size*.4,size*.4,60]);
+difference(s=50) {
+cube([100,100,100],s=10);
+icylinder(20);
+}

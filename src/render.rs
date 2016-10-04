@@ -37,9 +37,7 @@ impl Renderer {
     }
 
     pub fn rotate_from_screen(&mut self, x: f64, y: f64) {
-        let euler = ::cgmath::Euler::new(::cgmath::Rad { s: y },
-                                         ::cgmath::Rad { s: x },
-                                         ::cgmath::Rad { s: 0. });
+        let euler = ::cgmath::Euler::new(::cgmath::Rad(y), ::cgmath::Rad(x), ::cgmath::Rad(0.));
         let other = Matrix::from(euler);
         self.trans = self.trans.concat(&other);
     }

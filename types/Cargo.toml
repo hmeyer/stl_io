@@ -8,4 +8,4 @@ name = "xplicit_types"
 path = "lib.rs"
 
 [dependencies]
-cgmath = "0.10.0"
+cgmath = "0.12.0"
