@@ -125,25 +125,6 @@ impl Edge {
     }
 }
 
-// Offset of the end position of the first 3 edges - relative to current position.
-const EDGE_END_OFFSET: [Index; 3] = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
-const EDGE_END_OFFSET_VECTOR: [Vector; 3] = [Vector {
-                                                 x: 1.,
-                                                 y: 0.,
-                                                 z: 0.,
-                                             },
-                                             Vector {
-                                                 x: 0.,
-                                                 y: 1.,
-                                                 z: 0.,
-                                             },
-                                             Vector {
-                                                 x: 0.,
-                                                 y: 0.,
-
-                                                 z: 1.,
-                                             }];
-
 // Cell offsets of edges
 const EDGE_OFFSET: [Index; 12] = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 1, 0], [1, 0, 0],
                                   [1, 0, 0], [0, 0, 1], [0, 0, 1], [0, 1, 0], [0, 1, 1],
@@ -301,7 +282,7 @@ impl DualMarchingCubes {
 
         let maxdim = cmp::max(self.dim[0], cmp::max(self.dim[1], self.dim[2]));
         let origin = self.origin;
-        let origin_value = self.object.approx_value(origin, self.res);
+        let origin_value = self.object.approx_value(origin, res);
 
         if let Some(e) = self.sample_value_grid([0, 0, 0],
                                                 origin,
@@ -316,42 +297,30 @@ impl DualMarchingCubes {
                  self.value_grid.len(),
                  self.dim[0] * self.dim[1] * self.dim[2]);
 
-        let edge_end_offset: [Vector; 3] = [EDGE_END_OFFSET_VECTOR[0] * res,
-                                            EDGE_END_OFFSET_VECTOR[1] * res,
-                                            EDGE_END_OFFSET_VECTOR[2] * res];
-
         // Store crossing positions of edges in edge_grid
-        let mut p = Point::new(0., 0., self.origin.z);
         {
             let mut edge_grid = self.edge_grid.borrow_mut();
-            edge_grid.clear();
-            for z in 0..self.dim[2] - 1 {
-                p.y = self.origin.y;
-                for y in 0..self.dim[1] - 1 {
-                    p.x = self.origin.x;
-                    for x in 0..self.dim[0] - 1 {
-                        for edge in [Edge::A, Edge::B, Edge::C].iter() {
-                            // We don't need any start offset here, since edges 0-2 start at the
-                            // current cell.
-                            let eo = EDGE_END_OFFSET[*edge as usize];   // end offset
-                            if let Some(p0) = self.value_grid.get(&[x, y, z]) {
-                                if let Some(p1) = self.value_grid
-                                                      .get(&[x + eo[0], y + eo[1], z + eo[2]]) {
-                                    if let Some(plane) =
-                                           self.find_zero(p,
-                                                          *p0,
-                                                          p + edge_end_offset[*edge as usize],
-                                                          *p1) {
-                                        edge_grid.insert((*edge, [x, y, z]), plane);
-                                    }
-                                }
-                            }
+            for (point_idx, point_value) in &self.value_grid {
+                for edge in [Edge::A, Edge::B, Edge::C].iter() {
+                    let mut adjacent_idx = point_idx.clone();
+                    adjacent_idx[*edge as usize] += 1;
+                    if let Some(adjacent_value) = self.value_grid
+                                                      .get(&adjacent_idx) {
+                        let point_pos = self.origin +
+                                        res *
+                                        Vector::new(point_idx[0] as Float,
+                                                    point_idx[1] as Float,
+                                                    point_idx[2] as Float);
+                        let mut adjacent_pos = point_pos;
+                        adjacent_pos[*edge as usize] += res;
+                        if let Some(plane) = self.find_zero(point_pos,
+                                                            *point_value,
+                                                            adjacent_pos,
+                                                            *adjacent_value) {
+                            edge_grid.insert((*edge, *point_idx), plane);
                         }
-                        p.x += res;
                     }
-                    p.y += res;
                 }
-                p.z += res;
             }
         }
         let t3 = ::time::now();
