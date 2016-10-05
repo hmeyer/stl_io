@@ -10,7 +10,7 @@ use cgmath::{Array, EuclideanSpace};
 use rand;
 
 // How accurately find zero crossings.
-const PRECISION: Float = 0.01;
+const PRECISION: Float = 0.05;
 
 pub type Index = [usize; 3];
 
@@ -157,14 +157,12 @@ const QUADS: [[Edge; 4]; 3] = [[Edge::A, Edge::G, Edge::J, Edge::D],
 #[derive(Debug)]
 enum DualContouringError {
     HitZero(Point),
-    ZeroDim,
 }
 
 impl error::Error for DualContouringError {
     fn description(&self) -> &str {
         match self {
             &DualContouringError::HitZero(_) => "Hit zero value during grid sampling.",
-            &DualContouringError::ZeroDim => "Called with zero dimension.",
         }
     }
 }
@@ -173,7 +171,6 @@ impl fmt::Display for DualContouringError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             &DualContouringError::HitZero(p) => write!(f, "Hit zero value for {:?}", p),
-            &DualContouringError::ZeroDim => write!(f, "Called with zero dimension."),
         }
     }
 }
@@ -250,41 +247,49 @@ impl DualMarchingCubes {
         }
     }
 
-    fn sample_value_grid(&mut self, pos: Index, size: usize) -> Option<DualContouringError> {
-        if size == 0 {
-            return Some(DualContouringError::ZeroDim);
-        }
-        let val: Float;
-        if let Some(&v) = self.value_grid.get(&pos) {
-            val = v;
-        } else {
-            let p = self.origin +
-                    Vector::new(pos[0] as Float * self.res,
-                                pos[1] as Float * self.res,
-                                pos[2] as Float * self.res);
-            val = self.object.approx_value(p, self.res);
-            if val == 0. {
-                return Some(DualContouringError::HitZero(p));
-            }
-            self.value_grid.insert(pos, val);
-        }
-        if size > 1 && val.abs() < size as Float * self.res * 3_f64.sqrt() {
-            let mut pos = pos;
-            let size = size / 2;
-            for _ in 0..2 {
-                for _ in 0..2 {
-                    for _ in 0..2 {
-                        if let Some(e) = self.sample_value_grid(pos, size) {
+    fn sample_value_grid(&mut self,
+                         idx: Index,
+                         pos: Point,
+                         size: usize,
+                         val: Float)
+                         -> Option<DualContouringError> {
+        debug_assert!(size > 1);
+        let mut midx = idx;
+        let size = size / 2;
+        let vpos = [pos,
+                    Point::new(pos.x + size as Float * self.res,
+                               pos.y + size as Float * self.res,
+                               pos.z + size as Float * self.res)];
+        let sub_cube_diagonal = size as Float * self.res * 3_f64.sqrt();
+
+        for z in 0..2 {
+            for y in 0..2 {
+                for x in 0..2 {
+                    let mpos = Point::new(vpos[x].x, vpos[y].y, vpos[z].z);
+                    let value = if midx == idx {
+                        val
+                    } else {
+                        self.object.approx_value(mpos, self.res)
+                    };
+
+                    if value == 0. {
+                        return Some(DualContouringError::HitZero(mpos));
+                    }
+
+                    if size > 1 && value.abs() <= sub_cube_diagonal {
+                        if let Some(e) = self.sample_value_grid(midx, mpos, size, value) {
                             return Some(e);
                         }
-                        pos[0] += size;
+                    } else {
+                        self.value_grid.insert(midx, value);
                     }
-                    pos[0] -= 2 * size;
-                    pos[1] += size;
+                    midx[0] += size;
                 }
-                pos[1] -= 2 * size;
-                pos[2] += size;
+                midx[0] -= 2 * size;
+                midx[1] += size;
             }
+            midx[1] -= 2 * size;
+            midx[2] += size;
         }
         None
     }
@@ -295,8 +300,13 @@ impl DualMarchingCubes {
         let t1 = ::time::now();
 
         let maxdim = cmp::max(self.dim[0], cmp::max(self.dim[1], self.dim[2]));
+        let origin = self.origin;
+        let origin_value = self.object.approx_value(origin, self.res);
 
-        if let Some(e) = self.sample_value_grid([0, 0, 0], pow2roundup(maxdim)) {
+        if let Some(e) = self.sample_value_grid([0, 0, 0],
+                                                origin,
+                                                pow2roundup(maxdim),
+                                                origin_value) {
             return Err(e);
         }
 
