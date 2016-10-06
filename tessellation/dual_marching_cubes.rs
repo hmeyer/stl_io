@@ -237,10 +237,7 @@ impl DualMarchingCubes {
         debug_assert!(size > 1);
         let mut midx = idx;
         let size = size / 2;
-        let vpos = [pos,
-                    Point::new(pos.x + size as Float * self.res,
-                               pos.y + size as Float * self.res,
-                               pos.z + size as Float * self.res)];
+        let vpos = [pos, pos + size as Float * Vector::new(self.res, self.res, self.res)];
         let sub_cube_diagonal = size as Float * self.res * 3_f64.sqrt();
 
         for z in 0..2 {
