@@ -354,18 +354,22 @@ impl DualMarchingCubes {
         let t3 = ::time::now();
         println!("generated edge_grid: {:}", t3 - t2);
 
+
+        let mut vertices = HashMap::new();
         {
-            for (point_idx, _) in &self.value_grid {
-                // self.generate_vertices(point_idx);
+            for edge_index in self.edge_grid.borrow().keys() {
+                self.generate_vertices(edge_index, &mut vertices);
             }
         }
 
+        let t4 = ::time::now();
+        println!("generated {:?} vertices: {:}", vertices.len(), t4 - t3);
 
         for edge_index in self.edge_grid.borrow().keys() {
             self.compute_quad(*edge_index);
         }
-        let t4 = ::time::now();
-        println!("generated quads: {:}", t4 - t3);
+        let t5 = ::time::now();
+        println!("generated quads: {:}", t5 - t4);
 
         println!("qefs: {:?} clamps: {:?}", self.qefs, self.clamps);
 
@@ -375,16 +379,31 @@ impl DualMarchingCubes {
         Ok(self.mesh.borrow().clone())
     }
 
-    // fn generate_vertices(&self, idx: Index) -> Vec<Vertex> {
-    //     let cell_bitset = self.bitset_for_cell(idx);
-    //     self.cell_configs[cell_bitset.as_usize()].iter().map(|edge_set| {
-    //         let tangent_planes: Vec<_> =
-    //             edge_set.into_iter()
-    //                     .map(|edge| self.get_edge_tangent_plane(Edge::from_usize(edge), idx))
-    //                     .collect();
-    //         let qef = qef::Qef::new(&tangent_planes);
-    //     }
-    // }
+    fn generate_vertices(&self,
+                         edge_index: &EdgeIndex,
+                         result_map: &mut HashMap<VertexIndex, Vertex>) {
+        debug_assert!((edge_index.edge as usize) < 4);
+        for quad_egde in QUADS[edge_index.edge as usize].iter() {
+            let idx = neg_offset(edge_index.index, EDGE_OFFSET[*quad_egde as usize]);
+
+            let edge_set = self.get_connected_edges(*quad_egde, self.bitset_for_cell(idx));
+            let vertex_index = VertexIndex {
+                edges: edge_set,
+                index: idx,
+            };
+            result_map.entry(vertex_index).or_insert_with(|| {
+                let tangent_planes: Vec<_> = edge_set.into_iter()
+                                                     .map(|edge| {
+                                                         self.get_edge_tangent_plane(&EdgeIndex {
+                                                             edge: Edge::from_usize(edge),
+                                                             index: idx,
+                                                         })
+                                                     })
+                                                     .collect();
+                Vertex { qef: qef::Qef::new(&tangent_planes) }
+            });
+        }
+    }
 
     fn get_edge_tangent_plane(&self, edge_index: &EdgeIndex) -> Plane {
         if let Some(ref plane) = self.edge_grid
@@ -400,12 +419,12 @@ impl DualMarchingCubes {
     // Return the Point index (in self.mesh.vertices) the the point belonging to edge/idx.
     fn lookup_cell_point(&self, edge: Edge, idx: Index) -> usize {
         let edge_set = self.get_connected_edges(edge, self.bitset_for_cell(idx));
-        let edged_index = VertexIndex {
+        let vertex_index = VertexIndex {
             edges: edge_set,
             index: idx,
         };
         // Try to lookup the edge_set for this index.
-        if let Some(index) = self.vertex_map.borrow().get(&edged_index) {
+        if let Some(index) = self.vertex_map.borrow().get(&vertex_index) {
             return *index;
         }
         // It does not exist. So calculate all edge crossings and their normals.
@@ -413,7 +432,7 @@ impl DualMarchingCubes {
 
         let ref mut vertex_list = self.mesh.borrow_mut().vertices;
         let result = vertex_list.len();
-        self.vertex_map.borrow_mut().insert(edged_index, result);
+        self.vertex_map.borrow_mut().insert(vertex_index, result);
         vertex_list.push([point.x, point.y, point.z]);
         return result;
     }
@@ -466,6 +485,8 @@ impl DualMarchingCubes {
                         if *v < 0. {
                             result.set(z << 2 | y << 1 | x);
                         }
+                    } else {
+                        panic!("did not find value_grid[{:?}]", idx);
                     }
                     idx[0] += 1;
                 }
