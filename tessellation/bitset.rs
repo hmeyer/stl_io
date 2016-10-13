@@ -1,9 +1,15 @@
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub struct BitSet(u32);
+pub struct BitSet(pub u32);
 
 impl BitSet {
-    pub fn new(val: u32) -> BitSet {
+    pub const fn zero() -> BitSet {
+        BitSet(0)
+    }
+    pub const fn new(val: u32) -> BitSet {
         BitSet(val)
+    }
+    pub const fn bits4(b0: usize, b1: usize, b2: usize, b3: usize) -> BitSet {
+        BitSet(1 << b0 | 1 << b1 | 1 << b2 | 1 << b3)
     }
     pub fn set(&mut self, index: usize) {
         self.0 |= 1 << index;
@@ -99,8 +105,8 @@ mod tests {
 
     #[test]
     fn merge() {
-        assert_eq!(super::BitSet::new(0b00).merge(super::BitSet::new(0b00)),
-                   super::BitSet::new(0b00));
+        assert_eq!(super::BitSet::zero().merge(super::BitSet::zero()),
+                   super::BitSet::zero());
         assert_eq!(super::BitSet::new(0b01).merge(super::BitSet::new(0b00)),
                    super::BitSet::new(0b01));
         assert_eq!(super::BitSet::new(0b00).merge(super::BitSet::new(0b10)),

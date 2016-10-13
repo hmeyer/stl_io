@@ -1,3 +1,4 @@
+#![feature(const_fn)]
 extern crate cgmath;
 extern crate rand;
 extern crate nalgebra as na;

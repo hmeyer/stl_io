@@ -29,7 +29,7 @@ fn get_edges_for_cell_config(corners: u8) -> Vec<BitSet> {
         return special;
     }
     let mut result = Vec::new();
-    let mut visited_corners = BitSet::new(0);
+    let mut visited_corners = BitSet::zero();
     for corner in cell.clone().into_iter() {
         let connected_corners = visit_all_corners(corner, cell, &mut visited_corners);
         if !connected_corners.empty() {
@@ -52,11 +52,11 @@ fn get_edge_from_corners(a: usize, b: usize) -> Edge {
 fn visit_all_corners(corner: usize, cell: BitSet, visited_corners: &mut BitSet) -> BitSet {
     if visited_corners.get(corner) {
         // We already visited the current corner
-        return BitSet::new(0);
+        return BitSet::zero();
     }
     // Mark the current corner as visited.
     visited_corners.set(corner);
-    let mut result = BitSet::new(0);
+    let mut result = BitSet::zero();
     for adjacent_corner_ref in CORNER_CONNS[corner].into_iter() {
         let adjacent_corner = *adjacent_corner_ref as usize;
         if cell.get(adjacent_corner) {
@@ -70,7 +70,7 @@ fn visit_all_corners(corner: usize, cell: BitSet, visited_corners: &mut BitSet) 
 }
 
 fn bitset_from_edges(edges: [Edge; 3]) -> BitSet {
-    let mut bs = BitSet::new(0);
+    let mut bs = BitSet::zero();
     for edge in edges.iter() {
         bs.set(*edge as usize);
     }
