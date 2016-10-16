@@ -17,6 +17,9 @@ impl BitSet {
     pub fn merge(&self, other: BitSet) -> BitSet {
         return BitSet(self.0 | other.0);
     }
+    pub fn intersect(&self, other: BitSet) -> BitSet {
+        return BitSet(self.0 & other.0);
+    }
     pub fn get(&self, index: usize) -> bool {
         (self.0 & (1 << index)) != 0
     }
@@ -48,8 +51,8 @@ impl BitSet {
             Some(num)
         }
     }
-    pub fn as_usize(&self) -> usize {
-        self.0 as usize
+    pub fn as_u32(&self) -> u32 {
+        self.0
     }
 }
 
@@ -114,6 +117,20 @@ mod tests {
         assert_eq!(super::BitSet::new(0b01).merge(super::BitSet::new(0b10)),
                    super::BitSet::new(0b11));
         assert_eq!(super::BitSet::new(0b11).merge(super::BitSet::new(0b11)),
+                   super::BitSet::new(0b11));
+    }
+
+    #[test]
+    fn intersect() {
+        assert_eq!(super::BitSet::zero().intersect(super::BitSet::zero()),
+                   super::BitSet::zero());
+        assert_eq!(super::BitSet::new(0b01).intersect(super::BitSet::new(0b00)),
+                   super::BitSet::new(0b00));
+        assert_eq!(super::BitSet::new(0b00).intersect(super::BitSet::new(0b10)),
+                   super::BitSet::new(0b00));
+        assert_eq!(super::BitSet::new(0b01).intersect(super::BitSet::new(0b10)),
+                   super::BitSet::new(0b00));
+        assert_eq!(super::BitSet::new(0b11).intersect(super::BitSet::new(0b11)),
                    super::BitSet::new(0b11));
     }
 
