@@ -25,7 +25,7 @@ pub struct Qef {
 impl Qef {
     pub fn new(planes: &[Plane]) -> Qef {
         let mut qef = Qef {
-            solution: na::Vector3::new(0., 0., 0.),
+            solution: na::Vector3::new(::std::f64::NAN, ::std::f64::NAN, ::std::f64::NAN),
             mean: na::Vector3::new(0., 0., 0.),
             ata: [0.; 6],
             atb: na::Vector3::new(0., 0., 0.),
@@ -99,53 +99,60 @@ mod tests {
     #[test]
     fn origin() {
         let origin = Point::new(0., 0., 0.);
-        let qef = Qef::new(&[Plane {
-                                 p: origin.clone(),
-                                 n: Vector::new(0., 1., 2.).normalize(),
-                             },
-                             Plane {
-                                 p: origin.clone(),
-                                 n: Vector::new(1., 2., 3.).normalize(),
-                             },
-                             Plane {
-                                 p: origin.clone(),
-                                 n: Vector::new(2., 3., 4.).normalize(),
-                             }]);
+        let mut qef = Qef::new(&[Plane {
+                                     p: origin.clone(),
+                                     n: Vector::new(0., 1., 2.).normalize(),
+                                 },
+                                 Plane {
+                                     p: origin.clone(),
+                                     n: Vector::new(1., 2., 3.).normalize(),
+                                 },
+                                 Plane {
+                                     p: origin.clone(),
+                                     n: Vector::new(2., 3., 4.).normalize(),
+                                 }]);
+        qef.solve();
         assert!(qef.solution.approx_eq(&na::Vector3::new(0., 0., 0.)));
     }
 
     #[test]
     fn points_on_cube_solution_in_origin() {
-        let qef = Qef::new(&[Plane {
-                                 p: Point::new(1., 0., 0.),
-                                 n: Vector::new(0., 1., 1.).normalize(),
-                             },
-                             Plane {
-                                 p: Point::new(0., 1., 0.),
-                                 n: Vector::new(1., 0., 1.).normalize(),
-                             },
-                             Plane {
-                                 p: Point::new(0., 0., 1.),
-                                 n: Vector::new(1., 1., 0.).normalize(),
-                             }]);
+        let mut qef = Qef::new(&[Plane {
+                                     p: Point::new(1., 0., 0.),
+                                     n: Vector::new(0., 1., 1.).normalize(),
+                                 },
+                                 Plane {
+                                     p: Point::new(0., 1., 0.),
+                                     n: Vector::new(1., 0., 1.).normalize(),
+                                 },
+                                 Plane {
+                                     p: Point::new(0., 0., 1.),
+                                     n: Vector::new(1., 1., 0.).normalize(),
+                                 }]);
+        qef.solve();
         assert!(qef.solution.approx_eq(&na::Vector3::new(0., 0., 0.)));
     }
 
     #[test]
     fn points_on_origin_solution_on_cube() {
-        let qef = Qef::new(&[Plane {
-                                 p: Point::new(1., 0., 0.),
-                                 n: Vector::new(1., 0., 0.),
-                             },
-                             Plane {
-                                 p: Point::new(0., 2., 0.),
-                                 n: Vector::new(0., 1., 0.),
-                             },
-                             Plane {
-                                 p: Point::new(0., 0., 3.),
-                                 n: Vector::new(0., 0., 1.),
-                             }]);
-        assert!(qef.solution.approx_eq(&na::Vector3::new(1., 2., 3.)));
+        let mut qef = Qef::new(&[Plane {
+                                     p: Point::new(1., 0., 0.),
+                                     n: Vector::new(1., 0., 0.),
+                                 },
+                                 Plane {
+                                     p: Point::new(0., 2., 0.),
+                                     n: Vector::new(0., 1., 0.),
+                                 },
+                                 Plane {
+                                     p: Point::new(0., 0., 3.),
+                                     n: Vector::new(0., 0., 1.),
+                                 }]);
+        qef.solve();
+        let expected_solution = na::Vector3::new(1., 2., 3.);
+        assert!(qef.solution.approx_eq(&expected_solution),
+                "{} != {}",
+                qef.solution,
+                expected_solution);
     }
 
 
