@@ -1,4 +1,4 @@
-use BitSet;
+use bitset::BitSet;
 
 
 //  Edge indexes

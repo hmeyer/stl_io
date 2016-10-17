@@ -1,6 +1,9 @@
 use xplicit_primitive::Object;
-use {BitSet, Index, MaybeIndex, Mesh, Plane, VertexIndex, neg_offset, offset, qef};
-use dual_marching_cubes_cell_configs::get_dmc_cell_configs;
+use bitset::BitSet;
+use vertex_index::{Index, MaybeIndex, VertexIndex, neg_offset, offset};
+use qef;
+use {Mesh, Plane};
+use cell_configs::CELL_CONFIGS;
 use xplicit_types::{Float, Point, Vector};
 use std::collections::HashMap;
 use std::cell::{Cell, RefCell};
@@ -11,54 +14,6 @@ use rand;
 
 // How accurately find zero crossings.
 const PRECISION: Float = 0.05;
-
-//  Corner indexes
-//
-//      6---------------7
-//     /|              /|
-//    / |             / |
-//   /  |            /  |
-//  4---------------5   |
-//  |   |           |   |
-//  |   2-----------|---3
-//  |  /            |  /
-//  | /             | /
-//  |/              |/
-//  0---------------1
-#[derive(Clone, Copy)]
-pub enum Corner {
-    A = 0,
-    B = 1,
-    C = 2,
-    D = 3,
-    E = 4,
-    F = 5,
-    G = 6,
-    H = 7,
-}
-// Corner connections
-pub const CORNER_CONNS: [[Corner; 3]; 8] = [[Corner::B, Corner::C, Corner::E],
-                                            [Corner::A, Corner::D, Corner::F],
-                                            [Corner::A, Corner::D, Corner::G],
-                                            [Corner::B, Corner::C, Corner::H],
-                                            [Corner::A, Corner::F, Corner::G],
-                                            [Corner::B, Corner::E, Corner::H],
-                                            [Corner::C, Corner::E, Corner::H],
-                                            [Corner::D, Corner::F, Corner::G]];
-
-// Which corners does a edge connect:
-pub const EDGE_DEF: [(Corner, Corner); 12] = [(Corner::A, Corner::B),
-                                              (Corner::A, Corner::C),
-                                              (Corner::A, Corner::E),
-                                              (Corner::C, Corner::D),
-                                              (Corner::B, Corner::D),
-                                              (Corner::B, Corner::F),
-                                              (Corner::E, Corner::F),
-                                              (Corner::E, Corner::G),
-                                              (Corner::C, Corner::G),
-                                              (Corner::G, Corner::H),
-                                              (Corner::F, Corner::H),
-                                              (Corner::D, Corner::H)];
 
 //  Edge indexes
 //
@@ -180,7 +135,6 @@ pub struct DualMarchingCubes {
     res: Float,
     value_grid: HashMap<Index, Float>,
     edge_grid: RefCell<HashMap<EdgeIndex, Plane>>,
-    cell_configs: Vec<Vec<BitSet>>,
     qefs: Cell<usize>,
     clamps: Cell<usize>,
 }
@@ -196,6 +150,27 @@ fn pow2roundup(x: usize) -> usize {
     x |= x >> 16;
     x |= x >> 32;
     return x + 1;
+}
+
+
+// Returns a BitSet containing all egdes connected to "edge" in this cell.
+fn get_connected_edges(edge: Edge, cell: BitSet) -> BitSet {
+    for edge_set in CELL_CONFIGS[cell.as_u32() as usize].iter() {
+        if edge_set.get(edge as usize) {
+            return *edge_set;
+        }
+    }
+    panic!("Did not find edge_set for {:?} and {:?}", edge, cell);
+}
+
+// Returns a BitSet containing all egdes connected to one of edge_set in this cell.
+fn get_connected_edges_from_edge_set(edge_set: BitSet, cell: BitSet) -> BitSet {
+    for cell_edge_set in CELL_CONFIGS[cell.as_u32() as usize].iter() {
+        if !cell_edge_set.merge(edge_set).empty() {
+            return *cell_edge_set;
+        }
+    }
+    panic!("Did not find edge_set for {:?} and {:?}", edge_set, cell);
 }
 
 impl DualMarchingCubes {
@@ -219,7 +194,6 @@ impl DualMarchingCubes {
             res: res,
             value_grid: HashMap::new(),
             edge_grid: RefCell::new(HashMap::new()),
-            cell_configs: get_dmc_cell_configs(),
             qefs: Cell::new(0),
             clamps: Cell::new(0),
         }
@@ -371,7 +345,7 @@ impl DualMarchingCubes {
         for quad_egde in QUADS[edge_index.edge as usize].iter() {
             let idx = neg_offset(edge_index.index, EDGE_OFFSET[*quad_egde as usize]);
 
-            let edge_set = self.get_connected_edges(*quad_egde, self.bitset_for_cell(idx));
+            let edge_set = get_connected_edges(*quad_egde, self.bitset_for_cell(idx));
             let vertex_index = VertexIndex {
                 edges: edge_set,
                 index: idx,
@@ -381,7 +355,7 @@ impl DualMarchingCubes {
                 for i in 0..6 {
                     if let Some(mut neighbor_index) = vertex_index.neighbor(i) {
                         neighbor_index.edges =
-                            self.get_connected_edges_from_edge_set(neighbor_index.edges,
+                            get_connected_edges_from_edge_set(neighbor_index.edges,
                                                      self.bitset_for_cell(neighbor_index.index));
                         neighbors[i] = MaybeIndex::VertexIndex(neighbor_index);
                     }
@@ -415,7 +389,7 @@ impl DualMarchingCubes {
 
     // Return the Point index (in self.mesh.vertices) the the point belonging to edge/idx.
     fn lookup_cell_point(&self, edge: Edge, idx: Index) -> usize {
-        let edge_set = self.get_connected_edges(edge, self.bitset_for_cell(idx));
+        let edge_set = get_connected_edges(edge, self.bitset_for_cell(idx));
         let vertex_index = VertexIndex {
             edges: edge_set,
             index: idx,
@@ -494,26 +468,6 @@ impl DualMarchingCubes {
             idx[2] += 1;
         }
         result
-    }
-
-    // Return a BitSet containing all egdes connected to "edge" in this cell.
-    fn get_connected_edges(&self, edge: Edge, cell: BitSet) -> BitSet {
-        for edge_set in self.cell_configs[cell.as_u32() as usize].iter() {
-            if edge_set.get(edge as usize) {
-                return *edge_set;
-            }
-        }
-        panic!("Did not find edge_set for {:?} and {:?}", edge, cell);
-    }
-
-    // Return a BitSet containing all egdes connected to one of edge_set in this cell.
-    fn get_connected_edges_from_edge_set(&self, edge_set: BitSet, cell: BitSet) -> BitSet {
-        for cell_edge_set in self.cell_configs[cell.as_u32() as usize].iter() {
-            if !cell_edge_set.merge(edge_set).empty() {
-                return *cell_edge_set;
-            }
-        }
-        panic!("Did not find edge_set for {:?} and {:?}", edge_set, cell);
     }
 
     // Compute a quad for the given edge and append it to the list.

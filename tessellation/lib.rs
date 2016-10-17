@@ -22,12 +22,10 @@ pub struct Plane {
 }
 
 mod bitset;
-pub use self::bitset::BitSet;
 mod vertex_index;
-pub use self::vertex_index::{Index,VertexIndex,MaybeIndex,offset,neg_offset};
 mod dual_marching_cubes;
 pub use self::dual_marching_cubes::DualMarchingCubes;
-mod dual_marching_cubes_cell_configs;
+mod cell_configs;
 mod stl_writer;
 pub use self::stl_writer::write_stl;
 mod qef;
