@@ -1,5 +1,5 @@
 use xplicit_primitive::Object;
-use {BitSet, Mesh, Plane, qef};
+use {BitSet, Index, MaybeIndex, Mesh, Plane, VertexIndex, neg_offset, offset, qef};
 use dual_marching_cubes_cell_configs::get_dmc_cell_configs;
 use xplicit_types::{Float, Point, Vector};
 use std::collections::HashMap;
@@ -11,17 +11,6 @@ use rand;
 
 // How accurately find zero crossings.
 const PRECISION: Float = 0.05;
-
-pub type Index = [usize; 3];
-
-fn offset(idx: Index, offset: Index) -> Index {
-    [idx[0] + offset[0], idx[1] + offset[1], idx[2] + offset[2]]
-}
-
-fn neg_offset(idx: Index, offset: Index) -> Index {
-    [idx[0] - offset[0], idx[1] - offset[1], idx[2] - offset[2]]
-}
-
 
 //  Corner indexes
 //
@@ -70,14 +59,6 @@ pub const EDGE_DEF: [(Corner, Corner); 12] = [(Corner::A, Corner::B),
                                               (Corner::G, Corner::H),
                                               (Corner::F, Corner::H),
                                               (Corner::D, Corner::H)];
-
-// Face order X0, Y0, Z0, X1, Y1, Z1
-pub const EDGES_ON_FACE: [BitSet; 6] = [BitSet::bits4(1, 2, 7, 8),
-                                        BitSet::bits4(0, 2, 5, 6),
-                                        BitSet::bits4(0, 1, 3, 4),
-                                        BitSet::bits4(4, 5, 10, 11),
-                                        BitSet::bits4(3, 8, 9, 11),
-                                        BitSet::bits4(6, 7, 9, 10)];
 
 //  Edge indexes
 //
@@ -170,41 +151,9 @@ impl fmt::Display for DualContouringError {
 #[derive(Debug)]
 struct Vertex {
     qef: qef::Qef,
-    neighbors: [Option<VertexIndex>; 6],
+    neighbors: [MaybeIndex; 6],
 }
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-struct VertexIndex {
-    edges: BitSet,
-    index: Index,
-}
-
-impl VertexIndex {
-    pub fn neighbor(&self, mut face: usize) -> Option<VertexIndex> {
-        let intersect_edge_set = self.edges.intersect(EDGES_ON_FACE[face]);
-        if intersect_edge_set.empty() {
-            return None;
-        }
-        let mut offset_method: fn([usize; 3], [usize; 3]) -> [usize; 3] = offset;
-        let neighbor_edge_set;
-        if face > 2 {
-            face -= 3;
-            offset_method = neg_offset;
-            // Subtract 3 from each edge.
-            neighbor_edge_set = BitSet::new(intersect_edge_set.as_u32() >> 3);
-        } else {
-            // Add 3 to each edge.
-            neighbor_edge_set = BitSet::new(intersect_edge_set.as_u32() << 3);
-        }
-        debug_assert_eq!(intersect_edge_set.size(), neighbor_edge_set.size());
-        let mut off = [0, 0, 0];
-        off[face] = 1;
-        Some(VertexIndex {
-            edges: neighbor_edge_set,
-            index: offset_method(self.index, off),
-        })
-    }
-}
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 struct EdgeIndex {
@@ -394,10 +343,8 @@ impl DualMarchingCubes {
 
 
         let mut vertices = HashMap::new();
-        {
-            for edge_index in self.edge_grid.borrow().keys() {
-                self.generate_vertices(edge_index, &mut vertices);
-            }
+        for edge_index in self.edge_grid.borrow().keys() {
+            self.generate_vertices(edge_index, &mut vertices);
         }
 
         let t4 = ::time::now();
@@ -430,9 +377,14 @@ impl DualMarchingCubes {
                 index: idx,
             };
             result_map.entry(vertex_index).or_insert_with(|| {
-                let mut neighbors = [None; 6];
+                let mut neighbors = [MaybeIndex::None; 6];
                 for i in 0..6 {
-                    neighbors[i] = vertex_index.neighbor(i);
+                    if let Some(mut neighbor_index) = vertex_index.neighbor(i) {
+                        neighbor_index.edges =
+                            self.get_connected_edges_from_edge_set(neighbor_index.edges,
+                                                     self.bitset_for_cell(neighbor_index.index));
+                        neighbors[i] = MaybeIndex::VertexIndex(neighbor_index);
+                    }
                 }
                 let tangent_planes: Vec<_> = edge_set.into_iter()
                                                      .map(|edge| {
@@ -552,6 +504,16 @@ impl DualMarchingCubes {
             }
         }
         panic!("Did not find edge_set for {:?} and {:?}", edge, cell);
+    }
+
+    // Return a BitSet containing all egdes connected to one of edge_set in this cell.
+    fn get_connected_edges_from_edge_set(&self, edge_set: BitSet, cell: BitSet) -> BitSet {
+        for cell_edge_set in self.cell_configs[cell.as_u32() as usize].iter() {
+            if !cell_edge_set.merge(edge_set).empty() {
+                return *cell_edge_set;
+            }
+        }
+        panic!("Did not find edge_set for {:?} and {:?}", edge_set, cell);
     }
 
     // Compute a quad for the given edge and append it to the list.

@@ -8,7 +8,7 @@ impl BitSet {
     pub const fn new(val: u32) -> BitSet {
         BitSet(val)
     }
-    pub const fn bits4(b0: usize, b1: usize, b2: usize, b3: usize) -> BitSet {
+    pub const fn from_4bits(b0: usize, b1: usize, b2: usize, b3: usize) -> BitSet {
         BitSet(1 << b0 | 1 << b1 | 1 << b2 | 1 << b3)
     }
     pub fn set(&mut self, index: usize) {
