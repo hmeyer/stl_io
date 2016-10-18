@@ -1,7 +1,6 @@
 use super::ast::{Binding, Callable, Expression, ExpressionFn, Value};
-use super::super::xplicit_primitive::BoundingBox;
-use super::super::xplicit_primitive::{Intersection, Object, Union};
-use super::super::xplicit_types::{INFINITY, NEG_INFINITY, Point, Vector};
+use xplicit_primitive::{BoundingBox, Intersection, Object, Union};
+use xplicit_types::{Float, INFINITY, NAN, NEG_INFINITY, Point, Vector};
 use std::io::Write;
 use std::rc::Rc;
 
@@ -59,17 +58,17 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
               "text" => Value::String("".to_string()),
               env);
     add_func!("sphere",
-              |r: &Value, _, _| Value::Objects(vec![::xplicit_primitive::Sphere::new(r.as_f64())]),
+              |r: &Value, _, _| Value::Objects(vec![::xplicit_primitive::Sphere::new(r.as_Float())]),
               "r" => Value::Number(1.),
               env);
     add_func!("icylinder",
                         |r: &Value, _, _| Value::Objects(
-                            vec![::xplicit_primitive::Cylinder::new(r.as_f64())]),
+                            vec![::xplicit_primitive::Cylinder::new(r.as_Float())]),
                         "r" => Value::Number(1.),
                         env);
     add_func!("icone",
                                   |r: &Value, _, _| Value::Objects(
-                                      vec![::xplicit_primitive::Cone::new(r.as_f64(), 0.)]),
+                                      vec![::xplicit_primitive::Cone::new(r.as_Float(), 0.)]),
                                   "slope" => Value::Number(1.),
                                   env);
     add_func_multi_param!("cube",
@@ -78,7 +77,7 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                       let mut v = Vec::new();
                       for i in 0..3 {
                           v.push(if let Some(&Value::Number(ref x)) = dimv.get(i) {
-                              *x
+                              *x as Float
                           } else {
                               writeln!(msg, "invalid dimension value: {:?}, using 0",
                                        dimv.get(i)).unwrap();
@@ -88,7 +87,7 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                       return Value::Objects(vec![Intersection::from_vec(vec![
                       ::xplicit_primitive::SlabX::new(v[0]),
                       ::xplicit_primitive::SlabY::new(v[1]),
-                      ::xplicit_primitive::SlabZ::new(v[2]) ], dim_and_r.get(1).unwrap().as_f64())
+                      ::xplicit_primitive::SlabZ::new(v[2]) ], dim_and_r.get(1).unwrap().as_Float())
                                                      .unwrap()]);
                   }
                   writeln!(msg, "invalid dimension vector: {:?}, using undef",
@@ -103,15 +102,15 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
     add_func_multi_param!("cylinder",
                         |h_r_r1_r2_s: Vec<Value>, _, msg: &mut Write| {
                             if let &Value::Number(ref h) = h_r_r1_r2_s.get(0).unwrap() {
-                                let mut r1 = ::std::f64::NAN; let mut r2 = ::std::f64::NAN;
+                                let mut r1 = NAN; let mut r2 = NAN;
                                 if let &Value::Number(ref r) = h_r_r1_r2_s.get(1).unwrap() {
-                                    r1 = *r; r2 = *r;
+                                    r1 = *r as Float; r2 = *r as Float;
                                 }
                                 if let &Value::Number(ref pr1) = h_r_r1_r2_s.get(2).unwrap() {
-                                    r1 = *pr1;
+                                    r1 = *pr1 as Float;
                                 }
                                 if let &Value::Number(ref pr2) = h_r_r1_r2_s.get(3).unwrap() {
-                                    r2 = *pr2;
+                                    r2 = *pr2 as Float;
                                 }
                                 if r1.is_nan() || r2.is_nan() {
                                     writeln!(msg, "invalid radius, returning undef").unwrap();
@@ -121,12 +120,12 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                                 if r1 == r2 {
                                     conie = ::xplicit_primitive::Cylinder::new(r1) as Box<Object>;
                                 } else {
-                                    let slope = (r2 - r1).abs() / *h;
+                                    let slope = (r2 - r1).abs() / *h as Float;
                                     let offset;
                                     if r1 < r2 {
-                                        offset = -r1/ slope - h * 0.5;
+                                        offset = -r1/ slope - *h as Float * 0.5;
                                     } else {
-                                        offset = r2/ slope + h * 0.5;
+                                        offset = r2/ slope + *h as Float * 0.5;
                                     }
                                     conie = ::xplicit_primitive::Cone::new(slope, offset) as Box<Object>;
                                     let rmax = r1.max(r2);
@@ -136,8 +135,8 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                                 }
                                 Value::Objects(vec![Intersection::from_vec(vec![
                                   conie,
-                                  ::xplicit_primitive::SlabZ::new(*h) ],
-                                h_r_r1_r2_s.get(4).unwrap().as_f64()).unwrap()])
+                                  ::xplicit_primitive::SlabZ::new(*h as Float) ],
+                                h_r_r1_r2_s.get(4).unwrap().as_Float()).unwrap()])
                             } else {
                                 writeln!(msg, "invalid height, returning undef").unwrap();
                                 Value::Undef
@@ -156,7 +155,7 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                           let mut v = Vec::new();
                           for i in 0..3 {
                               v.push(if let Some(x) = tv.get(i) {
-                                  x.as_f64_or(0.)
+                                  x.as_Float_or(0.)
                               } else {
                                   0.
                               });
@@ -180,7 +179,7 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                           let mut v = Vec::new();
                           for i in 0..3 {
                               v.push(if let Some(x) = tv.get(i) {
-                                  x.as_f64_or(0.)
+                                  x.as_Float_or(0.)
                               } else {
                                   0.
                               });
@@ -204,7 +203,7 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                           let mut v = Vec::new();
                           for i in 0..3 {
                               v.push(if let Some(x) = tv.get(i) {
-                                  x.as_f64_or(0.)
+                                  x.as_Float_or(0.)
                               } else {
                                   0.
                               });
@@ -226,7 +225,7 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                                     let union_of_subs = Union::from_vec(
                                         subs.clone(), 0.).unwrap();
                                     let bended = ::xplicit_primitive::Bender::new(
-                                        union_of_subs, *width);
+                                        union_of_subs, *width as Float);
                                     return Value::Objects(vec![bended]);
                                 }
                             }
@@ -241,7 +240,7 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                                                         let union_of_subs = Union::from_vec(
                                                             subs.clone(), 0.).unwrap();
                                                         let twisted = ::xplicit_primitive::Twister::new(
-                                                            union_of_subs, *height);
+                                                            union_of_subs, *height as Float);
                                                         return Value::Objects(vec![twisted]);
                                                     }
                                                 }
@@ -254,7 +253,7 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                   if subs.len() > 0 {
                       if let &Value::Number(rf) = r {
                           return Value::Objects(vec![Union::from_vec(subs.clone(),
-                                                                                  rf)
+                                                                                  rf as Float)
                                                          .unwrap()]);
                       }
                   }
@@ -268,7 +267,7 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                       if let &Value::Number(rf) = r {
                           return Value::Objects(
                               vec![Intersection::from_vec(
-                                  subs.clone(), rf).unwrap()]);
+                                  subs.clone(), rf as Float).unwrap()]);
                       }
                   }
                   return Value::Undef;
@@ -281,7 +280,7 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                       if let &Value::Number(rf) = r {
                           return Value::Objects(
                               vec![Intersection::difference_from_vec(
-                                  subs.clone(), rf).unwrap()]);
+                                  subs.clone(), rf as Float).unwrap()]);
                       }
                   }
                   return Value::Undef;

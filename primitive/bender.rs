@@ -1,6 +1,6 @@
 use Object;
 use bounding_box::BoundingBox;
-use xplicit_types::{Float, Point, Vector};
+use xplicit_types::{Float, PI, Point, Vector};
 use cgmath::{InnerSpace, Rotation, Rotation2};
 
 type Point2 = ::cgmath::Point2<Float>;
@@ -10,7 +10,7 @@ type Vector2 = ::cgmath::Vector2<Float>;
 #[derive(Clone, Debug)]
 pub struct Bender {
     object: Box<Object>,
-    width_scaler: Float, // width_for_full_rotation / (2. * ::std::f64::consts::PI),
+    width_scaler: Float, // width_for_full_rotation / (2. * PI),
     bbox: BoundingBox,
 }
 
@@ -28,8 +28,8 @@ impl Object for Bender {
                 return center_to_bbox;
             }
 
-            // let circumference = 2. * ::std::f64::consts::PI * r;
-            // let width_for_full_rotation = self.width_scaler * 2. * ::std::f64::consts::PI;
+            // let circumference = 2. * PI * r;
+            // let width_for_full_rotation = self.width_scaler * 2. * PI;
             // let x_scale = circumference / width_for_full_rotation;
             let x_scale = r / self.width_scaler;
             let x_scaler = x_scale.min(1.);
@@ -59,7 +59,7 @@ impl Bender {
 
         Box::new(Bender {
             object: o,
-            width_scaler: w / (2. * ::std::f64::consts::PI),
+            width_scaler: w / (2. * PI),
             bbox: bbox,
         })
     }
@@ -70,15 +70,15 @@ impl Bender {
     }
     fn tilt_normal(&self, mut normal: Vector, polar_p: Point) -> Vector {
         let r = polar_p.y;
-        let circumference = 2. * ::std::f64::consts::PI * r;
-        let width_for_one_full_rotation = self.width_scaler * 2. * ::std::f64::consts::PI;
+        let circumference = 2. * PI * r;
+        let width_for_one_full_rotation = self.width_scaler * 2. * PI;
         let scale_along_x = circumference / width_for_one_full_rotation;
         normal.x /= scale_along_x;
         normal.normalize()
     }
     fn bend_normal(&self, v: Vector, polar_p: Point) -> Vector {
         let v = self.tilt_normal(v, polar_p);
-        let phi = ::cgmath::Rad(polar_p.x + ::std::f64::consts::PI);
+        let phi = ::cgmath::Rad(polar_p.x + PI);
         let v2 = ::cgmath::Vector2::new(v.x, v.y);
         let trans = ::cgmath::Basis2::from_angle(phi);
         let rv2 = trans.rotate_vector(v2);

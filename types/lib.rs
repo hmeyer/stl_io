@@ -8,6 +8,8 @@ pub type Matrix = ::cgmath::Matrix4<Float>;
 
 pub const INFINITY: Float = 1e10;
 pub const NEG_INFINITY: Float = -1e10;
+pub const NAN: Float = ::std::f64::NAN;
+pub const PI: Float = ::std::f64::consts::PI;
 
 pub const EPSILON: Float = 1e-10;
 pub const MIN_POSITIVE: Float = ::std::f64::MIN_POSITIVE;

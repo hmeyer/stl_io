@@ -2,6 +2,7 @@ use std::fmt::Debug;
 use std::io::Write;
 use std::rc::Rc;
 use xplicit_primitive::Object;
+use xplicit_types::{Float, NAN};
 use super::functions;
 
 pub struct Environment {
@@ -82,15 +83,17 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn as_f64(&self) -> f64 {
+    #[allow(non_snake_case)]
+    pub fn as_Float(&self) -> Float {
         match self {
-            &Value::Number(x) => x,
-            _ => ::std::f64::NAN,
+            &Value::Number(x) => x as Float,
+            _ => NAN,
         }
     }
-    pub fn as_f64_or(&self, default: f64) -> f64 {
+    #[allow(non_snake_case)]
+    pub fn as_Float_or(&self, default: Float) -> Float {
         match self {
-            &Value::Number(x) => x,
+            &Value::Number(x) => x as Float,
             _ => default,
         }
     }

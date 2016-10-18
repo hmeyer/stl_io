@@ -36,13 +36,13 @@ impl Renderer {
         self.object = object
     }
 
-    pub fn rotate_from_screen(&mut self, x: f64, y: f64) {
+    pub fn rotate_from_screen(&mut self, x: Float, y: Float) {
         let euler = ::cgmath::Euler::new(::cgmath::Rad(y), ::cgmath::Rad(x), ::cgmath::Rad(0.));
         let other = Matrix::from(euler);
         self.trans = self.trans.concat(&other);
     }
 
-    pub fn translate_from_screen(&mut self, x: f64, y: f64) {
+    pub fn translate_from_screen(&mut self, x: Float, y: Float) {
         let v = Vector::new(-x as Float, y as Float, 0.);
         let other = Matrix::from_translation(v);
         self.trans = self.trans.concat(&other);

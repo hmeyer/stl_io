@@ -1,4 +1,4 @@
-use xplicit_types::Float;
+use xplicit_types::{Float, NAN};
 use Plane;
 use cgmath::{EuclideanSpace, InnerSpace};
 use na;
@@ -25,12 +25,12 @@ pub struct Qef {
 impl Qef {
     pub fn new(planes: &[Plane]) -> Qef {
         let mut qef = Qef {
-            solution: na::Vector3::new(::std::f64::NAN, ::std::f64::NAN, ::std::f64::NAN),
+            solution: na::Vector3::new(NAN, NAN, NAN),
             mean: na::Vector3::new(0., 0., 0.),
             ata: [0.; 6],
             atb: na::Vector3::new(0., 0., 0.),
             btb: 0.,
-            error: 0.,
+            error: NAN,
         };
         for p in planes {
             qef.ata[0] += p.n[0] * p.n[0];

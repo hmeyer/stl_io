@@ -36,7 +36,7 @@ impl Object for Union {
             rvmin(&self.objs
                        .iter()
                        .map(|o| o.approx_value(p, slack + self.r))
-                       .collect::<Vec<f64>>(),
+                       .collect::<Vec<Float>>(),
                   self.r)
         } else {
             approx
@@ -114,7 +114,7 @@ impl Object for Intersection {
             rvmax(&self.objs
                        .iter()
                        .map(|o| o.approx_value(p, slack + self.r))
-                       .collect::<Vec<f64>>(),
+                       .collect::<Vec<Float>>(),
                   self.r)
         } else {
             approx

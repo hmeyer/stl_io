@@ -1,6 +1,6 @@
 use Object;
 use bounding_box::BoundingBox;
-use xplicit_types::{Float, Point, Vector};
+use xplicit_types::{Float, PI, Point, Vector};
 use cgmath::{InnerSpace, Rotation, Rotation2};
 
 type Point2 = ::cgmath::Point2<Float>;
@@ -41,7 +41,7 @@ impl Twister {
         let r = mx.hypot(my);
 
         // The ratio of height and circumference (slope on the outer edge).
-        let tan_a = h / (2. * ::std::f64::consts::PI * r);
+        let tan_a = h / (2. * PI * r);
         // The scaler is 1 / sin(a)
         // sin(atan(x)) =   x / sqrt(x^2 + 1)
         let scaler = tan_a / (tan_a * tan_a + 1.).sqrt();
@@ -50,7 +50,7 @@ impl Twister {
                                     Point::new(r, r, o.bbox().max.z));
         Box::new(Twister {
             object: o,
-            height_scaler: ::std::f64::consts::PI * 2. / h,
+            height_scaler: PI * 2. / h,
             value_scaler: scaler,
             bbox: bbox,
         })

@@ -203,7 +203,7 @@ impl DualMarchingCubes {
             match self.try_tesselate() {
                 Ok(mesh) => return mesh,
                 Err(x) => {
-                    let padding = self.res / (10. + rand::random::<f64>().abs());
+                    let padding = self.res / (10. + rand::random::<Float>().abs());
                     println!("Error: {:?}. moving by {:?} and retrying.", x, padding);
                     self.origin.x -= padding;
                     self.value_grid.clear();
@@ -226,7 +226,7 @@ impl DualMarchingCubes {
         let mut midx = idx;
         let size = size / 2;
         let vpos = [pos, pos + size as Float * Vector::new(self.res, self.res, self.res)];
-        let sub_cube_diagonal = size as Float * self.res * 3_f64.sqrt();
+        let sub_cube_diagonal = size as Float * self.res * (3. as Float).sqrt();
 
         for z in 0..2 {
             for y in 0..2 {
@@ -320,7 +320,6 @@ impl DualMarchingCubes {
 
         let t4 = ::time::now();
         println!("generated {:?} vertices: {:}", vertices.len(), t4 - t3);
-        println!("v {:?}", vertices);
 
         for edge_index in self.edge_grid.borrow().keys() {
             self.compute_quad(*edge_index);

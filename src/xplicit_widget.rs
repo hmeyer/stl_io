@@ -7,6 +7,7 @@ use gtk::traits::*;
 use gtk::DrawingArea;
 use cairo::{Context, Format, ImageSurface};
 
+use xplicit_types::Float;
 use render;
 
 pub struct XplicitWidget {
@@ -45,7 +46,7 @@ impl XplicitWidget {
                 let da_alloc = da.get_allocation();
                 let (nx, ny) = em.get_position();
                 let (ox, oy) = mouse_pos_clone.get();
-                let (dx, dy) = ((nx - ox) / da_alloc.width as f64, (ny - oy) / da_alloc.height as f64);
+                let (dx, dy) = (((nx - ox) / da_alloc.width as f64) as Float, ((ny - oy) / da_alloc.height as f64) as Float);
                 mouse_pos_clone.set(em.get_position());
                 match em.get_state() {
                     ::gdk::BUTTON1_MASK => {
