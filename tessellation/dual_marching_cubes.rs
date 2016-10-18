@@ -316,13 +316,11 @@ impl DualMarchingCubes {
         println!("generated edge_grid: {:}", t3 - t2);
 
 
-        let mut vertices = HashMap::new();
-        for edge_index in self.edge_grid.borrow().keys() {
-            self.generate_vertices(edge_index, &mut vertices);
-        }
+        let vertices = self.generate_leaf_vertices();
 
         let t4 = ::time::now();
         println!("generated {:?} vertices: {:}", vertices.len(), t4 - t3);
+        println!("v {:?}", vertices);
 
         for edge_index in self.edge_grid.borrow().keys() {
             self.compute_quad(*edge_index);
@@ -338,9 +336,29 @@ impl DualMarchingCubes {
         Ok(self.mesh.borrow().clone())
     }
 
-    fn generate_vertices(&self,
-                         edge_index: &EdgeIndex,
-                         result_map: &mut HashMap<VertexIndex, Vertex>) {
+    fn generate_leaf_vertices(&self) -> Vec<Vertex> {
+        let mut index_map = HashMap::new();
+        let mut vertices = Vec::new();
+        for edge_index in self.edge_grid.borrow().keys() {
+            self.generate_vertices_for_minimal_egde(edge_index, &mut vertices, &mut index_map);
+        }
+        for vertex in vertices.iter_mut() {
+            for neighbor in vertex.neighbors.iter_mut() {
+                match neighbor {
+                    &mut MaybeIndex::VertexIndex(vi) => {
+                        *neighbor = MaybeIndex::Index(*index_map.get(&vi).unwrap())
+                    }
+                    &mut MaybeIndex::Index(_) => panic!("unexpected in fresh leaf map."),
+                    &mut MaybeIndex::None => {}
+                }
+            }
+        }
+        vertices
+    }
+    fn generate_vertices_for_minimal_egde(&self,
+                                          edge_index: &EdgeIndex,
+                                          vertices: &mut Vec<Vertex>,
+                                          index_map: &mut HashMap<VertexIndex, usize>) {
         debug_assert!((edge_index.edge as usize) < 4);
         for quad_egde in QUADS[edge_index.edge as usize].iter() {
             let idx = neg_offset(edge_index.index, EDGE_OFFSET[*quad_egde as usize]);
@@ -350,7 +368,7 @@ impl DualMarchingCubes {
                 edges: edge_set,
                 index: idx,
             };
-            result_map.entry(vertex_index).or_insert_with(|| {
+            index_map.entry(vertex_index).or_insert_with(|| {
                 let mut neighbors = [MaybeIndex::None; 6];
                 for i in 0..6 {
                     if let Some(mut neighbor_index) = vertex_index.neighbor(i) {
@@ -368,10 +386,11 @@ impl DualMarchingCubes {
                                                          })
                                                      })
                                                      .collect();
-                Vertex {
+                vertices.push(Vertex {
                     qef: qef::Qef::new(&tangent_planes),
                     neighbors: neighbors,
-                }
+                });
+                vertices.len() - 1
             });
         }
     }
