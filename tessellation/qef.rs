@@ -11,7 +11,8 @@ use na::Inverse;
 pub struct Qef {
     // Point closest to all planes.
     pub solution: na::Vector3<Float>,
-    mean: na::Vector3<Float>,
+    sum: na::Vector3<Float>,
+    num: usize,
     // Upper right triangle of AT * A
     ata: [Float; 6],
     // Vector AT * B
@@ -26,7 +27,8 @@ impl Qef {
     pub fn new(planes: &[Plane]) -> Qef {
         let mut qef = Qef {
             solution: na::Vector3::new(NAN, NAN, NAN),
-            mean: na::Vector3::new(0., 0., 0.),
+            sum: na::Vector3::new(0., 0., 0.),
+            num: planes.len(),
             ata: [0.; 6],
             atb: na::Vector3::new(0., 0., 0.),
             btb: 0.,
@@ -44,44 +46,33 @@ impl Qef {
             qef.atb[1] += p.n[1] * pn;
             qef.atb[2] += p.n[2] * pn;
             qef.btb += pn * pn;
-            qef.mean[0] += p.p[0];
-            qef.mean[1] += p.p[1];
-            qef.mean[2] += p.p[2];
+            qef.sum[0] += p.p[0];
+            qef.sum[1] += p.p[1];
+            qef.sum[2] += p.p[2];
         }
-        qef.mean /= planes.len() as Float;
         qef
     }
     pub fn solve(&mut self) {
         let m = &self.ata;
         let ma = na::Matrix3::new(m[0], m[1], m[2], m[1], m[3], m[4], m[2], m[4], m[5]);
+        let mean = self.sum / self.num as Float;
         if let Some(inv) = ma.inverse() {
-            let b_rel_mean = self.atb - ma * self.mean;
-            self.solution = b_rel_mean * inv + self.mean;
+            let b_rel_mean = self.atb - ma * mean;
+            self.solution = b_rel_mean * inv + mean;
         } else {
-            self.solution = self.mean;
+            self.solution = mean;
         }
         self.error = -2. * na::dot(&self.solution, &self.atb) +
                      na::dot(&self.solution, &(ma * self.solution));
     }
-    pub fn merge(qefs: &[Qef]) -> Qef {
-        let mut merged = Qef {
-            solution: na::Vector3::new(0., 0., 0.),
-            mean: na::Vector3::new(0., 0., 0.),
-            ata: [0.; 6],
-            atb: na::Vector3::new(0., 0., 0.),
-            btb: 0.,
-            error: 0.,
-        };
-        for q in qefs {
-            for i in 0..6 {
-                merged.ata[i] += q.ata[i];
-            }
-            merged.atb += q.atb;
-            merged.btb += q.btb;
-            merged.mean += q.mean;
+    pub fn merge(&mut self, other: &Qef) {
+        for i in 0..6 {
+            self.ata[i] += other.ata[i];
         }
-        merged.mean /= qefs.len() as Float;
-        merged
+        self.atb += other.atb;
+        self.btb += other.btb;
+        self.sum += other.sum;
+        self.num += other.num;
     }
 }
 
