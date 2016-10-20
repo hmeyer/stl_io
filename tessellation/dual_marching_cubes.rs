@@ -249,6 +249,22 @@ fn subsample_octtree(base: &Vec<Vertex>) -> Vec<Vertex> {
     result
 }
 
+struct Timer {
+    t: ::time::Tm,
+}
+
+impl Timer {
+    fn new() -> Timer {
+        Timer { t: ::time::now() }
+    }
+    fn elapsed(&mut self) -> ::time::Duration {
+        let now = ::time::now();
+        let result = now - self.t;
+        self.t = now;
+        result
+    }
+}
+
 impl DualMarchingCubes {
     // Constructor
     // obj: Object to tessellate
@@ -339,7 +355,7 @@ impl DualMarchingCubes {
     // This method does the main work of tessellation.
     fn try_tesselate(&mut self) -> Result<Mesh, DualContouringError> {
         let res = self.res;
-        let t1 = ::time::now();
+        let mut t = Timer::new();
 
         let maxdim = cmp::max(self.dim[0], cmp::max(self.dim[1], self.dim[2]));
         let origin = self.origin;
@@ -352,8 +368,7 @@ impl DualMarchingCubes {
             return Err(e);
         }
 
-        let t2 = ::time::now();
-        println!("generated value_grid: {:}", t2 - t1);
+        println!("generated value_grid: {:}", t.elapsed());
         println!("value_grid with {:} for {:} cells.",
                  self.value_grid.len(),
                  self.dim[0] * self.dim[1] * self.dim[2]);
@@ -388,17 +403,15 @@ impl DualMarchingCubes {
                 }
             }
         }
-        let t3 = ::time::now();
-        println!("generated edge_grid: {:}", t3 - t2);
+        println!("generated edge_grid: {:}", t.elapsed());
 
 
         let mut vertex_stack = Vec::new();
         vertex_stack.push(self.generate_leaf_vertices());
 
-        let t4 = ::time::now();
         println!("generated {:?} vertices: {:}",
                  vertex_stack[0].len(),
-                 t4 - t3);
+                 t.elapsed());
 
         loop {
             let next = subsample_octtree(vertex_stack.last().unwrap());
@@ -408,16 +421,14 @@ impl DualMarchingCubes {
             vertex_stack.push(next);
         }
 
-        let t5 = ::time::now();
         println!("subsampled {:} layers: {:}",
                  vertex_stack.len() - 1,
-                 t5 - t4);
+                 t.elapsed());
 
         for edge_index in self.edge_grid.borrow().keys() {
             self.compute_quad(*edge_index);
         }
-        let t6 = ::time::now();
-        println!("generated quads: {:}", t6 - t5);
+        println!("generated quads: {:}", t.elapsed());
 
         println!("qefs: {:?} clamps: {:?}", self.qefs, self.clamps);
 
