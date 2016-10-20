@@ -109,6 +109,7 @@ struct Vertex {
     qef: qef::Qef,
     neighbors: [MaybeIndex; 6],
     parent: Cell<Option<usize>>,
+    children: Vec<usize>,
 }
 
 
@@ -157,9 +158,9 @@ fn pow2roundup(x: usize) -> usize {
 
 // Returns a BitSet containing all egdes connected to "edge" in this cell.
 fn get_connected_edges(edge: Edge, cell: BitSet) -> BitSet {
-    for edge_set in CELL_CONFIGS[cell.as_u32() as usize].iter() {
+    for &edge_set in CELL_CONFIGS[cell.as_u32() as usize].iter() {
         if edge_set.get(edge as usize) {
-            return *edge_set;
+            return edge_set;
         }
     }
     panic!("Did not find edge_set for {:?} and {:?}", edge, cell);
@@ -167,9 +168,9 @@ fn get_connected_edges(edge: Edge, cell: BitSet) -> BitSet {
 
 // Returns a BitSet containing all egdes connected to one of edge_set in this cell.
 fn get_connected_edges_from_edge_set(edge_set: BitSet, cell: BitSet) -> BitSet {
-    for cell_edge_set in CELL_CONFIGS[cell.as_u32() as usize].iter() {
+    for &cell_edge_set in CELL_CONFIGS[cell.as_u32() as usize].iter() {
         if !cell_edge_set.merge(edge_set).empty() {
-            return *cell_edge_set;
+            return cell_edge_set;
         }
     }
     panic!("Did not find edge_set for {:?} and {:?}", edge_set, cell);
@@ -206,8 +207,10 @@ fn subsample_octtree(base: &Vec<Vertex>) -> Vec<Vertex> {
             add_connected_vertices_in_subcell(base, vertex, &mut neighbor_set);
             let mut parent_qef = qef::Qef::new(&[]);
             let mut parent_neighbors = [MaybeIndex::None; 6];
-            for vertex_index in neighbor_set.iter() {
-                let ref neighbor = base[*vertex_index];
+            let mut children = Vec::new();
+            for &vertex_index in neighbor_set.iter() {
+                children.push(vertex_index);
+                let ref neighbor = base[vertex_index];
                 neighbor.parent.set(Some(result.len()));
                 parent_qef.merge(&neighbor.qef);
                 let index = neighbor.index;
@@ -228,6 +231,7 @@ fn subsample_octtree(base: &Vec<Vertex>) -> Vec<Vertex> {
                 qef: parent_qef,
                 neighbors: parent_neighbors,
                 parent: Cell::new(None),
+                children: children,
             });
         }
     }
@@ -357,26 +361,26 @@ impl DualMarchingCubes {
         // Store crossing positions of edges in edge_grid
         {
             let mut edge_grid = self.edge_grid.borrow_mut();
-            for (point_idx, point_value) in &self.value_grid {
-                for edge in [Edge::A, Edge::B, Edge::C].iter() {
+            for (&point_idx, &point_value) in &self.value_grid {
+                for &edge in [Edge::A, Edge::B, Edge::C].iter() {
                     let mut adjacent_idx = point_idx.clone();
-                    adjacent_idx[*edge as usize] += 1;
-                    if let Some(adjacent_value) = self.value_grid
-                                                      .get(&adjacent_idx) {
+                    adjacent_idx[edge as usize] += 1;
+                    if let Some(&adjacent_value) = self.value_grid
+                                                       .get(&adjacent_idx) {
                         let point_pos = self.origin +
                                         res *
                                         Vector::new(point_idx[0] as Float,
                                                     point_idx[1] as Float,
                                                     point_idx[2] as Float);
                         let mut adjacent_pos = point_pos;
-                        adjacent_pos[*edge as usize] += res;
+                        adjacent_pos[edge as usize] += res;
                         if let Some(plane) = self.find_zero(point_pos,
-                                                            *point_value,
+                                                            point_value,
                                                             adjacent_pos,
-                                                            *adjacent_value) {
+                                                            adjacent_value) {
                             edge_grid.insert(EdgeIndex {
-                                                 edge: *edge,
-                                                 index: *point_idx,
+                                                 edge: edge,
+                                                 index: point_idx,
                                              },
                                              plane);
                         }
@@ -447,10 +451,10 @@ impl DualMarchingCubes {
                                           vertices: &mut Vec<Vertex>,
                                           index_map: &mut HashMap<VertexIndex, usize>) {
         debug_assert!((edge_index.edge as usize) < 4);
-        for quad_egde in QUADS[edge_index.edge as usize].iter() {
-            let idx = neg_offset(edge_index.index, EDGE_OFFSET[*quad_egde as usize]);
+        for &quad_egde in QUADS[edge_index.edge as usize].iter() {
+            let idx = neg_offset(edge_index.index, EDGE_OFFSET[quad_egde as usize]);
 
-            let edge_set = get_connected_edges(*quad_egde, self.bitset_for_cell(idx));
+            let edge_set = get_connected_edges(quad_egde, self.bitset_for_cell(idx));
             let vertex_index = VertexIndex {
                 edges: edge_set,
                 index: idx,
@@ -478,6 +482,7 @@ impl DualMarchingCubes {
                     qef: qef::Qef::new(&tangent_planes),
                     neighbors: neighbors,
                     parent: Cell::new(None),
+                    children: Vec::new(),
                 });
                 vertices.len() - 1
             });
@@ -560,8 +565,8 @@ impl DualMarchingCubes {
         for z in 0..2 {
             for y in 0..2 {
                 for x in 0..2 {
-                    if let Some(v) = self.value_grid.get(&idx) {
-                        if *v < 0. {
+                    if let Some(&v) = self.value_grid.get(&idx) {
+                        if v < 0. {
                             result.set(z << 2 | y << 1 | x);
                         }
                     } else {
@@ -584,13 +589,13 @@ impl DualMarchingCubes {
         debug_assert!(edge_index.index.iter().all(|&i| i > 0));
 
         let mut p = Vec::with_capacity(4);
-        for quad_egde in QUADS[edge_index.edge as usize].iter() {
-            p.push(self.lookup_cell_point(*quad_egde,
+        for &quad_egde in QUADS[edge_index.edge as usize].iter() {
+            p.push(self.lookup_cell_point(quad_egde,
                                           neg_offset(edge_index.index,
-                                                     EDGE_OFFSET[*quad_egde as usize])))
+                                                     EDGE_OFFSET[quad_egde as usize])))
         }
-        if let Some(v) = self.value_grid.get(&edge_index.index) {
-            if *v < 0. {
+        if let Some(&v) = self.value_grid.get(&edge_index.index) {
+            if v < 0. {
                 p.reverse();
             }
         }
