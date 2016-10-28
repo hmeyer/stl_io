@@ -12,14 +12,14 @@ pub struct Qef {
     // Point closest to all planes.
     pub solution: na::Vector3<Float>,
     sum: na::Vector3<Float>,
-    num: usize,
+    pub num: usize,
     // Upper right triangle of AT * A
     ata: [Float; 6],
     // Vector AT * B
     atb: na::Vector3<Float>,
     // Scalar BT * B
     btb: Float,
-    error: Float,
+    pub error: Float,
 }
 
 

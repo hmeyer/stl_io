@@ -1,6 +1,6 @@
 use xplicit_primitive::Object;
 use bitset::BitSet;
-use vertex_index::{Index, MaybeIndex, VertexIndex, neg_offset, offset};
+use vertex_index::{Index, VarIndex, VertexIndex, neg_offset, offset};
 use qef;
 use {Mesh, Plane};
 use cell_configs::CELL_CONFIGS;
@@ -106,8 +106,8 @@ impl fmt::Display for DualContouringError {
 #[derive(Debug)]
 struct Vertex {
     index: Index,
-    qef: qef::Qef,
-    neighbors: [MaybeIndex; 6],
+    qef: RefCell<qef::Qef>,
+    neighbors: [Vec<VarIndex>; 6],
     parent: Cell<Option<usize>>,
     children: Vec<usize>,
 }
@@ -166,33 +166,59 @@ fn get_connected_edges(edge: Edge, cell: BitSet) -> BitSet {
     panic!("Did not find edge_set for {:?} and {:?}", edge, cell);
 }
 
-// Returns a BitSet containing all egdes connected to one of edge_set in this cell.
-fn get_connected_edges_from_edge_set(edge_set: BitSet, cell: BitSet) -> BitSet {
+// Returns all BitSets containing  egdes connected to one of edge_set in this cell.
+fn get_connected_edges_from_edge_set(edge_set: BitSet, cell: BitSet) -> Vec<BitSet> {
+    let mut result = Vec::new();
     for &cell_edge_set in CELL_CONFIGS[cell.as_u32() as usize].iter() {
-        if !cell_edge_set.merge(edge_set).empty() {
-            return cell_edge_set;
+        if !cell_edge_set.intersect(edge_set).empty() {
+            result.push(cell_edge_set);
         }
     }
-    panic!("Did not find edge_set for {:?} and {:?}", edge_set, cell);
+    debug_assert!(result.iter()
+                        .fold(BitSet::zero(), |sum, x| sum.merge(*x))
+                        .intersect(edge_set) == edge_set,
+                  "result: {:?} does not contain all edges from egde_set: {:?}",
+                  result,
+                  edge_set);
+    result
 }
 
 fn half_index(input: &Index) -> Index {
     [input[0] / 2, input[1] / 2, input[2] / 2]
 }
 
-// Will add all vertices in the same octtree subcell as start and are connected to start
-// to neighbors.
+// Will add the following vertices to neighbors:
+// All vertices in the same octtree subcell as start and connected to start.
 fn add_connected_vertices_in_subcell(base: &Vec<Vertex>,
                                      start: &Vertex,
                                      neigbors: &mut HashSet<usize>) {
-    let cell_index = half_index(&start.index);
-    for maybe_neighbor_index in start.neighbors.iter() {
-        if let &MaybeIndex::Index(vi) = maybe_neighbor_index {
-            let ref neighbor = base[vi];
-            if half_index(&neighbor.index) == cell_index {
-                if neigbors.insert(vi) {
-                    add_connected_vertices_in_subcell(base, &base[vi], neigbors);
+    let parent_index = half_index(&start.index);
+    for neighbor_index_vector in start.neighbors.iter() {
+        for neighbor_index in neighbor_index_vector.iter() {
+            match neighbor_index {
+                &VarIndex::Index(vi) => {
+                    let ref neighbor = base[vi];
+                    if half_index(&neighbor.index) == parent_index {
+                        if neigbors.insert(vi) {
+                            add_connected_vertices_in_subcell(base, &base[vi], neigbors);
+                        }
+                    }
                 }
+                &VarIndex::VertexIndex(vi) => {
+                    panic!("unexpected VertexIndex {:?}", vi);
+                }
+            }
+        }
+    }
+}
+
+fn add_child_to_parent(child: &Vertex, parent: &mut Vertex) {
+    parent.qef.borrow_mut().merge(&*child.qef.borrow());
+    for dim in 0..3 {
+        let relevant_neighbor = dim * 2 + (child.index[dim] & 1);
+        for neighbor in child.neighbors[relevant_neighbor].iter() {
+            if !parent.neighbors[relevant_neighbor].contains(neighbor) {
+                parent.neighbors[relevant_neighbor].push(*neighbor);
             }
         }
     }
@@ -205,48 +231,83 @@ fn subsample_octtree(base: &Vec<Vertex>) -> Vec<Vertex> {
             let mut neighbor_set = HashSet::new();
             neighbor_set.insert(i);
             add_connected_vertices_in_subcell(base, vertex, &mut neighbor_set);
-            let mut parent_qef = qef::Qef::new(&[]);
-            let mut parent_neighbors = [MaybeIndex::None; 6];
-            let mut children = Vec::new();
-            for &vertex_index in neighbor_set.iter() {
-                children.push(vertex_index);
-                let ref neighbor = base[vertex_index];
-                neighbor.parent.set(Some(result.len()));
-                parent_qef.merge(&neighbor.qef);
-                let index = neighbor.index;
-                for dim in 0..3 {
-                    let neighbor_index = dim +
-                                         if index[dim] & 1 == 1 {
-                        3
-                    } else {
-                        0
-                    };
-                    if let MaybeIndex::Index(i) = neighbor.neighbors[neighbor_index] {
-                        parent_neighbors[neighbor_index] = MaybeIndex::Index(i);
-                    }
-                }
-            }
-            result.push(Vertex {
+            let mut parent = Vertex {
                 index: half_index(&vertex.index),
-                qef: parent_qef,
-                neighbors: parent_neighbors,
+                qef: RefCell::new(qef::Qef::new(&[])),
+                neighbors: [Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new()],
                 parent: Cell::new(None),
-                children: children,
-            });
+                children: Vec::new(),
+            };
+            for &neighbor_index in neighbor_set.iter() {
+                let child = &base[neighbor_index];
+                debug_assert!(child.parent.get() == None,
+                              "child #{:?} already has parent #{:?}",
+                              neighbor_index,
+                              child.parent.get().unwrap());
+                debug_assert!(!parent.children.contains(&neighbor_index));
+                parent.children.push(neighbor_index);
+                add_child_to_parent(child, &mut parent);
+                child.parent.set(Some(result.len()));
+            }
+            result.push(parent);
         }
     }
     for vertex in result.iter_mut() {
-        for neighbor in vertex.neighbors.iter_mut() {
-            match neighbor {
-                &mut MaybeIndex::VertexIndex(_) => panic!("unexpected VertexIndex in normal node."),
-                &mut MaybeIndex::Index(i) => {
-                    *neighbor = MaybeIndex::Index(base[i].parent.get().unwrap())
+        for neighbor_vec in vertex.neighbors.iter_mut() {
+            for neighbor in neighbor_vec.iter_mut() {
+                match neighbor {
+                    &mut VarIndex::VertexIndex(_) => panic!("unexpected VertexIndex in normal node."),
+                    &mut VarIndex::Index(i) => {
+                        *neighbor = VarIndex::Index(base[i].parent.get().unwrap())
+                    }
                 }
-                &mut MaybeIndex::None => {}
             }
         }
     }
     result
+}
+
+// Solves QEFs in vertex stack, starting at the highest level, down all layers until the qef error
+// is below threshold.
+// Returns the number of solved QEFs.
+fn solve_qefs(vertex_stack: &[Vec<Vertex>], error_threshold: Float) -> usize {
+    let mut num_solved = 0;
+    if let Some(top_layer) = vertex_stack.last() {
+        for i in 0..top_layer.len() {
+            num_solved += recursively_solve_qefs(vertex_stack, error_threshold, i);
+        }
+    }
+    num_solved
+}
+
+fn recursively_solve_qefs(vertex_stack: &[Vec<Vertex>],
+                          error_threshold: Float,
+                          index_in_layer: usize)
+                          -> usize {
+    let (top_layer, remaining_layers) = vertex_stack.split_last().unwrap();
+    let vertex = &top_layer[index_in_layer];
+    let error;
+    {
+        // Solve qef and store error.
+        let mut qef = vertex.qef.borrow_mut();
+        // Make sure we never solve a qef twice.
+        debug_assert!(qef.error.is_nan(),
+                      "found solved qef layer {:?} index {:?} {:?} parent: {:?}",
+                      remaining_layers.len(),
+                      index_in_layer,
+                      vertex.index,
+                      vertex.parent);
+        qef.solve();
+        error = qef.error;
+    }
+    let mut num_solved = 1;
+    // If error exceed threshold, recurse into subvertices.
+    if error.abs() > error_threshold {
+        for &child_index in vertex.children.iter() {
+            num_solved += recursively_solve_qefs(remaining_layers, error_threshold, child_index);
+        }
+    }
+    num_solved
 }
 
 struct Timer {
@@ -405,11 +466,10 @@ impl DualMarchingCubes {
         }
         println!("generated edge_grid: {:}", t.elapsed());
 
-
         let mut vertex_stack = Vec::new();
         vertex_stack.push(self.generate_leaf_vertices());
 
-        println!("generated {:?} vertices: {:}",
+        println!("generated {:?} leaf vertices: {:}",
                  vertex_stack[0].len(),
                  t.elapsed());
 
@@ -418,12 +478,20 @@ impl DualMarchingCubes {
             if next.len() == vertex_stack.last().unwrap().len() {
                 break;
             }
+            println!("layer #{} {} vertices {:}",
+                     vertex_stack.len(),
+                     next.len(),
+                     t.elapsed());
             vertex_stack.push(next);
         }
 
         println!("subsampled {:} layers: {:}",
                  vertex_stack.len() - 1,
                  t.elapsed());
+
+        let num_qefs_solved = solve_qefs(&vertex_stack, self.res);
+
+        println!("solved {} qefs: {:}", num_qefs_solved, t.elapsed());
 
         for edge_index in self.edge_grid.borrow().keys() {
             self.compute_quad(*edge_index);
@@ -442,25 +510,49 @@ impl DualMarchingCubes {
         let mut index_map = HashMap::new();
         let mut vertices = Vec::new();
         for edge_index in self.edge_grid.borrow().keys() {
-            self.generate_vertices_for_minimal_egde(edge_index, &mut vertices, &mut index_map);
+            self.add_vertices_for_minimal_egde(edge_index, &mut vertices, &mut index_map);
         }
         for vertex in vertices.iter_mut() {
-            for neighbor in vertex.neighbors.iter_mut() {
-                match neighbor {
-                    &mut MaybeIndex::VertexIndex(vi) => {
-                        *neighbor = MaybeIndex::Index(*index_map.get(&vi).unwrap())
+            for neighbor_vec in vertex.neighbors.iter_mut() {
+                for neighbor in neighbor_vec.iter_mut() {
+                    match neighbor {
+                        &mut VarIndex::VertexIndex(vi) => {
+                            *neighbor = VarIndex::Index(*index_map.get(&vi).unwrap())
+                        }
+                        &mut VarIndex::Index(_) => panic!("unexpected Index in fresh leaf map."),
                     }
-                    &mut MaybeIndex::Index(_) => panic!("unexpected Index in fresh leaf map."),
-                    &mut MaybeIndex::None => {}
+                }
+            }
+        }
+        for vi in 0..vertices.len() {
+            for np in 0..vertices[vi].neighbors.len() {
+                for ni in 0..vertices[vi].neighbors[np].len() {
+                    match vertices[vi].neighbors[np][ni] {
+                        VarIndex::VertexIndex(_) => panic!("unexpected VertexIndex."),
+                        VarIndex::Index(i) => {
+                            debug_assert!(vertices[i].neighbors[np ^ 1]
+                                              .contains(&VarIndex::Index(vi)),
+                                          "vertex[{}].neighbors[{}][{}]=={:?}, but vertex[{}].neighbors[{}]=={:?}\n{:?} vs. {:?}",
+                                          vi,
+                                          np,
+                                          ni,
+                                          vertices[vi].neighbors[np][ni],
+                                          i,
+                                          np ^ 1,
+                                          vertices[i].neighbors[np ^ 1],
+                                          vertices[vi],
+                                          vertices[i]);
+                        }
+                    }
                 }
             }
         }
         vertices
     }
-    fn generate_vertices_for_minimal_egde(&self,
-                                          edge_index: &EdgeIndex,
-                                          vertices: &mut Vec<Vertex>,
-                                          index_map: &mut HashMap<VertexIndex, usize>) {
+    fn add_vertices_for_minimal_egde(&self,
+                                     edge_index: &EdgeIndex,
+                                     vertices: &mut Vec<Vertex>,
+                                     index_map: &mut HashMap<VertexIndex, usize>) {
         debug_assert!((edge_index.edge as usize) < 4);
         for &quad_egde in QUADS[edge_index.edge as usize].iter() {
             let idx = neg_offset(edge_index.index, EDGE_OFFSET[quad_egde as usize]);
@@ -471,13 +563,18 @@ impl DualMarchingCubes {
                 index: idx,
             };
             index_map.entry(vertex_index).or_insert_with(|| {
-                let mut neighbors = [MaybeIndex::None; 6];
+                let mut neighbors = [Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new(),
+                                     Vec::new()];
                 for i in 0..6 {
                     if let Some(mut neighbor_index) = vertex_index.neighbor(i) {
-                        neighbor_index.edges =
-                            get_connected_edges_from_edge_set(neighbor_index.edges,
-                                                     self.bitset_for_cell(neighbor_index.index));
-                        neighbors[i] = MaybeIndex::VertexIndex(neighbor_index);
+                        for edges in get_connected_edges_from_edge_set(neighbor_index.edges,
+                                                 self.bitset_for_cell(neighbor_index.index)) {
+                            neighbor_index.edges = edges;
+                            let idx = VarIndex::VertexIndex(neighbor_index);
+                            if !neighbors[i].contains(&idx) {
+                                neighbors[i].push(idx);
+                            }
+                        }
                     }
                 }
                 let tangent_planes: Vec<_> = edge_set.into_iter()
@@ -490,7 +587,7 @@ impl DualMarchingCubes {
                                                      .collect();
                 vertices.push(Vertex {
                     index: idx,
-                    qef: qef::Qef::new(&tangent_planes),
+                    qef: RefCell::new(qef::Qef::new(&tangent_planes)),
                     neighbors: neighbors,
                     parent: Cell::new(None),
                     children: Vec::new(),
@@ -646,5 +743,49 @@ impl DualMarchingCubes {
         } else {
             return self.find_zero(n, nv, b, bv);
         }
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::get_connected_edges_from_edge_set;
+    use super::super::bitset::BitSet;
+    //  Corner indexes
+    //
+    //      6---------------7
+    //     /|              /|
+    //    / |             / |
+    //   /  |            /  |
+    //  4---------------5   |
+    //  |   |           |   |
+    //  |   2-----------|---3
+    //  |  /            |  /
+    //  | /             | /
+    //  |/              |/
+    //  0---------------1
+
+    //  Edge indexes
+    //
+    //      +-------9-------+
+    //     /|              /|
+    //    7 |            10 |              ^
+    //   /  8            /  11            /
+    //  +-------6-------+   |     ^    higher indexes in y
+    //  |   |           |   |     |     /
+    //  |   +-------3---|---+     |    /
+    //  2  /            5  /  higher indexes
+    //  | 1             | 4      in z
+    //  |/              |/        |/
+    //  o-------0-------+         +-- higher indexes in x ---->
+
+    #[test]
+    fn connected_edges() {
+        let cell = BitSet::from_4bits(0, 6, 3, 5);
+        let edge_set = BitSet::from_4bits(4, 5, 10, 11);
+        let connected_edges = get_connected_edges_from_edge_set(edge_set, cell);
+        assert_eq!(connected_edges.len(), 2);
+        assert!(connected_edges.contains(&BitSet::from_4bits(5, 5, 6, 10)));
+        assert!(connected_edges.contains(&BitSet::from_4bits(3, 3, 4, 11)));
     }
 }
