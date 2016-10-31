@@ -5,7 +5,7 @@ use qef;
 use {Mesh, Plane};
 use cell_configs::CELL_CONFIGS;
 use xplicit_types::{Float, Point, Vector};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap};
 use std::cell::{Cell, RefCell};
 use std::{error, fmt};
 use std::cmp;
@@ -191,7 +191,7 @@ fn half_index(input: &Index) -> Index {
 // All vertices in the same octtree subcell as start and connected to start.
 fn add_connected_vertices_in_subcell(base: &Vec<Vertex>,
                                      start: &Vertex,
-                                     neigbors: &mut HashSet<usize>) {
+                                     neigbors: &mut BTreeSet<usize>) {
     let parent_index = half_index(&start.index);
     for neighbor_index_vector in start.neighbors.iter() {
         for neighbor_index in neighbor_index_vector.iter() {
@@ -228,7 +228,7 @@ fn subsample_octtree(base: &Vec<Vertex>) -> Vec<Vertex> {
     let mut result = Vec::new();
     for (i, vertex) in base.iter().enumerate() {
         if vertex.parent.get() == None {
-            let mut neighbor_set = HashSet::new();
+            let mut neighbor_set = BTreeSet::new();
             neighbor_set.insert(i);
             add_connected_vertices_in_subcell(base, vertex, &mut neighbor_set);
             let mut parent = Vertex {
@@ -484,10 +484,6 @@ impl DualMarchingCubes {
                      t.elapsed());
             vertex_stack.push(next);
         }
-
-        println!("subsampled {:} layers: {:}",
-                 vertex_stack.len() - 1,
-                 t.elapsed());
 
         let num_qefs_solved = solve_qefs(&vertex_stack, self.res);
 
