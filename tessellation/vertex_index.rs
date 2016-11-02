@@ -53,7 +53,7 @@ pub struct VertexIndex {
 }
 
 impl VertexIndex {
-    pub fn neighbor(&self, mut face: usize) -> Option<VertexIndex> {
+    pub fn neighbor(&self, face: usize) -> Option<VertexIndex> {
         let neighbor_edge_set = egdes_on_neighbor(face, self.edges);
         if neighbor_edge_set.empty() {
             return None;

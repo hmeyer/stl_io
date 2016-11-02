@@ -59,10 +59,11 @@ impl Qef {
         if let Some(inv) = ma.inverse() {
             let b_rel_mean = self.atb - ma * mean;
             self.solution = b_rel_mean * inv + mean;
+            // TODO: Check, whether or not this solution is in the bounding octtree cell.
         } else {
             self.solution = mean;
         }
-        self.error = -2. * na::dot(&self.solution, &self.atb) +
+        self.error = self.btb - 2. * na::dot(&self.solution, &self.atb) +
                      na::dot(&self.solution, &(ma * self.solution));
     }
     pub fn merge(&mut self, other: &Qef) {
@@ -85,7 +86,6 @@ mod tests {
     use na;
     use na::ApproxEq;
     use cgmath::InnerSpace;
-
 
     #[test]
     fn origin() {
@@ -145,6 +145,4 @@ mod tests {
                 qef.solution,
                 expected_solution);
     }
-
-
 }

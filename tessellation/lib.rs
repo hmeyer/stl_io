@@ -1,5 +1,4 @@
 #![feature(const_fn)]
-#![feature(step_by)]
 extern crate cgmath;
 extern crate rand;
 extern crate nalgebra as na;

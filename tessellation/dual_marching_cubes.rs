@@ -9,7 +9,7 @@ use std::collections::{BTreeSet, HashMap};
 use std::cell::{Cell, RefCell};
 use std::{error, fmt};
 use std::cmp;
-use cgmath::{Array, EuclideanSpace};
+use cgmath::Array;
 use rand;
 
 // How accurately find zero crossings.
@@ -110,6 +110,8 @@ struct Vertex {
     neighbors: [Vec<VarIndex>; 6],
     parent: Cell<Option<usize>>,
     children: Vec<usize>,
+    // Index of this vertex in the final mesh.
+    mesh_index: Cell<Option<usize>>,
 }
 
 
@@ -133,13 +135,14 @@ pub struct DualMarchingCubes {
     origin: Point,
     dim: [usize; 3],
     mesh: RefCell<Mesh>,
-    // Map (EdgeSet, Index) -> index in mesh.vertices
-    vertex_map: RefCell<HashMap<VertexIndex, usize>>,
     res: Float,
     value_grid: HashMap<Index, Float>,
     edge_grid: RefCell<HashMap<EdgeIndex, Plane>>,
-    qefs: Cell<usize>,
-    clamps: Cell<usize>,
+    // The Vertex Octtree. vertex_octtree[0] stores the leaf vertices. vertex_octtree[1] the next
+    // layer and so on. vertex_octtree.len() is the depth of the octtree.
+    vertex_octtree: Vec<Vec<Vertex>>,
+    // Map from VertexIndex to vertex_octtree[0]
+    vertex_index_map: HashMap<VertexIndex, usize>,
 }
 
 // Returns the next largest power of 2
@@ -237,6 +240,7 @@ fn subsample_octtree(base: &Vec<Vertex>) -> Vec<Vertex> {
                 neighbors: [Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new()],
                 parent: Cell::new(None),
                 children: Vec::new(),
+                mesh_index: Cell::new(None),
             };
             for &neighbor_index in neighbor_set.iter() {
                 let child = &base[neighbor_index];
@@ -270,21 +274,21 @@ fn subsample_octtree(base: &Vec<Vertex>) -> Vec<Vertex> {
 // Solves QEFs in vertex stack, starting at the highest level, down all layers until the qef error
 // is below threshold.
 // Returns the number of solved QEFs.
-fn solve_qefs(vertex_stack: &[Vec<Vertex>], error_threshold: Float) -> usize {
+fn solve_qefs(vertex_octtree: &[Vec<Vertex>], error_threshold: Float) -> usize {
     let mut num_solved = 0;
-    if let Some(top_layer) = vertex_stack.last() {
+    if let Some(top_layer) = vertex_octtree.last() {
         for i in 0..top_layer.len() {
-            num_solved += recursively_solve_qefs(vertex_stack, error_threshold, i);
+            num_solved += recursively_solve_qefs(vertex_octtree, error_threshold, i);
         }
     }
     num_solved
 }
 
-fn recursively_solve_qefs(vertex_stack: &[Vec<Vertex>],
+fn recursively_solve_qefs(vertex_octtree: &[Vec<Vertex>],
                           error_threshold: Float,
                           index_in_layer: usize)
                           -> usize {
-    let (top_layer, remaining_layers) = vertex_stack.split_last().unwrap();
+    let (top_layer, remaining_layers) = vertex_octtree.split_last().unwrap();
     let vertex = &top_layer[index_in_layer];
     let error;
     {
@@ -343,12 +347,11 @@ impl DualMarchingCubes {
                 vertices: Vec::new(),
                 faces: Vec::new(),
             }),
-            vertex_map: RefCell::new(HashMap::new()),
             res: res,
             value_grid: HashMap::new(),
             edge_grid: RefCell::new(HashMap::new()),
-            qefs: Cell::new(0),
-            clamps: Cell::new(0),
+            vertex_octtree: Vec::new(),
+            vertex_index_map: HashMap::new(),
         }
     }
     pub fn tesselate(&mut self) -> Mesh {
@@ -362,8 +365,8 @@ impl DualMarchingCubes {
                     self.value_grid.clear();
                     self.mesh.borrow_mut().vertices.clear();
                     self.mesh.borrow_mut().faces.clear();
-                    self.qefs.set(0);
-                    self.clamps.set(0);
+                    self.vertex_octtree.clear();
+                    self.vertex_index_map.clear();
                 }
             }
         }
@@ -466,26 +469,27 @@ impl DualMarchingCubes {
         }
         println!("generated edge_grid: {:}", t.elapsed());
 
-        let mut vertex_stack = Vec::new();
-        vertex_stack.push(self.generate_leaf_vertices());
+        let (leafs, index_map) = self.generate_leaf_vertices();
+        self.vertex_index_map = index_map;
+        self.vertex_octtree.push(leafs);
 
         println!("generated {:?} leaf vertices: {:}",
-                 vertex_stack[0].len(),
+                 self.vertex_octtree[0].len(),
                  t.elapsed());
 
         loop {
-            let next = subsample_octtree(vertex_stack.last().unwrap());
-            if next.len() == vertex_stack.last().unwrap().len() {
+            let next = subsample_octtree(self.vertex_octtree.last().unwrap());
+            if next.len() == self.vertex_octtree.last().unwrap().len() {
                 break;
             }
             println!("layer #{} {} vertices {:}",
-                     vertex_stack.len(),
+                     self.vertex_octtree.len(),
                      next.len(),
                      t.elapsed());
-            vertex_stack.push(next);
+            self.vertex_octtree.push(next);
         }
 
-        let num_qefs_solved = solve_qefs(&vertex_stack, self.res);
+        let num_qefs_solved = solve_qefs(&self.vertex_octtree, self.res);
 
         println!("solved {} qefs: {:}", num_qefs_solved, t.elapsed());
 
@@ -494,15 +498,15 @@ impl DualMarchingCubes {
         }
         println!("generated quads: {:}", t.elapsed());
 
-        println!("qefs: {:?} clamps: {:?}", self.qefs, self.clamps);
-
         println!("computed mesh with {:?} faces.",
                  self.mesh.borrow().faces.len());
 
         Ok(self.mesh.borrow().clone())
     }
 
-    fn generate_leaf_vertices(&self) -> Vec<Vertex> {
+    // Generates leaf vertices along with a map that points VertexIndices to the index in the leaf
+    // vertex vec.
+    fn generate_leaf_vertices(&self) -> (Vec<Vertex>, HashMap<VertexIndex, usize>) {
         let mut index_map = HashMap::new();
         let mut vertices = Vec::new();
         for edge_index in self.edge_grid.borrow().keys() {
@@ -543,7 +547,7 @@ impl DualMarchingCubes {
                 }
             }
         }
-        vertices
+        (vertices, index_map)
     }
     fn add_vertices_for_minimal_egde(&self,
                                      edge_index: &EdgeIndex,
@@ -587,6 +591,7 @@ impl DualMarchingCubes {
                     neighbors: neighbors,
                     parent: Cell::new(None),
                     children: Vec::new(),
+                    mesh_index: Cell::new(None),
                 });
                 vertices.len() - 1
             });
@@ -606,54 +611,43 @@ impl DualMarchingCubes {
 
     // Return the Point index (in self.mesh.vertices) the the point belonging to edge/idx.
     fn lookup_cell_point(&self, edge: Edge, idx: Index) -> usize {
+        // Generate the proper vertex Index from a single edge and an Index.
         let edge_set = get_connected_edges(edge, self.bitset_for_cell(idx));
         let vertex_index = VertexIndex {
             edges: edge_set,
             index: idx,
         };
-        // Try to lookup the edge_set for this index.
-        if let Some(index) = self.vertex_map.borrow().get(&vertex_index) {
-            return *index;
-        }
-        // It does not exist. So calculate all edge crossings and their normals.
-        let point = self.compute_cell_point(edge_set, idx);
 
+        // Convert the vertex index to index and layer in the Octtree.
+        let mut octtree_index = *self.vertex_index_map.get(&vertex_index).unwrap();
+        let mut octtree_layer = 0;
+        // Walk up the chain of parents
+        loop {
+            let next_index = self.vertex_octtree[octtree_layer][octtree_index]
+                                 .parent
+                                 .get()
+                                 .unwrap();
+            let error = self.vertex_octtree[octtree_layer + 1][next_index].qef.borrow().error;
+            if (!error.is_nan() && error > self.res) ||
+               (octtree_layer == self.vertex_octtree.len() - 1) {
+                // Stop, if either the error is too large or we reached the top.
+                break;
+            }
+            octtree_layer += 1;
+            octtree_index = next_index;
+        }
+        let vertex = &self.vertex_octtree[octtree_layer][octtree_index];
+        // If the vertex exists in mesh, return its index.
+        if let Some(mesh_index) = vertex.mesh_index.get() {
+            return mesh_index;
+        }
+        // If not, store it in mesh and return its index.
+        let qef_solution = vertex.qef.borrow().solution;
         let ref mut vertex_list = self.mesh.borrow_mut().vertices;
         let result = vertex_list.len();
-        self.vertex_map.borrow_mut().insert(vertex_index, result);
-        vertex_list.push([point.x, point.y, point.z]);
+        vertex.mesh_index.set(Some(result));
+        vertex_list.push([qef_solution.x, qef_solution.y, qef_solution.z]);
         return result;
-    }
-
-    fn compute_cell_point(&self, edge_set: BitSet, idx: Index) -> Point {
-        let tangent_planes: Vec<_> = edge_set.into_iter()
-                                             .map(|edge| {
-                                                 self.get_edge_tangent_plane(&EdgeIndex {
-                                                     edge: Edge::from_usize(edge),
-                                                     index: idx,
-                                                 })
-                                             })
-                                             .collect();
-
-        // Fit the point to tangent planes.
-        let mut qef = qef::Qef::new(&tangent_planes);
-        qef.solve();
-        let qef_solution = Point::new(qef.solution[0], qef.solution[1], qef.solution[2]);
-
-        if self.is_in_cell(&idx, &qef_solution) {
-            let qefs = self.qefs.get();
-            self.qefs.set(qefs + 1);
-            return qef_solution;
-        }
-        let mean = Point::from_vec(&tangent_planes.iter()
-                                                  .fold(Vector::new(0., 0., 0.),
-                                                        |sum, x| sum + x.p.to_vec()) /
-                                   tangent_planes.len() as Float);
-        // Proper calculation landed us outside the cell.
-        // Revert mean.
-        let clamps = self.clamps.get();
-        self.clamps.set(clamps + 1);
-        return mean;
     }
 
     fn is_in_cell(&self, idx: &Index, p: &Point) -> bool {
@@ -694,18 +688,31 @@ impl DualMarchingCubes {
 
         let mut p = Vec::with_capacity(4);
         for &quad_egde in QUADS[edge_index.edge as usize].iter() {
-            p.push(self.lookup_cell_point(quad_egde,
-                                          neg_offset(edge_index.index,
-                                                     EDGE_OFFSET[quad_egde as usize])))
+            let point_index = self.lookup_cell_point(quad_egde,
+                                                     neg_offset(edge_index.index,
+                                                                EDGE_OFFSET[quad_egde as usize]));
+            // Dedup points before insertion (two minimal vertices might end up in the same parent
+            // vertex).
+            if !p.contains(&point_index) {
+                p.push(point_index)
+            }
         }
+        // Only try to generate meshes, if there are more then two points.
+        if p.len() < 3 {
+            return;
+        }
+        // Reverse order, if the edge is reversed.
         if let Some(&v) = self.value_grid.get(&edge_index.index) {
             if v < 0. {
                 p.reverse();
             }
         }
         let ref mut face_list = self.mesh.borrow_mut().faces;
+        // TODO: Fix this to choose the proper split.
         face_list.push([p[0], p[1], p[2]]);
-        face_list.push([p[2], p[3], p[0]]);
+        if p.len() == 4 {
+            face_list.push([p[2], p[3], p[0]]);
+        }
     }
 
     // If a is inside the object and b outside - this method return the point on the line between
