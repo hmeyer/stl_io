@@ -1,4 +1,4 @@
-use xplicit_primitive::Object;
+use xplicit_primitive::{BoundingBox, Object};
 use bitset::BitSet;
 use vertex_index::{Index, VarIndex, VertexIndex, neg_offset, offset};
 use qef;
@@ -271,49 +271,6 @@ fn subsample_octtree(base: &Vec<Vertex>) -> Vec<Vertex> {
     result
 }
 
-// Solves QEFs in vertex stack, starting at the highest level, down all layers until the qef error
-// is below threshold.
-// Returns the number of solved QEFs.
-fn solve_qefs(vertex_octtree: &[Vec<Vertex>], error_threshold: Float) -> usize {
-    let mut num_solved = 0;
-    if let Some(top_layer) = vertex_octtree.last() {
-        for i in 0..top_layer.len() {
-            num_solved += recursively_solve_qefs(vertex_octtree, error_threshold, i);
-        }
-    }
-    num_solved
-}
-
-fn recursively_solve_qefs(vertex_octtree: &[Vec<Vertex>],
-                          error_threshold: Float,
-                          index_in_layer: usize)
-                          -> usize {
-    let (top_layer, remaining_layers) = vertex_octtree.split_last().unwrap();
-    let vertex = &top_layer[index_in_layer];
-    let error;
-    {
-        // Solve qef and store error.
-        let mut qef = vertex.qef.borrow_mut();
-        // Make sure we never solve a qef twice.
-        debug_assert!(qef.error.is_nan(),
-                      "found solved qef layer {:?} index {:?} {:?} parent: {:?}",
-                      remaining_layers.len(),
-                      index_in_layer,
-                      vertex.index,
-                      vertex.parent);
-        qef.solve();
-        error = qef.error;
-    }
-    let mut num_solved = 1;
-    // If error exceed threshold, recurse into subvertices.
-    if error.abs() > error_threshold {
-        for &child_index in vertex.children.iter() {
-            num_solved += recursively_solve_qefs(remaining_layers, error_threshold, child_index);
-        }
-    }
-    num_solved
-}
-
 struct Timer {
     t: ::time::Tm,
 }
@@ -489,7 +446,7 @@ impl DualMarchingCubes {
             self.vertex_octtree.push(next);
         }
 
-        let num_qefs_solved = solve_qefs(&self.vertex_octtree, self.res);
+        let num_qefs_solved = self.solve_qefs(self.res);
 
         println!("solved {} qefs: {:}", num_qefs_solved, t.elapsed());
 
@@ -502,6 +459,63 @@ impl DualMarchingCubes {
                  self.mesh.borrow().faces.len());
 
         Ok(self.mesh.borrow().clone())
+    }
+
+
+    // Solves QEFs in vertex stack, starting at the highest level, down all layers until the qef error
+    // is below threshold.
+    // Returns the number of solved QEFs.
+    fn solve_qefs(&self, error_threshold: Float) -> usize {
+        let mut num_solved = 0;
+        if let Some(top_layer) = self.vertex_octtree.last() {
+            for i in 0..top_layer.len() {
+                num_solved += self.recursively_solve_qefs(&self.vertex_octtree.len() - 1,
+                                                          error_threshold,
+                                                          i);
+            }
+        }
+        num_solved
+    }
+
+    // Computes the bounding box for a given layer and index.
+    fn get_bbox(&self, layer: usize, index: &Index) -> BoundingBox {
+        let real_res = self.res * (1 << layer) as Float;
+        let cell_origin = self.origin +
+                          Vector::new(index[0] as Float, index[1] as Float, index[2] as Float) *
+                          real_res;
+        BoundingBox::new(cell_origin,
+                         cell_origin + Vector::new(real_res, real_res, real_res))
+    }
+
+    fn recursively_solve_qefs(&self,
+                              layer: usize,
+                              error_threshold: Float,
+                              index_in_layer: usize)
+                              -> usize {
+        let vertex = &self.vertex_octtree[layer][index_in_layer];
+        assert!(vertex.children.len() == 0 || layer > 0);
+        let error;
+        {
+            // Solve qef and store error.
+            let mut qef = vertex.qef.borrow_mut();
+            // Make sure we never solve a qef twice.
+            debug_assert!(qef.error.is_nan(),
+                          "found solved qef layer {:?} index {:?} {:?} parent: {:?}",
+                          layer,
+                          index_in_layer,
+                          vertex.index,
+                          vertex.parent);
+            qef.solve(&self.get_bbox(layer, &vertex.index));
+            error = qef.error;
+        }
+        let mut num_solved = 1;
+        // If error exceed threshold, recurse into subvertices.
+        if error.abs() > error_threshold {
+            for &child_index in vertex.children.iter() {
+                num_solved += self.recursively_solve_qefs(layer - 1, error_threshold, child_index);
+            }
+        }
+        num_solved
     }
 
     // Generates leaf vertices along with a map that points VertexIndices to the index in the leaf

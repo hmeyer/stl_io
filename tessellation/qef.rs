@@ -1,4 +1,5 @@
 use xplicit_types::{Float, NAN};
+use xplicit_primitive::BoundingBox;
 use Plane;
 use cgmath::{EuclideanSpace, InnerSpace};
 use na;
@@ -52,7 +53,7 @@ impl Qef {
         }
         qef
     }
-    pub fn solve(&mut self) {
+    pub fn solve(&mut self, cell_bbox: &BoundingBox) {
         let m = &self.ata;
         let ma = na::Matrix3::new(m[0], m[1], m[2], m[1], m[3], m[4], m[2], m[4], m[5]);
         let mean = self.sum / self.num as Float;
