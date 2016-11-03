@@ -62,6 +62,7 @@ impl Qef {
             self.solution = b_rel_mean * inv + mean;
             if !cell_bbox.contains(Point::new(self.solution.x, self.solution.y, self.solution.z)) {
                 // If this solution is in the bounding octtree cell you the mean.
+                // TODO: Do something more clever than just using the mean.
                 self.solution = mean;
             }
         } else {
