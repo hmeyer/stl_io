@@ -1,4 +1,4 @@
-use xplicit_types::{Float, NAN};
+use xplicit_types::{Float, NAN, Point};
 use xplicit_primitive::BoundingBox;
 use Plane;
 use cgmath::{EuclideanSpace, InnerSpace};
@@ -60,7 +60,10 @@ impl Qef {
         if let Some(inv) = ma.inverse() {
             let b_rel_mean = self.atb - ma * mean;
             self.solution = b_rel_mean * inv + mean;
-            // TODO: Check, whether or not this solution is in the bounding octtree cell.
+            if !cell_bbox.contains(Point::new(self.solution.x, self.solution.y, self.solution.z)) {
+                // If this solution is in the bounding octtree cell you the mean.
+                self.solution = mean;
+            }
         } else {
             self.solution = mean;
         }

@@ -110,4 +110,8 @@ impl BoundingBox {
         let zval = (p.z - self.max.z).max(self.min.z - p.z);
         xval.max(yval.max(zval))
     }
+    pub fn contains(&self, p: Point) -> bool {
+        p.x >= self.min.x && p.x <= self.max.x && p.y >= self.min.y && p.y <= self.max.y &&
+        p.z >= self.min.z && p.z <= self.max.z
+    }
 }
