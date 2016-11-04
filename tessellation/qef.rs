@@ -62,8 +62,6 @@ impl Qef {
         if let Some(inv) = ma.inverse() {
             let b_rel_mean = self.atb - ma * mean;
             self.solution = b_rel_mean * inv + mean;
-        } else {
-            self.solution = self.sum / self.num as Float;
         }
         // NAN-solution will also not be contained in the bbox.
         if !self.bbox.contains(Point::new(self.solution.x, self.solution.y, self.solution.z)) {
