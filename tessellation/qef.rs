@@ -63,6 +63,7 @@ impl Qef {
             let b_rel_mean = self.atb - ma * mean;
             self.solution = b_rel_mean * inv + mean;
         }
+        // If solution is not contained in cell bbox, start a binary search for a proper solution.
         // NAN-solution will also not be contained in the bbox.
         if !self.bbox.contains(Point::new(self.solution.x, self.solution.y, self.solution.z)) {
             let accuracy = (self.bbox.max.x - self.bbox.min.x) / 100.0;
@@ -78,17 +79,23 @@ impl Qef {
         }
         self.error = self.error(&self.solution, &ma);
     }
+    // Do a binary search. Stop, if bbox is smaller then accuracy.
     fn search_solution(&self,
                        accuracy: Float,
                        bbox: &mut BoundingBox,
                        ma: &na::Matrix3<Float>)
                        -> na::Vector3<Float> {
+        // Generate bbox mid-point and error value on mid-point.
         let mid = (bbox.max.to_vec() + bbox.min.to_vec()) * 0.5;
         let na_mid = na::Vector3::new(mid.x, mid.y, mid.z);
-        if bbox.max.x - bbox.min.x < accuracy {
+        if bbox.max.x - bbox.min.x <= accuracy {
             return na_mid;
         }
         let mid_error = self.error(&na_mid, ma);
+        // For each dimension generate delta and error on delta - which results in the gradient for
+        // that direction. Based on the gradient sign choose proper half of the bbox.
+        // TODO: Verify this is the right thing to do. Error is essentially an Elipsoid, so we
+        // might need to do something more clever here.
         for dim in 0..3 {
             let mut d_mid = na_mid.clone();
             d_mid[dim] += EPSILON;
