@@ -6,7 +6,7 @@ pub use xplicit_types::{Float, Point, Vector, EPSILON_X, EPSILON_Y, EPSILON_Z};
 use cgmath::InnerSpace;
 
 mod bounding_box;
-pub use self::bounding_box::BoundingBox;
+pub use self::bounding_box::{BoundingBox, INFINITY_BOX, NEG_INFINITY_BOX};
 
 mod transformer;
 pub use self::transformer::AffineTransformer;

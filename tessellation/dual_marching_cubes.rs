@@ -1,4 +1,4 @@
-use xplicit_primitive::{BoundingBox, Object};
+use xplicit_primitive::{BoundingBox, NEG_INFINITY_BOX, Object};
 use bitset::BitSet;
 use vertex_index::{Index, VarIndex, VertexIndex, neg_offset, offset};
 use qef;
@@ -236,7 +236,7 @@ fn subsample_octtree(base: &Vec<Vertex>) -> Vec<Vertex> {
             add_connected_vertices_in_subcell(base, vertex, &mut neighbor_set);
             let mut parent = Vertex {
                 index: half_index(&vertex.index),
-                qef: RefCell::new(qef::Qef::new(&[])),
+                qef: RefCell::new(qef::Qef::new(&[], NEG_INFINITY_BOX.clone())),
                 neighbors: [Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new()],
                 parent: Cell::new(None),
                 children: Vec::new(),
@@ -477,16 +477,6 @@ impl DualMarchingCubes {
         num_solved
     }
 
-    // Computes the bounding box for a given layer and index.
-    fn get_bbox(&self, layer: usize, index: &Index) -> BoundingBox {
-        let real_res = self.res * (1 << layer) as Float;
-        let cell_origin = self.origin +
-                          Vector::new(index[0] as Float, index[1] as Float, index[2] as Float) *
-                          real_res;
-        BoundingBox::new(cell_origin,
-                         cell_origin + Vector::new(real_res, real_res, real_res))
-    }
-
     fn recursively_solve_qefs(&self,
                               layer: usize,
                               error_threshold: Float,
@@ -505,7 +495,7 @@ impl DualMarchingCubes {
                           index_in_layer,
                           vertex.index,
                           vertex.parent);
-            qef.solve(&self.get_bbox(layer, &vertex.index));
+            qef.solve();
             error = qef.error;
         }
         let mut num_solved = 1;
@@ -568,6 +558,7 @@ impl DualMarchingCubes {
                                      vertices: &mut Vec<Vertex>,
                                      index_map: &mut HashMap<VertexIndex, usize>) {
         debug_assert!((edge_index.edge as usize) < 4);
+        let cell_size = Vector::new(self.res, self.res, self.res);
         for &quad_egde in QUADS[edge_index.edge as usize].iter() {
             let idx = neg_offset(edge_index.index, EDGE_OFFSET[quad_egde as usize]);
 
@@ -599,9 +590,14 @@ impl DualMarchingCubes {
                                                          })
                                                      })
                                                      .collect();
+                let cell_origin = self.origin +
+                                  Vector::new(idx[0] as Float, idx[1] as Float, idx[2] as Float) *
+                                  self.res;
                 vertices.push(Vertex {
                     index: idx,
-                    qef: RefCell::new(qef::Qef::new(&tangent_planes)),
+                    qef: RefCell::new(qef::Qef::new(&tangent_planes,
+                                                    BoundingBox::new(cell_origin,
+                                                                     cell_origin + cell_size))),
                     neighbors: neighbors,
                     parent: Cell::new(None),
                     children: Vec::new(),
@@ -643,8 +639,8 @@ impl DualMarchingCubes {
                                  .unwrap();
             let error = self.vertex_octtree[octtree_layer + 1][next_index].qef.borrow().error;
             if (!error.is_nan() && error > self.res) ||
-               (octtree_layer == self.vertex_octtree.len() - 1) {
-                // Stop, if either the error is too large or we reached the top.
+               (octtree_layer == self.vertex_octtree.len() - 2) {
+                // Stop, if either the error is too large or we will reach the top.
                 break;
             }
             octtree_layer += 1;

@@ -91,15 +91,17 @@ mod tests {
             edges: BitSet::new(0xfff),
             index: [17, 35, 8],
         };
-        for i in (0..6).step_by(2) {
+        for dim in 0..3 {
+            let i = dim * 2;
             let mut expected_index = v.index;
-            expected_index[i / 2] -= 1;
+            expected_index[dim] -= 1;
             assert_eq!(v.neighbor(i).unwrap().index, expected_index);
             assert_eq!(v.neighbor(i).unwrap().edges, EDGES_ON_FACE[i + 1]);
         }
-        for i in (1..6).step_by(2) {
+        for dim in 0..3 {
+            let i = dim * 2 + 1;
             let mut expected_index = v.index;
-            expected_index[i / 2] += 1;
+            expected_index[dim] += 1;
             assert_eq!(v.neighbor(i).unwrap().index, expected_index);
             assert_eq!(v.neighbor(i).unwrap().edges, EDGES_ON_FACE[i - 1]);
         }
