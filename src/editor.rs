@@ -7,7 +7,7 @@ use xplicit_primitive;
 use xplicit_widget;
 use gtk::Inhibit;
 use gtk::traits::*;
-use xplicit_tessellation::{DualMarchingCubes, write_stl /* ); */};
+use xplicit_tessellation::{DualContouring, write_stl /* ); */};
 
 #[derive(Clone)]
 pub struct Editor {
@@ -93,7 +93,7 @@ impl Editor {
     pub fn tesselate(&self) {
         let maybe_obj = self.get_object(&mut ::std::io::stdout());
         if let Some(obj) = maybe_obj {
-            let mesh = DualMarchingCubes::new(obj, 1.).tesselate();
+            let mesh = DualContouring::new(obj, 1.).tesselate();
             println!("Writing xplicit.stl: {:?}", write_stl("xplicit.stl", &mesh));
             mesh_view::show_mesh(&mesh);
         }

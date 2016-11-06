@@ -130,7 +130,7 @@ impl EdgeIndex {
     }
 }
 
-pub struct DualMarchingCubes {
+pub struct DualContouring {
     object: Box<Object>,
     origin: Point,
     dim: [usize; 3],
@@ -287,14 +287,14 @@ impl Timer {
     }
 }
 
-impl DualMarchingCubes {
+impl DualContouring {
     // Constructor
     // obj: Object to tessellate
     // res: resolution
-    pub fn new(obj: Box<Object>, res: Float) -> DualMarchingCubes {
+    pub fn new(obj: Box<Object>, res: Float) -> DualContouring {
         let bbox = obj.bbox().dilate(1. + res * 1.1);
-        println!("DualMarchingCubes: res: {:} {:?}", res, bbox);
-        DualMarchingCubes {
+        println!("DualContouring: res: {:} {:?}", res, bbox);
+        DualContouring {
             object: obj,
             origin: bbox.min,
             dim: [(bbox.dim()[0] / res).ceil() as usize,
