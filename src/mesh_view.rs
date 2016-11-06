@@ -8,7 +8,6 @@ use xplicit_tessellation;
 use std::sync::{ONCE_INIT, Once};
 
 pub fn show_mesh(mesh: &xplicit_tessellation::Mesh) {
-
     static mut KISS3D_SINGLETON: Option<Window> = None;
     static INIT: Once = ONCE_INIT;
     let window = unsafe {
