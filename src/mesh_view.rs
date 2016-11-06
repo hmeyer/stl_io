@@ -5,17 +5,32 @@ use kiss3d::window::Window;
 use kiss3d::light::Light;
 use kiss3d::resource::Mesh;
 use xplicit_tessellation;
+use std::sync::{ONCE_INIT, Once};
 
 pub fn show_mesh(mesh: &xplicit_tessellation::Mesh) {
-    let mut window = Window::new("MeshView");
-    let scale = na::Vector3::new(1.0, 1.0, 1.0);
-    let mut c = window.add_mesh(tessellation_to_kiss3d_mesh(mesh), scale);
 
-    c.set_color(1.0, 1.0, 0.0);
+    static mut KISS3D_SINGLETON: Option<Window> = None;
+    static INIT: Once = ONCE_INIT;
+    let window = unsafe {
+        INIT.call_once(|| {
+            KISS3D_SINGLETON = Some(Window::new("MeshView"));
+        });
+        KISS3D_SINGLETON.as_mut().unwrap()
+    };
+    window.glfw_window_mut().set_should_close(false);
+    window.glfw_window_mut().restore();
+
+    let scale = na::Vector3::new(1.0, 1.0, 1.0);
+    let mut object_node = window.add_mesh(tessellation_to_kiss3d_mesh(mesh), scale);
+
+    object_node.set_color(1.0, 1.0, 0.0);
 
     window.set_light(Light::StickToCamera);
+    window.show();
 
     while window.render() {}
+    window.remove(&mut object_node);
+    window.hide();
 }
 
 fn tessellation_to_kiss3d_mesh(mesh: &xplicit_tessellation::Mesh) -> Rc<RefCell<Mesh>> {
