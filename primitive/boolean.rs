@@ -1,6 +1,9 @@
 use {ALWAYS_PRECISE, Object, normal_from_object};
 use bounding_box::{BoundingBox, INFINITY_BOX, NEG_INFINITY_BOX};
 use xplicit_types::{Float, INFINITY, NEG_INFINITY, Point, Vector};
+use cgmath::InnerSpace;
+
+pub const SMOOTHNESS_FADE: Float = 0.9; // fade over 10 % r to simple normal calculation
 
 #[derive(Clone, Debug)]
 pub struct Union {
@@ -60,12 +63,20 @@ impl Object for Union {
                                    (v0, v1)
                                }
                            });
-        // if they are far apart, use the min's normal
-        if (v1.1 - v0.1) >= self.r {
-            self.objs[v0.0].normal(p)
-        } else {
-            // else, calc normal from full object
-            normal_from_object(self, p)
+
+        match (v0.1 - v1.1).abs() {
+            // if they are close together, calc normal from full object
+            diff if diff < (self.r * SMOOTHNESS_FADE) => {
+                // else,
+                normal_from_object(self, p)
+            }
+            diff if diff < self.r => {
+                let fader = (diff / self.r - SMOOTHNESS_FADE) / (1. - SMOOTHNESS_FADE);
+                (self.objs[v0.0].normal(p) * fader + normal_from_object(self, p) * (1. - fader))
+                    .normalize()
+            }
+            // they are far apart, use the min's normal
+            _ => self.objs[v0.0].normal(p),
         }
     }
 }
@@ -138,12 +149,19 @@ impl Object for Intersection {
                                    (v0, v1)
                                }
                            });
-        // if they are far apart, use the min's normal
-        if (v0.1 - v1.1) >= self.r {
-            self.objs[v0.0].normal(p)
-        } else {
-            // else, calc normal from full object
-            normal_from_object(self, p)
+        match (v0.1 - v1.1).abs() {
+            // if they are close together, calc normal from full object
+            diff if diff < (self.r * SMOOTHNESS_FADE) => {
+                // else,
+                normal_from_object(self, p)
+            }
+            diff if diff < self.r => {
+                let fader = (diff / self.r - SMOOTHNESS_FADE) / (1. - SMOOTHNESS_FADE);
+                (self.objs[v0.0].normal(p) * fader + normal_from_object(self, p) * (1. - fader))
+                    .normalize()
+            }
+            // they are far apart, use the min's normal
+            _ => self.objs[v0.0].normal(p),
         }
     }
 }
