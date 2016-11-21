@@ -1,4 +1,4 @@
-use xplicit_primitive::{BoundingBox, NEG_INFINITY_BOX, Object};
+use xplicit_primitive::{BoundingBox, NEG_INFINITY_BOX, Object, normal_from_object};
 use bitset::BitSet;
 use vertex_index::{Index, VarIndex, VertexIndex, neg_offset, offset};
 use qef;
@@ -311,9 +311,9 @@ impl DualContouring {
             vertex_index_map: HashMap::new(),
         }
     }
-    pub fn tesselate(&mut self) -> Mesh {
+    pub fn tessellate(&mut self) -> Mesh {
         loop {
-            match self.try_tesselate() {
+            match self.try_tessellate() {
                 Ok(mesh) => return mesh,
                 Err(x) => {
                     let padding = self.res / (10. + rand::random::<Float>().abs());
@@ -374,7 +374,7 @@ impl DualContouring {
     }
 
     // This method does the main work of tessellation.
-    fn try_tesselate(&mut self) -> Result<Mesh, DualContouringError> {
+    fn try_tessellate(&mut self) -> Result<Mesh, DualContouringError> {
         let res = self.res;
         let mut t = Timer::new();
 
@@ -638,7 +638,7 @@ impl DualContouring {
                                  .get()
                                  .unwrap();
             let error = self.vertex_octtree[octtree_layer + 1][next_index].qef.borrow().error;
-            if (!error.is_nan() && error > self.res) ||
+            if (!error.is_nan() && error > (self.res * 5.)) ||
                (octtree_layer == self.vertex_octtree.len() - 2) {
                 // Stop, if either the error is too large or we will reach the top.
                 break;
@@ -658,13 +658,6 @@ impl DualContouring {
         vertex.mesh_index.set(Some(result));
         vertex_list.push([qef_solution.x, qef_solution.y, qef_solution.z]);
         return result;
-    }
-
-    fn is_in_cell(&self, idx: &Index, p: &Point) -> bool {
-        idx.iter().enumerate().all(|(i, &idx_)| {
-            let d = p[i] - self.origin[i] - idx_ as Float * self.res;
-            d > 0. && d < self.res
-        })
     }
 
     fn bitset_for_cell(&self, idx: Index) -> BitSet {
@@ -744,7 +737,8 @@ impl DualContouring {
             }
             return Some(Plane {
                 p: *result,
-                n: self.object.normal(*result),
+                // We need a precise normal here.
+                n: normal_from_object(&*self.object, *result),
             });
         }
         // Linear interpolation of the zero crossing.

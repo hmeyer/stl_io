@@ -39,7 +39,7 @@ fn main() {
     let editor_clone1 = editor.clone();
     let editor_clone2 = editor.clone();
     let menu = menu::create_menu(move || {
-                                     editor_clone1.tesselate();
+                                     editor_clone1.tessellate();
                                  },
                                  move || {
                                      editor_clone2.save(&FILENAME.to_string());
