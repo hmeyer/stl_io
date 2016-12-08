@@ -10,7 +10,6 @@ use cgmath::{InnerSpace, SquareMatrix, Transform};
 
 const EPSILON: Float = 0.003;
 const APPROX_SLACK: Float = 0.1;
-const MAXVAL: Float = 100.;
 
 const FOCAL_FACTOR: Float = 36. /* 36 mm film */ / 50.;
 
@@ -21,6 +20,9 @@ pub struct Renderer {
     light_dir: Vector,
     trans: Matrix,
     object: Option<Box<Object>>,
+    epsilon: Float,
+    maxval: Float,
+    approx_slack: Float,
 }
 
 impl Renderer {
@@ -29,11 +31,17 @@ impl Renderer {
             light_dir: Vector::new(-2. / 3., 2. / 3., -1. / 3.),
             trans: Matrix::identity(),
             object: None,
+            epsilon: EPSILON,
+            maxval: 0.,
+            approx_slack: APPROX_SLACK,
         }
     }
 
     pub fn set_object(&mut self, object: Option<Box<Object>>) {
-        self.object = object
+        self.object = object;
+        self.epsilon = self.object_width() * EPSILON;
+        self.maxval = self.object_width();
+        self.approx_slack = self.object_width() * APPROX_SLACK;
     }
 
     pub fn rotate_from_screen(&mut self, x: Float, y: Float) {
@@ -61,13 +69,13 @@ impl Renderer {
         loop {
             cr.dir = cr.dir.normalize();
             cr.origin = cr.origin + cr.dir * value;
-            value = obj.approx_value(cr.origin, APPROX_SLACK);
+            value = obj.approx_value(cr.origin, self.approx_slack);
             iter += 1;
-            if value > MAXVAL {
+            if value > self.maxval {
                 return (iter, 0.);
             }
 
-            if value < EPSILON {
+            if value < self.epsilon {
                 break;
             }
         }
@@ -82,22 +90,7 @@ impl Renderer {
     pub fn draw_on_buf(&self, buf: &mut [u8], width: i32, height: i32) {
         if let Some(ref my_obj) = self.object {
 
-            let object_width = my_obj.bbox()
-                                     .max
-                                     .x
-                                     .abs()
-                                     .max(my_obj.bbox().min.x.abs())
-                                     .max(my_obj.bbox()
-                                                .max
-                                                .y
-                                                .abs()
-                                                .max(my_obj.bbox().min.y.abs()))
-                                     .max(my_obj.bbox()
-                                                .max
-                                                .z
-                                                .abs()
-                                                .max(my_obj.bbox().min.z.abs())) *
-                               2.;
+            let object_width = self.object_width();
             let viewer_dist = FOCAL_FACTOR * object_width * 3.;
 
             let scale = 1. / cmp::min(width, height) as Float;
@@ -113,7 +106,7 @@ impl Renderer {
 
 
 
-            let origin_value = my_obj.approx_value(ray.origin, APPROX_SLACK);
+            let origin_value = my_obj.approx_value(ray.origin, self.approx_slack);
 
 
             let mut index = 0 as usize;
@@ -137,5 +130,26 @@ impl Renderer {
                 }
             }
         }
+    }
+
+    fn object_width(&self) -> Float {
+        if let Some(ref my_obj) = self.object {
+            return my_obj.bbox()
+                         .max
+                         .x
+                         .abs()
+                         .max(my_obj.bbox().min.x.abs())
+                         .max(my_obj.bbox()
+                                    .max
+                                    .y
+                                    .abs()
+                                    .max(my_obj.bbox().min.y.abs()))
+                         .max(my_obj.bbox()
+                                    .max
+                                    .z
+                                    .abs()
+                                    .max(my_obj.bbox().min.z.abs())) * 2.;
+        }
+        0.
     }
 }
