@@ -14,6 +14,8 @@ use rand;
 
 // How accurately find zero crossings.
 const PRECISION: Float = 0.05;
+// The acceptable error threshold when simplifying the mesh.
+const RELATIVE_ERROR: Float = 2.0;
 
 //  Edge indexes
 //
@@ -446,7 +448,7 @@ impl DualContouring {
             self.vertex_octtree.push(next);
         }
 
-        let num_qefs_solved = self.solve_qefs(self.res);
+        let num_qefs_solved = self.solve_qefs();
 
         println!("solved {} qefs: {:}", num_qefs_solved, t.elapsed());
 
@@ -465,23 +467,17 @@ impl DualContouring {
     // Solves QEFs in vertex stack, starting at the highest level, down all layers until the qef error
     // is below threshold.
     // Returns the number of solved QEFs.
-    fn solve_qefs(&self, error_threshold: Float) -> usize {
+    fn solve_qefs(&self) -> usize {
         let mut num_solved = 0;
         if let Some(top_layer) = self.vertex_octtree.last() {
             for i in 0..top_layer.len() {
-                num_solved += self.recursively_solve_qefs(&self.vertex_octtree.len() - 1,
-                                                          error_threshold,
-                                                          i);
+                num_solved += self.recursively_solve_qefs(&self.vertex_octtree.len() - 1, i);
             }
         }
         num_solved
     }
 
-    fn recursively_solve_qefs(&self,
-                              layer: usize,
-                              error_threshold: Float,
-                              index_in_layer: usize)
-                              -> usize {
+    fn recursively_solve_qefs(&self, layer: usize, index_in_layer: usize) -> usize {
         let vertex = &self.vertex_octtree[layer][index_in_layer];
         assert!(vertex.children.len() == 0 || layer > 0);
         let error;
@@ -500,9 +496,9 @@ impl DualContouring {
         }
         let mut num_solved = 1;
         // If error exceed threshold, recurse into subvertices.
-        if error.abs() > error_threshold {
+        if error.abs() > self.res * RELATIVE_ERROR {
             for &child_index in vertex.children.iter() {
-                num_solved += self.recursively_solve_qefs(layer - 1, error_threshold, child_index);
+                num_solved += self.recursively_solve_qefs(layer - 1, child_index);
             }
         }
         num_solved
@@ -638,7 +634,7 @@ impl DualContouring {
                                  .get()
                                  .unwrap();
             let error = self.vertex_octtree[octtree_layer + 1][next_index].qef.borrow().error;
-            if (!error.is_nan() && error > (self.res * 5.)) ||
+            if (!error.is_nan() && error > (self.res * RELATIVE_ERROR)) ||
                (octtree_layer == self.vertex_octtree.len() - 2) {
                 // Stop, if either the error is too large or we will reach the top.
                 break;
