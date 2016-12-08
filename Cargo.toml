@@ -25,5 +25,5 @@ git = "https://github.com/sebcrozet/kiss3d"
 gtk_3_10 = []
 gtk_3_14 = ["gtk_3_10"]
 
-[profile.release]
-lto = true
+#[profile.release]
+#lto = true
