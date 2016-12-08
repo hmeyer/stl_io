@@ -1,2 +1,6 @@
 target/
 ./xplicit.stl
+./xplicit.scad
+*.stl
+*.scad
+*~
