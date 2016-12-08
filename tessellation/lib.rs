@@ -23,8 +23,8 @@ pub struct Plane {
 
 mod bitset;
 mod vertex_index;
-mod dual_contouring;
-pub use self::dual_contouring::DualContouring;
+mod manifold_dual_contouring;
+pub use self::manifold_dual_contouring::ManifoldDualContouring;
 mod cell_configs;
 mod stl_writer;
 pub use self::stl_writer::write_stl;

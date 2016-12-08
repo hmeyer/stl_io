@@ -132,7 +132,7 @@ impl EdgeIndex {
     }
 }
 
-pub struct DualContouring {
+pub struct ManifoldDualContouring {
     object: Box<Object>,
     origin: Point,
     dim: [usize; 3],
@@ -289,14 +289,14 @@ impl Timer {
     }
 }
 
-impl DualContouring {
+impl ManifoldDualContouring {
     // Constructor
     // obj: Object to tessellate
     // res: resolution
-    pub fn new(obj: Box<Object>, res: Float) -> DualContouring {
+    pub fn new(obj: Box<Object>, res: Float) -> ManifoldDualContouring {
         let bbox = obj.bbox().dilate(1. + res * 1.1);
-        println!("DualContouring: res: {:} {:?}", res, bbox);
-        DualContouring {
+        println!("ManifoldDualContouring: res: {:} {:?}", res, bbox);
+        ManifoldDualContouring {
             object: obj,
             origin: bbox.min,
             dim: [(bbox.dim()[0] / res).ceil() as usize,

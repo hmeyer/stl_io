@@ -26,31 +26,6 @@ impl BitSet {
     pub fn empty(&self) -> bool {
         self.0 == 0
     }
-    pub fn size(&self) -> usize {
-        let mut num = 0;
-        let mut b = self.0 as usize;
-        while b != 0 {
-            num += 1;
-            b &= b - 1;
-        }
-        num
-    }
-    pub fn neg(&self) -> BitSet {
-        BitSet(!self.0)
-    }
-    pub fn lowest(&self) -> Option<usize> {
-        if self.0 == 0 {
-            None
-        } else {
-            let mut num = 0;
-            let mut b = self.0 as usize;
-            while b & 1 == 0 {
-                num += 1;
-                b >>= 1;
-            }
-            Some(num)
-        }
-    }
     pub fn as_u32(&self) -> u32 {
         self.0
     }
