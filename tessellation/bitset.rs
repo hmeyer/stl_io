@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct BitSet(pub u32);
 
@@ -7,6 +9,9 @@ impl BitSet {
     }
     pub const fn new(val: u32) -> BitSet {
         BitSet(val)
+    }
+    pub const fn from_3bits(b0: usize, b1: usize, b2: usize) -> BitSet {
+        BitSet(1 << b0 | 1 << b1 | 1 << b2)
     }
     pub const fn from_4bits(b0: usize, b1: usize, b2: usize, b3: usize) -> BitSet {
         BitSet(1 << b0 | 1 << b1 | 1 << b2 | 1 << b3)
@@ -28,6 +33,24 @@ impl BitSet {
     }
     pub fn as_u32(&self) -> u32 {
         self.0
+    }
+}
+
+impl fmt::Display for BitSet {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        try!(write!(f, "BitSet["));
+        let mut index = 1;
+        let mut val = self.0;
+        while val != 0 {
+            if (val & index) != 0 {
+                try!(write!(f, "1, "));
+                val ^= index;
+            } else {
+                try!(write!(f, "0, "));
+            }
+            index <<= 1;
+        }
+        write!(f, "zeros]")
     }
 }
 
