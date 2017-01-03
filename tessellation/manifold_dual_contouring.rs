@@ -1,6 +1,6 @@
 use xplicit_primitive::{BoundingBox, NEG_INFINITY_BOX, Object, normal_from_object};
 use bitset::BitSet;
-use vertex_index::{Index, VarIndex, VertexIndex, neg_offset, offset};
+use vertex_index::{EDGES_ON_FACE, Index, VarIndex, VertexIndex, neg_offset, offset};
 use qef;
 use {Mesh, Plane};
 use cell_configs::CELL_CONFIGS;
@@ -82,6 +82,15 @@ const QUADS: [[Edge; 4]; 3] = [[Edge::A, Edge::G, Edge::J, Edge::D],
                                [Edge::B, Edge::E, Edge::K, Edge::H],
                                [Edge::C, Edge::I, Edge::L, Edge::F]];
 
+const OUTSIDE_EDGES_PER_CORNER: [BitSet; 8] = [BitSet::from_3bits(0, 1, 2),
+                                               BitSet::from_3bits(0, 4, 5),
+                                               BitSet::from_3bits(1, 3, 8),
+                                               BitSet::from_3bits(3, 4, 11),
+                                               BitSet::from_3bits(2, 6, 7),
+                                               BitSet::from_3bits(5, 6, 10),
+                                               BitSet::from_3bits(7, 8, 9),
+                                               BitSet::from_3bits(9, 10, 11)];
+
 #[derive(Debug)]
 enum DualContouringError {
     HitZero(Point),
@@ -114,8 +123,27 @@ struct Vertex {
     children: Vec<usize>,
     // Index of this vertex in the final mesh.
     mesh_index: Cell<Option<usize>>,
+    edge_intersections: [u32; 12],
+    euler_characteristic: i32,
 }
 
+impl Vertex {
+    fn is_2manifold(&self) -> bool {
+        if self.euler_characteristic != 1 {
+            return false;
+        }
+        for edges_on_face in EDGES_ON_FACE.iter() {
+            let mut sum = 0;
+            for edge in edges_on_face.into_iter() {
+                sum += self.edge_intersections[edge];
+            }
+            if sum != 0 && sum != 2 {
+                return false;
+            }
+        }
+        true
+    }
+}
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 struct EdgeIndex {
@@ -229,6 +257,33 @@ fn add_child_to_parent(child: &Vertex, parent: &mut Vertex) {
     }
 }
 
+fn subsample_euler_characteristics(children: &BTreeSet<usize>,
+                                   vertices: &Vec<Vertex>)
+                                   -> ([u32; 12], i32) {
+    let mut intersections = [0u32; 12];
+    let mut euler = 0i32;
+    let mut inner_sum = 0;
+    for vertex in children.iter().map(|i| &vertices[*i]) {
+        let i = vertex.index;
+        let corner_index = (i[2] & 1) << 2 | (i[1] & 1) << 1 | (i[0] & 1);
+        let outside_edges = OUTSIDE_EDGES_PER_CORNER[corner_index];
+        for i in 0..12 {
+            if outside_edges.get(i) {
+                intersections[i] += vertex.edge_intersections[i];
+            } else {
+                inner_sum += vertex.edge_intersections[i];
+            }
+        }
+        euler += vertex.euler_characteristic;
+    }
+    debug_assert_eq!(inner_sum % 4,
+                     0,
+                     "inner_sum {} is not divisible by 4.",
+                     inner_sum);
+    euler -= inner_sum as i32 / 4;
+    (intersections, euler)
+}
+
 fn subsample_octtree(base: &Vec<Vertex>) -> Vec<Vertex> {
     let mut result = Vec::new();
     for (i, vertex) in base.iter().enumerate() {
@@ -236,6 +291,7 @@ fn subsample_octtree(base: &Vec<Vertex>) -> Vec<Vertex> {
             let mut neighbor_set = BTreeSet::new();
             neighbor_set.insert(i);
             add_connected_vertices_in_subcell(base, vertex, &mut neighbor_set);
+            let (intersections, euler) = subsample_euler_characteristics(&neighbor_set, base);
             let mut parent = Vertex {
                 index: half_index(&vertex.index),
                 qef: RefCell::new(qef::Qef::new(&[], NEG_INFINITY_BOX.clone())),
@@ -243,6 +299,8 @@ fn subsample_octtree(base: &Vec<Vertex>) -> Vec<Vertex> {
                 parent: Cell::new(None),
                 children: Vec::new(),
                 mesh_index: Cell::new(None),
+                edge_intersections: intersections,
+                euler_characteristic: euler,
             };
             for &neighbor_index in neighbor_set.iter() {
                 let child = &base[neighbor_index];
@@ -578,6 +636,10 @@ impl ManifoldDualContouring {
                         }
                     }
                 }
+                let mut intersections = [0u32; 12];
+                for edge in edge_set {
+                    intersections[edge] = 1;
+                }
                 let tangent_planes: Vec<_> = edge_set.into_iter()
                                                      .map(|edge| {
                                                          self.get_edge_tangent_plane(&EdgeIndex {
@@ -598,6 +660,8 @@ impl ManifoldDualContouring {
                     parent: Cell::new(None),
                     children: Vec::new(),
                     mesh_index: Cell::new(None),
+                    edge_intersections: intersections,
+                    euler_characteristic: 1,
                 });
                 vertices.len() - 1
             });
@@ -633,9 +697,11 @@ impl ManifoldDualContouring {
                                  .parent
                                  .get()
                                  .unwrap();
-            let error = self.vertex_octtree[octtree_layer + 1][next_index].qef.borrow().error;
+            let ref next_vertex = self.vertex_octtree[octtree_layer + 1][next_index];
+            let error = next_vertex.qef.borrow().error;
             if (!error.is_nan() && error > (self.res * RELATIVE_ERROR)) ||
-               (octtree_layer == self.vertex_octtree.len() - 2) {
+               (octtree_layer == self.vertex_octtree.len() - 2) ||
+               !next_vertex.is_2manifold() {
                 // Stop, if either the error is too large or we will reach the top.
                 break;
             }
@@ -648,6 +714,11 @@ impl ManifoldDualContouring {
             return mesh_index;
         }
         // If not, store it in mesh and return its index.
+        if vertex.qef.borrow().error.is_nan() {
+            // Maybe the qef was not solved, since the error in the layer above was below the
+            // threshold. But it seems, manifold criterion has catched and we need to solve it now.
+            vertex.qef.borrow_mut().solve()
+        }
         let qef_solution = vertex.qef.borrow().solution;
         let ref mut vertex_list = self.mesh.borrow_mut().vertices;
         let result = vertex_list.len();
@@ -714,12 +785,10 @@ impl ManifoldDualContouring {
         }
     }
 
-    // If a is inside the object and b outside - this method return the point on the line between
+    // If a is inside the object and b outside - this method returns the point on the line between
     // a and b where the object edge is. It also returns the normal on that point.
     // av and bv represent the object values at a and b.
     fn find_zero(&self, a: Point, av: Float, b: Point, bv: Float) -> Option<(Plane)> {
-        debug_assert!(av == self.object.approx_value(a, self.res));
-        debug_assert!(bv == self.object.approx_value(b, self.res));
         assert!(a != b);
         if av.signum() == bv.signum() {
             return None;
