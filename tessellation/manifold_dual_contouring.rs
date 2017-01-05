@@ -483,8 +483,10 @@ impl ManifoldDualContouring {
                     }
                 }
             }
+            println!("generated edge_grid with {} edges: {:}",
+                     edge_grid.len(),
+                     t.elapsed());
         }
-        println!("generated edge_grid: {:}", t.elapsed());
 
         let (leafs, index_map) = self.generate_leaf_vertices();
         self.vertex_index_map = index_map;
