@@ -11,7 +11,8 @@ use xplicit_tessellation::{ManifoldDualContouring, write_stl};
 
 #[derive(Clone)]
 pub struct Editor {
-    pub text_view: ::gtk::TextView,
+    pub widget: ::gtk::ScrolledWindow,
+    text_view: ::gtk::TextView,
 }
 
 
@@ -20,7 +21,9 @@ impl Editor {
                xw: &xplicit_widget::XplicitWidget,
                debug_buffer: &::gtk::TextBuffer)
                -> Editor {
+        let widget = ::gtk::ScrolledWindow::new(None, None);
         let tv = ::gtk::TextView::new();
+        widget.add(&tv);
         // TODO: Find out why this causes a non-draw on startup.
         // tv.set_wrap_mode(::gtk::WrapMode::WordChar);
         let open_result = File::open(&input_filename);
@@ -41,7 +44,10 @@ impl Editor {
         let renderer = xw.renderer.clone();
         let drawing_area = xw.drawing_area.clone();
         let debug_buffer_clone = debug_buffer.clone();
-        let editor = Editor { text_view: tv };
+        let editor = Editor {
+            widget: widget,
+            text_view: tv,
+        };
         let editor_clone = editor.clone();
 
         editor.text_view.connect_key_release_event(move |tv: &::gtk::TextView,

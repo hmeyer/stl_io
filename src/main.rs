@@ -34,7 +34,7 @@ fn main() {
     let editor = ::xplicit::editor::Editor::new(FILENAME.to_string(), &xw, &debug_text);
     let h_pane = gtk::Paned::new(gtk::Orientation::Horizontal);
     h_pane.add2(&xw.drawing_area);
-    h_pane.add1(&editor.text_view);
+    h_pane.add1(&editor.widget);
 
     let editor_clone1 = editor.clone();
     let editor_clone2 = editor.clone();
