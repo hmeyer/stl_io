@@ -27,7 +27,9 @@ fn main() {
     });
 
     let v_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    let debug_scrolled_window = gtk::ScrolledWindow::new(None, None);
     let debug_view = gtk::TextView::new();
+    debug_scrolled_window.add(&debug_view);
     debug_view.set_wrap_mode(gtk::WrapMode::WordChar);
     let xw = xplicit_widget::XplicitWidget::new();
     let debug_text = debug_view.get_buffer().unwrap();
@@ -51,7 +53,7 @@ fn main() {
     let v_pane = gtk::Paned::new(gtk::Orientation::Vertical);
     v_pane.set_border_width(5);
     v_pane.add1(&h_pane);
-    v_pane.add2(&debug_view);
+    v_pane.add2(&debug_scrolled_window);
 
     v_box.pack_start(&menu, false, false, 0);
     v_box.pack_start(&v_pane, true, true, 0);
