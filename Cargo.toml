@@ -14,6 +14,8 @@ peg = "=0.3.14"
 nalgebra = "0.9.*"
 rand = "0.3"
 rulinalg="0.3.2"
+rustc-serialize = "0.3"
+toml = "0.2"
 xplicit_tessellation = { path = "tessellation", version = "0.0.*" }
 xplicit_types = { path = "types", version = "0.0.*" }
 xplicit_primitive = { path = "primitive", version = "0.0.*" }

@@ -7,6 +7,7 @@ use gtk::Inhibit;
 use gtk::traits::*;
 use xplicit::xplicit_widget;
 use xplicit::menu;
+use xplicit::config;
 
 const FILENAME: &'static str = "xplicit.scad";
 
@@ -16,6 +17,8 @@ fn main() {
         println!("Failed to initialize GTK.");
         return;
     }
+
+    let config = config::Config::new();
 
     let window = gtk::Window::new(gtk::WindowType::Toplevel);
 
