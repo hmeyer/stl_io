@@ -32,6 +32,7 @@ fn main() {
     let v_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
     let debug_scrolled_window = gtk::ScrolledWindow::new(None, None);
     let debug_view = gtk::TextView::new();
+    debug_view.set_editable(false);
     debug_scrolled_window.add(&debug_view);
     debug_view.set_wrap_mode(gtk::WrapMode::WordChar);
     let xw = xplicit_widget::XplicitWidget::new();
