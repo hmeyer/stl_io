@@ -18,7 +18,7 @@ fn main() {
         return;
     }
 
-    let config = config::Config::new();
+    let config = config::ConfigData::new();
 
     let window = gtk::Window::new(gtk::WindowType::Toplevel);
 

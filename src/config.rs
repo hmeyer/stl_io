@@ -8,7 +8,7 @@ const CONFIG_FILENAME: &'static str = ".xplicit";
 
 
 #[derive(RustcDecodable, RustcEncodable)]
-pub struct Config {
+pub struct ConfigData {
     tessellation_resolution: f64,
 }
 
@@ -29,7 +29,7 @@ enum ConfigError {
     Enc(::toml::Error)
 }
 
-impl Config {
+impl ConfigData {
     fn path() -> Result<::std::path::PathBuf, ConfigError> {
         let mut path = match ::std::env::home_dir() {
             Some(p) => p,
@@ -39,7 +39,7 @@ impl Config {
         Ok(path)
     }
     fn get_toml() -> Result<Self, ConfigError> {
-        let path = try!(Config::path());
+        let path = try!(ConfigData::path());
         let f = try!(File::open(path).map_err(ConfigError::Io));
         let mut reader = BufReader::new(f);
         let mut buffer = String::new();
@@ -61,12 +61,12 @@ impl Config {
             }
         }
     }
-    pub fn new() -> Config {
-        match Config::get_toml() {
+    pub fn new() -> ConfigData {
+        match ConfigData::get_toml() {
             Ok(c) => c,
             Err(e) => {
                 println!("error reading config: {:?}", e);
-                Config { tessellation_resolution: 0.12 }
+                ConfigData { tessellation_resolution: 0.12 }
             }
         }
     }
@@ -74,7 +74,7 @@ impl Config {
     fn put_toml(&mut self) -> Result<(), ConfigError> {
         let mut e = Encoder::new();
         try!(self.encode(&mut e).map_err(ConfigError::Enc));
-        let path = try!(Config::path());
+        let path = try!(ConfigData::path());
         let file = try!(File::create(path).map_err(ConfigError::Io));
         let mut writer = BufWriter::new(file);
         try!(writer.write(format!("{}", Value::Table(e.toml)).as_bytes()).map_err(ConfigError::Io));
@@ -82,7 +82,7 @@ impl Config {
     }
 }
 
-impl ::std::ops::Drop for Config {
+impl ::std::ops::Drop for ConfigData {
     fn drop(&mut self) {
         match self.put_toml() {
             Ok(_) => {},
