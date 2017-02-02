@@ -3,16 +3,19 @@ extern crate gtk;
 use gtk::Inhibit;
 use gtk::traits::*;
 
-pub fn create_menu<FT: Fn() + 'static, FS: Fn() + 'static, FQ: Fn() + 'static>(tessellate_action: FT,
-                                                                               save_action: FS,
-                                                                               quit_action: FQ)
-                                                                               -> gtk::MenuBar {
+pub fn create_menu<FT: Fn() + 'static, FS: Fn() + 'static, FSET: Fn() + 'static, FQ: Fn() + 'static>
+    (tessellate_action: FT,
+     save_action: FS,
+     settings_action: FSET,
+     quit_action: FQ)
+     -> gtk::MenuBar {
     let bar = gtk::MenuBar::new();
     let file = gtk::MenuItem::new_with_mnemonic("_File");
     let f_menu = gtk::Menu::new();
     let f_new = gtk::MenuItem::new_with_mnemonic("_New");
     let f_tessellate = gtk::MenuItem::new_with_mnemonic("_Tessellate");
     let f_save = gtk::MenuItem::new_with_mnemonic("_Save");
+    let f_settings = gtk::MenuItem::new_with_mnemonic("_Settings");
     let f_quit = gtk::MenuItem::new_with_mnemonic("_Quit");
 
     f_tessellate.connect_activate(move |_| {
@@ -21,6 +24,10 @@ pub fn create_menu<FT: Fn() + 'static, FS: Fn() + 'static, FQ: Fn() + 'static>(t
     });
     f_save.connect_activate(move |_| {
         save_action();
+        Inhibit(false);
+    });
+    f_settings.connect_activate(move |_| {
+        settings_action();
         Inhibit(false);
     });
     f_quit.connect_activate(move |_| {
@@ -34,6 +41,7 @@ pub fn create_menu<FT: Fn() + 'static, FS: Fn() + 'static, FQ: Fn() + 'static>(t
     f_menu.append(&f_new);
     f_menu.append(&f_tessellate);
     f_menu.append(&f_save);
+    f_menu.append(&f_settings);
     f_menu.append(&f_quit);
     file.set_submenu(Some(&f_menu));
     bar.append(&file);

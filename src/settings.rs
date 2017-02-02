@@ -4,11 +4,14 @@ use std::io::{BufReader, BufWriter, Read, Write};
 use toml::{Decoder, Encoder, Parser, Value};
 use rustc_serialize::Decodable;
 
-const CONFIG_FILENAME: &'static str = ".xplicit";
+const SETTINGS_FILENAME: &'static str = ".xplicit";
 
+pub fn show_settings_dialog() {
+    SettingsData::new();
+}
 
 #[derive(RustcDecodable, RustcEncodable)]
-pub struct ConfigData {
+pub struct SettingsData {
     tessellation_resolution: f64,
 }
 
@@ -23,36 +26,36 @@ fn join<S: ToString>(l: Vec<S>, sep: &str) -> String {
 }
 
 #[derive(Debug)]
-enum ConfigError {
+enum SettingsError {
     Io(::std::io::Error),
     Dec(::toml::DecodeError),
     Enc(::toml::Error)
 }
 
-impl ConfigData {
-    fn path() -> Result<::std::path::PathBuf, ConfigError> {
+impl SettingsData {
+    fn path() -> Result<::std::path::PathBuf, SettingsError> {
         let mut path = match ::std::env::home_dir() {
             Some(p) => p,
-            None => try!(::std::env::current_dir().map_err(ConfigError::Io))
+            None => try!(::std::env::current_dir().map_err(SettingsError::Io))
         };
-        path.push(CONFIG_FILENAME);
+        path.push(SETTINGS_FILENAME);
         Ok(path)
     }
-    fn get_toml() -> Result<Self, ConfigError> {
-        let path = try!(ConfigData::path());
-        let f = try!(File::open(path).map_err(ConfigError::Io));
+    fn get_toml() -> Result<Self, SettingsError> {
+        let path = try!(SettingsData::path());
+        let f = try!(File::open(path).map_err(SettingsError::Io));
         let mut reader = BufReader::new(f);
         let mut buffer = String::new();
-        let _ = try!(reader.read_to_string(&mut buffer).map_err(ConfigError::Io));
+        let _ = try!(reader.read_to_string(&mut buffer).map_err(SettingsError::Io));
         let mut parser = Parser::new(&buffer);
         match parser.parse() {
             Some(value) => {
                 let mut decoder = Decoder::new(Value::Table(value));
-                let config = try!(Decodable::decode(&mut decoder).map_err(ConfigError::Dec));
-                Ok(config)
+                let settings = try!(Decodable::decode(&mut decoder).map_err(SettingsError::Dec));
+                Ok(settings)
             },
             None => {
-                Err(ConfigError::Io(::std::io::Error::new(::std::io::ErrorKind::InvalidInput,
+                Err(SettingsError::Io(::std::io::Error::new(::std::io::ErrorKind::InvalidInput,
                                           join(parser.errors
                                                      .iter()
                                                      .map(|e| format!("{}", e))
@@ -61,32 +64,32 @@ impl ConfigData {
             }
         }
     }
-    pub fn new() -> ConfigData {
-        match ConfigData::get_toml() {
+    pub fn new() -> SettingsData {
+        match SettingsData::get_toml() {
             Ok(c) => c,
             Err(e) => {
-                println!("error reading config: {:?}", e);
-                ConfigData { tessellation_resolution: 0.12 }
+                println!("error reading settings: {:?}", e);
+                SettingsData { tessellation_resolution: 0.12 }
             }
         }
     }
 
-    fn put_toml(&mut self) -> Result<(), ConfigError> {
+    fn put_toml(&mut self) -> Result<(), SettingsError> {
         let mut e = Encoder::new();
-        try!(self.encode(&mut e).map_err(ConfigError::Enc));
-        let path = try!(ConfigData::path());
-        let file = try!(File::create(path).map_err(ConfigError::Io));
+        try!(self.encode(&mut e).map_err(SettingsError::Enc));
+        let path = try!(SettingsData::path());
+        let file = try!(File::create(path).map_err(SettingsError::Io));
         let mut writer = BufWriter::new(file);
-        try!(writer.write(format!("{}", Value::Table(e.toml)).as_bytes()).map_err(ConfigError::Io));
+        try!(writer.write(format!("{}", Value::Table(e.toml)).as_bytes()).map_err(SettingsError::Io));
         Ok(())
     }
 }
 
-impl ::std::ops::Drop for ConfigData {
+impl ::std::ops::Drop for SettingsData {
     fn drop(&mut self) {
         match self.put_toml() {
             Ok(_) => {},
-            Err(e) => println!("error writing config: {:?}", e),
+            Err(e) => println!("error writing settings: {:?}", e),
         }
     }
 }
