@@ -3,11 +3,36 @@ use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
 use toml::{Decoder, Encoder, Parser, Value};
 use rustc_serialize::Decodable;
+use gtk::{BoxExt, ContainerExt, DialogExt, WidgetExt};
 
 const SETTINGS_FILENAME: &'static str = ".xplicit";
 
-pub fn show_settings_dialog() {
-    SettingsData::new();
+pub fn show_settings_dialog<T: ::gtk::IsA<::gtk::Window>>(parent: Option<&T>) {
+    let mut data = SettingsData::new();
+
+    let dialog = ::gtk::Dialog::new_with_buttons(Some("Settings"), parent, ::gtk::DIALOG_MODAL,
+    &[("OK", ::gtk::ResponseType::Ok.into()), ("Cancel", ::gtk::ResponseType::Cancel.into())]);
+    // TODO: use rustc_serialize::Encodable to generate settings items
+    let h_box = ::gtk::Box::new(::gtk::Orientation::Horizontal, 0);
+    let tessellation_resolution_label = ::gtk::Label::new_with_mnemonic(Some("_tessellation resolution"));
+    let tessellation_resolution = ::gtk::SpinButton::new_with_range(0.0001, 1000., 0.01);
+    tessellation_resolution.set_digits(3);
+    tessellation_resolution.set_value(data.tessellation_resolution);
+
+    h_box.pack_start(&tessellation_resolution_label, true, false, 5);
+    h_box.pack_start(&tessellation_resolution, true, false, 5);
+
+    dialog.get_content_area().add(&h_box);
+    dialog.show_all();
+    let ret = dialog.run();
+
+    if ret == ::gtk::ResponseType::Ok.into()     {
+        data.tessellation_resolution = tessellation_resolution.get_value();
+        data.save();
+    }
+
+    dialog.destroy();
+    println!("done settings: {}", ret);
 }
 
 #[derive(RustcDecodable, RustcEncodable)]
@@ -74,7 +99,7 @@ impl SettingsData {
         }
     }
 
-    fn put_toml(&mut self) -> Result<(), SettingsError> {
+    fn put_toml(&self) -> Result<(), SettingsError> {
         let mut e = Encoder::new();
         try!(self.encode(&mut e).map_err(SettingsError::Enc));
         let path = try!(SettingsData::path());
@@ -83,10 +108,8 @@ impl SettingsData {
         try!(writer.write(format!("{}", Value::Table(e.toml)).as_bytes()).map_err(SettingsError::Io));
         Ok(())
     }
-}
 
-impl ::std::ops::Drop for SettingsData {
-    fn drop(&mut self) {
+    pub fn save(&self) {
         match self.put_toml() {
             Ok(_) => {},
             Err(e) => println!("error writing settings: {:?}", e),
