@@ -30,14 +30,12 @@ pub fn show_settings_dialog<T: ::gtk::IsA<::gtk::Window>>(parent: Option<&T>) {
         data.tessellation_resolution = tessellation_resolution.get_value();
         data.save();
     }
-
     dialog.destroy();
-    println!("done settings: {}", ret);
 }
 
 #[derive(RustcDecodable, RustcEncodable)]
 pub struct SettingsData {
-    tessellation_resolution: f64,
+    pub tessellation_resolution: f64,
 }
 
 fn join<S: ToString>(l: Vec<S>, sep: &str) -> String {

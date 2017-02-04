@@ -96,10 +96,10 @@ impl Editor {
     pub fn save(&self, filename: &String) {
         save_from_textview(&self.text_view, filename);
     }
-    pub fn tessellate(&self) {
+    pub fn tessellate(&self, resolution: f64) {
         let maybe_obj = self.get_object(&mut ::std::io::stdout());
         if let Some(obj) = maybe_obj {
-            let mesh = ManifoldDualContouring::new(obj, 0.12).tessellate();
+            let mesh = ManifoldDualContouring::new(obj, resolution).tessellate();
             println!("Writing xplicit.stl: {:?}", write_stl("xplicit.stl", &mesh));
             mesh_view::show_mesh(&mesh);
         }
