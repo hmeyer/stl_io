@@ -45,7 +45,8 @@ fn main() {
     let window_clone = window.clone();
     let menu = menu::create_menu(move || {
                                      let data = settings::SettingsData::new();
-                                     editor_clone1.tessellate(data.tessellation_resolution);
+                                     editor_clone1.tessellate(data.tessellation_resolution,
+                                                              data.tessellation_error);
                                  },
                                  move || {
                                      editor_clone2.save(&FILENAME.to_string());

@@ -14,8 +14,6 @@ use rand;
 
 // How accurately find zero crossings.
 const PRECISION: Float = 0.05;
-// The acceptable error threshold when simplifying the mesh.
-const RELATIVE_ERROR: Float = 2.0;
 
 //  Edge indexes
 //
@@ -166,6 +164,7 @@ pub struct ManifoldDualContouring {
     dim: [usize; 3],
     mesh: RefCell<Mesh>,
     res: Float,
+    error: Float,
     value_grid: HashMap<Index, Float>,
     edge_grid: RefCell<HashMap<EdgeIndex, Plane>>,
     // The Vertex Octtree. vertex_octtree[0] stores the leaf vertices. vertex_octtree[1] the next
@@ -351,7 +350,8 @@ impl ManifoldDualContouring {
     // Constructor
     // obj: Object to tessellate
     // res: resolution
-    pub fn new(obj: Box<Object>, res: Float) -> ManifoldDualContouring {
+    // relative_error: acceptable error threshold when simplifying the mesh.
+    pub fn new(obj: Box<Object>, res: Float, relative_error: Float) -> ManifoldDualContouring {
         let bbox = obj.bbox().dilate(1. + res * 1.1);
         println!("ManifoldDualContouring: res: {:} {:?}", res, bbox);
         ManifoldDualContouring {
@@ -365,6 +365,7 @@ impl ManifoldDualContouring {
                 faces: Vec::new(),
             }),
             res: res,
+            error: res * relative_error,
             value_grid: HashMap::new(),
             edge_grid: RefCell::new(HashMap::new()),
             vertex_octtree: Vec::new(),
@@ -556,7 +557,7 @@ impl ManifoldDualContouring {
         }
         let mut num_solved = 1;
         // If error exceed threshold, recurse into subvertices.
-        if error.abs() > self.res * RELATIVE_ERROR {
+        if error.abs() > self.error {
             for &child_index in vertex.children.iter() {
                 num_solved += self.recursively_solve_qefs(layer - 1, child_index);
             }
@@ -701,7 +702,7 @@ impl ManifoldDualContouring {
                                  .unwrap();
             let ref next_vertex = self.vertex_octtree[octtree_layer + 1][next_index];
             let error = next_vertex.qef.borrow().error;
-            if (!error.is_nan() && error > (self.res * RELATIVE_ERROR)) ||
+            if (!error.is_nan() && error > (self.error)) ||
                (octtree_layer == self.vertex_octtree.len() - 2) ||
                !next_vertex.is_2manifold() {
                 // Stop, if either the error is too large or we will reach the top.
