@@ -3,12 +3,15 @@ use bounding_box::{BoundingBox, INFINITY_BOX, NEG_INFINITY_BOX};
 use xplicit_types::{Float, INFINITY, NEG_INFINITY, Point, Vector};
 use cgmath::InnerSpace;
 
-pub const SMOOTHNESS_FADE: Float = 0.9; // fade over 10 % r to simple normal calculation
+pub const FADE_RANGE: Float = 0.1;
+pub const R_MULTIPLIER: Float = 1.0;
 
 #[derive(Clone, Debug)]
 pub struct Union {
     objs: Vec<Box<Object>>,
     r: Float,
+    exact_range: Float, // Calculate smooth transitions over this range
+    fade_range: Float, // Fade normal over this fraction of the smoothing range
     bbox: BoundingBox,
 }
 
@@ -26,6 +29,8 @@ impl Union {
                     objs: v,
                     r: r,
                     bbox: bbox,
+                    exact_range: r * R_MULTIPLIER,
+                    fade_range: FADE_RANGE,
                 }))
             }
         }
@@ -40,7 +45,8 @@ impl Object for Union {
                        .iter()
                        .map(|o| o.approx_value(p, slack + self.r))
                        .collect::<Vec<Float>>(),
-                  self.r)
+                  self.r,
+                  self.exact_range)
         } else {
             approx
         }
@@ -66,12 +72,12 @@ impl Object for Union {
 
         match (v0.1 - v1.1).abs() {
             // if they are close together, calc normal from full object
-            diff if diff < (self.r * SMOOTHNESS_FADE) => {
+            diff if diff < (self.exact_range * (1. - self.fade_range)) => {
                 // else,
                 normal_from_object(self, p)
             }
-            diff if diff < self.r => {
-                let fader = (diff / self.r - SMOOTHNESS_FADE) / (1. - SMOOTHNESS_FADE);
+            diff if diff < self.exact_range => {
+                let fader = (diff / self.exact_range - 1. + self.fade_range) / self.fade_range;
                 (self.objs[v0.0].normal(p) * fader + normal_from_object(self, p) * (1. - fader))
                     .normalize()
             }
@@ -85,6 +91,8 @@ impl Object for Union {
 pub struct Intersection {
     objs: Vec<Box<Object>>,
     r: Float,
+    exact_range: Float, // Calculate smooth transitions over this range
+    fade_range: Float, // Fade normal over this fraction of the smoothing range
     bbox: BoundingBox,
 }
 
@@ -100,6 +108,8 @@ impl Intersection {
                     objs: v,
                     r: r,
                     bbox: bbox,
+                    exact_range: r * R_MULTIPLIER,
+                    fade_range: FADE_RANGE,
                 }))
             }
         }
@@ -126,7 +136,8 @@ impl Object for Intersection {
                        .iter()
                        .map(|o| o.approx_value(p, slack + self.r))
                        .collect::<Vec<Float>>(),
-                  self.r)
+                  self.r,
+                  self.exact_range)
         } else {
             approx
         }
@@ -151,12 +162,12 @@ impl Object for Intersection {
                            });
         match (v0.1 - v1.1).abs() {
             // if they are close together, calc normal from full object
-            diff if diff < (self.r * SMOOTHNESS_FADE) => {
+            diff if diff < (self.exact_range * (1. - self.fade_range)) => {
                 // else,
                 normal_from_object(self, p)
             }
-            diff if diff < self.r => {
-                let fader = (diff / self.r - SMOOTHNESS_FADE) / (1. - SMOOTHNESS_FADE);
+            diff if diff < self.exact_range => {
+                let fader = (diff / self.exact_range - 1. + self.fade_range) / self.fade_range;
                 (self.objs[v0.0].normal(p) * fader + normal_from_object(self, p) * (1. - fader))
                     .normalize()
             }
@@ -188,18 +199,18 @@ impl Object for Negation {
     }
 }
 
-fn rvmin(v: &[Float], r: Float) -> Float {
+fn rvmin(v: &[Float], r: Float, exact_range: Float) -> Float {
     let mut close_min = false;
     let minimum = v.iter().fold(INFINITY, |min, x| {
         if x < &min {
-            if (min - x) < r {
+            if (min - x) < exact_range {
                 close_min = true;
             } else {
                 close_min = false;
             }
             *x
         } else {
-            if (x - min) < r {
+            if (x - min) < exact_range {
                 close_min = true;
             }
             min
@@ -215,18 +226,18 @@ fn rvmin(v: &[Float], r: Float) -> Float {
     return exp_sum.ln() * -r4;
 }
 
-fn rvmax(v: &[Float], r: Float) -> Float {
+fn rvmax(v: &[Float], r: Float, exact_range: Float) -> Float {
     let mut close_max = false;
     let maximum = v.iter().fold(NEG_INFINITY, |max, x| {
         if x > &max {
-            if (x - max) < r {
+            if (x - max) < exact_range {
                 close_max = true;
             } else {
                 close_max = false;
             }
             *x
         } else {
-            if (max - x) < r {
+            if (max - x) < exact_range {
                 close_max = true;
             }
             max
