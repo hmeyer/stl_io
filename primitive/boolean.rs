@@ -1,4 +1,4 @@
-use {ALWAYS_PRECISE, Object, normal_from_object};
+use {ALWAYS_PRECISE, Object, PrimitiveParameters, normal_from_object};
 use bounding_box::{BoundingBox, INFINITY_BOX, NEG_INFINITY_BOX};
 use xplicit_types::{Float, INFINITY, NEG_INFINITY, Point, Vector};
 use cgmath::InnerSpace;
@@ -53,6 +53,13 @@ impl Object for Union {
     }
     fn bbox(&self) -> &BoundingBox {
         &self.bbox
+    }
+    fn set_parameters(&mut self, p: &PrimitiveParameters) {
+        self.exact_range = self.r * p.r_multiplier;
+        self.fade_range = self.r * p.r_multiplier;
+        for o in &mut self.objs {
+            o.set_parameters(p);
+        }
     }
     fn normal(&self, p: Point) -> Vector {
         // Find the two smallest values with their indices.
@@ -144,6 +151,13 @@ impl Object for Intersection {
     }
     fn bbox(&self) -> &BoundingBox {
         &self.bbox
+    }
+    fn set_parameters(&mut self, p: &PrimitiveParameters) {
+        self.exact_range = self.r * p.r_multiplier;
+        self.fade_range = self.r * p.r_multiplier;
+        for o in &mut self.objs {
+            o.set_parameters(p);
+        }
     }
     fn normal(&self, p: Point) -> Vector {
         // Find the two largest values with their indices.

@@ -1,4 +1,4 @@
-use Object;
+use {Object, PrimitiveParameters};
 use bounding_box::BoundingBox;
 use xplicit_types::{Float, Matrix, Point, Vector};
 use cgmath::{InnerSpace, SquareMatrix, Transform};
@@ -46,6 +46,9 @@ impl Object for AffineTransformer {
     }
     fn bbox(&self) -> &BoundingBox {
         &self.bbox
+    }
+    fn set_parameters(&mut self, p: &PrimitiveParameters) {
+        self.object.set_parameters(p);
     }
     fn normal(&self, p: Point) -> Vector {
         self.transposed

@@ -29,8 +29,12 @@ pub use self::cylinder::{Cone, Cylinder};
 mod slab;
 pub use self::slab::{SlabX, SlabY, SlabZ};
 
-pub const ALWAYS_PRECISE: Float = 1.;
+pub struct PrimitiveParameters {
+    pub fade_range: Float,
+    pub r_multiplier: Float,
+}
 
+pub const ALWAYS_PRECISE: Float = 1.;
 
 pub fn normal_from_object(f: &Object, p: Point) -> Vector {
     let center = f.approx_value(p, ALWAYS_PRECISE);
@@ -47,6 +51,7 @@ pub trait Object: ObjectClone + Debug {
     fn set_bbox(&mut self, _: bounding_box::BoundingBox) {
         unimplemented!();
     }
+    fn set_parameters(&mut self, _: &PrimitiveParameters) {}
     // Value is 0 on object surfaces, negative inside and positive outside of objects.
     // If positive, value is guarateed to be the minimum distance to the object surface.
     // return some approximation (which is always larger then the proper value).

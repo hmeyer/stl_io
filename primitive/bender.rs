@@ -1,4 +1,4 @@
-use Object;
+use {Object, PrimitiveParameters};
 use bounding_box::BoundingBox;
 use xplicit_types::{Float, PI, Point, Vector};
 use cgmath::{InnerSpace, Rotation, Rotation2};
@@ -42,6 +42,9 @@ impl Object for Bender {
     }
     fn bbox(&self) -> &BoundingBox {
         &self.bbox
+    }
+    fn set_parameters(&mut self, p: &PrimitiveParameters) {
+        self.object.set_parameters(p);
     }
     fn normal(&self, p: Point) -> Vector {
         let polar_p = self.to_polar(p);
