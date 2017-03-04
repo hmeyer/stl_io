@@ -38,6 +38,8 @@ pub fn show_settings_dialog<T: ::gtk::IsA<::gtk::Window>>(parent: Option<&T>) {
     // TODO: use rustc_serialize::Encodable to generate settings items
     dialog.get_content_area().add(&add_setting!(tessellation_resolution, &data));
     dialog.get_content_area().add(&add_setting!(tessellation_error, &data));
+    dialog.get_content_area().add(&add_setting!(fade_range, &data));
+    dialog.get_content_area().add(&add_setting!(r_multiplier, &data));
 
     dialog.show_all();
     let ret = dialog.run();
@@ -52,6 +54,8 @@ pub fn show_settings_dialog<T: ::gtk::IsA<::gtk::Window>>(parent: Option<&T>) {
 pub struct SettingsData {
     pub tessellation_resolution: f64,
     pub tessellation_error: f64,
+    pub fade_range: f64,
+    pub r_multiplier: f64,
 }
 
 fn join<S: ToString>(l: Vec<S>, sep: &str) -> String {
@@ -109,7 +113,9 @@ impl SettingsData {
             Err(e) => {
                 println!("error reading settings: {:?}", e);
                 SettingsData { tessellation_resolution: 0.12,
-                               tessellation_error: 2. }
+                               tessellation_error: 2.,
+                               fade_range: 0.1,
+                               r_multiplier: 1.0 }
             }
         }
     }

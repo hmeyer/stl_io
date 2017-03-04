@@ -5,6 +5,7 @@ use mesh_view;
 use openscad;
 use xplicit_primitive;
 use xplicit_widget;
+use settings;
 use gtk::Inhibit;
 use gtk::traits::*;
 use xplicit_tessellation::{ManifoldDualContouring, write_stl};
@@ -83,10 +84,18 @@ impl Editor {
         if let Ok(pgm) = maybe_pgm {
             writeln!(msg, "\nparsed : {:?}", pgm).unwrap();
             let mut env = openscad::ast::Environment::new();
-            let result = pgm.eval(&mut env, msg);
-            writeln!(msg, "\nexecuted : {:?}", result).unwrap();
-            if let openscad::ast::Value::Objects(objs) = result {
-                return xplicit_primitive::Union::from_vec(objs, 0.);
+            let ast_value = pgm.eval(&mut env, msg);
+            writeln!(msg, "\nexecuted : {:?}", ast_value).unwrap();
+            if let openscad::ast::Value::Objects(objs) = ast_value {
+                if objs.len() > 0 {
+                    let mut result_union = xplicit_primitive::Union::from_vec(objs, 0.).unwrap();
+                    let s = settings::SettingsData::new();
+                    result_union.set_parameters(&xplicit_primitive::PrimitiveParameters {
+                        fade_range: s.fade_range,
+                        r_multiplier: s.r_multiplier,
+                    });
+                    return Some(result_union);
+                }
             }
         } else {
             writeln!(msg, "{:?}", maybe_pgm).unwrap()
@@ -96,10 +105,14 @@ impl Editor {
     pub fn save(&self, filename: &String) {
         save_from_textview(&self.text_view, filename);
     }
-    pub fn tessellate(&self, resolution: f64, error: f64) {
+    pub fn tessellate(&self) {
         let maybe_obj = self.get_object(&mut ::std::io::stdout());
         if let Some(obj) = maybe_obj {
-            let mesh = ManifoldDualContouring::new(obj, resolution, error).tessellate();
+            let s = settings::SettingsData::new();
+            let mesh = ManifoldDualContouring::new(obj,
+                                                   s.tessellation_resolution,
+                                                   s.tessellation_error)
+                           .tessellate();
             println!("Writing xplicit.stl: {:?}", write_stl("xplicit.stl", &mesh));
             mesh_view::show_mesh(&mesh);
         }
