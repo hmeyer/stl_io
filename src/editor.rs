@@ -18,30 +18,12 @@ pub struct Editor {
 
 
 impl Editor {
-    pub fn new(input_filename: String,
-               xw: &xplicit_widget::XplicitWidget,
-               debug_buffer: &::gtk::TextBuffer)
-               -> Editor {
+    pub fn new(xw: &xplicit_widget::XplicitWidget, debug_buffer: &::gtk::TextBuffer) -> Editor {
         let widget = ::gtk::ScrolledWindow::new(None, None);
         let tv = ::gtk::TextView::new();
         widget.add(&tv);
         // TODO: Find out why this causes a non-draw on startup.
         // tv.set_wrap_mode(::gtk::WrapMode::WordChar);
-        let open_result = File::open(&input_filename);
-        if let Ok(f) = open_result {
-            let reader = BufReader::new(f);
-            let mut buffer = String::new();
-            for line in reader.lines() {
-                if let Ok(line) = line {
-                    buffer.push_str(&line);
-                    buffer.push_str("\n");
-                }
-            }
-            tv.get_buffer().unwrap().set_text(&buffer);
-        } else {
-            println!("could not open {:?}: {:?}", &input_filename, open_result);
-        }
-
         let renderer = xw.renderer.clone();
         let drawing_area = xw.drawing_area.clone();
         let debug_buffer_clone = debug_buffer.clone();
@@ -51,7 +33,7 @@ impl Editor {
         };
         let editor_clone = editor.clone();
 
-        editor.text_view.connect_key_release_event(move |tv: &::gtk::TextView,
+        editor.text_view.connect_key_release_event(move |_: &::gtk::TextView,
                                                          key: &::gdk::EventKey|
                                                          -> Inhibit {
             match key.get_keyval() {
@@ -62,9 +44,6 @@ impl Editor {
                     debug_buffer_clone.set_text(&String::from_utf8(output).unwrap());
                     renderer.borrow_mut().set_object(obj);
                     drawing_area.queue_draw();
-                }
-                ::gdk::enums::key::F2 => {
-                    save_from_textview(tv, &input_filename);
                 }
                 _ => {
                     // println!("unbound key release: {:?}", x);
@@ -102,7 +81,23 @@ impl Editor {
         }
         None
     }
-    pub fn save(&self, filename: &String) {
+    pub fn open(&self, filename: &str) {
+        let open_result = File::open(&filename);
+        if let Ok(f) = open_result {
+            let reader = BufReader::new(f);
+            let mut buffer = String::new();
+            for line in reader.lines() {
+                if let Ok(line) = line {
+                    buffer.push_str(&line);
+                    buffer.push_str("\n");
+                }
+            }
+            self.text_view.get_buffer().unwrap().set_text(&buffer);
+        } else {
+            println!("could not open {:?}: {:?}", &filename, open_result);
+        }
+    }
+    pub fn save(&self, filename: &str) {
         save_from_textview(&self.text_view, filename);
     }
     pub fn tessellate(&self) {
@@ -119,7 +114,7 @@ impl Editor {
     }
 }
 
-fn save_from_textview(text_view: &::gtk::TextView, filename: &String) {
+fn save_from_textview(text_view: &::gtk::TextView, filename: &str) {
     let open_result = File::create(filename);
     if let Ok(f) = open_result {
         let code_buffer = text_view.get_buffer().unwrap();
