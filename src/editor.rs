@@ -8,7 +8,7 @@ use xplicit_widget;
 use settings;
 use gtk::Inhibit;
 use gtk::traits::*;
-use xplicit_tessellation::{ManifoldDualContouring, write_stl};
+use xplicit_tessellation::{ManifoldDualContouring, Mesh};
 
 #[derive(Clone)]
 pub struct Editor {
@@ -100,7 +100,7 @@ impl Editor {
     pub fn save(&self, filename: &str) {
         save_from_textview(&self.text_view, filename);
     }
-    pub fn tessellate(&self) {
+    pub fn tessellate(&self) -> Option<Mesh> {
         let maybe_obj = self.get_object(&mut ::std::io::stdout());
         if let Some(obj) = maybe_obj {
             let s = settings::SettingsData::new();
@@ -108,9 +108,12 @@ impl Editor {
                                                    s.tessellation_resolution,
                                                    s.tessellation_error)
                            .tessellate();
-            println!("Writing xplicit.stl: {:?}", write_stl("xplicit.stl", &mesh));
-            mesh_view::show_mesh(&mesh);
+            if let Some(ref mesh) = mesh {
+                mesh_view::show_mesh(&mesh);
+            }
+            return mesh;
         }
+        return None;
     }
 }
 

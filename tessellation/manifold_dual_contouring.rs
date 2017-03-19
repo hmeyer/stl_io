@@ -372,10 +372,10 @@ impl ManifoldDualContouring {
             vertex_index_map: HashMap::new(),
         }
     }
-    pub fn tessellate(&mut self) -> Mesh {
+    pub fn tessellate(&mut self) -> Option<Mesh> {
         loop {
             match self.try_tessellate() {
-                Ok(mesh) => return mesh,
+                Ok(mesh) => return Some(mesh),
                 Err(x) => {
                     let padding = self.res / (10. + rand::random::<Float>().abs());
                     println!("Error: {:?}. moving by {:?} and retrying.", x, padding);

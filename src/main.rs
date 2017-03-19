@@ -2,12 +2,14 @@
 extern crate gtk;
 extern crate gdk;
 extern crate xplicit;
+extern crate xplicit_tessellation;
 
 use gtk::{FileChooserAction, FileChooserDialog, FileFilter, Inhibit, ResponseType};
 use gtk::traits::*;
 use xplicit::xplicit_widget;
 use xplicit::menu;
 use xplicit::settings;
+use xplicit_tessellation::write_stl;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -43,14 +45,18 @@ fn main() {
     let editor_clone2 = editor.clone();
     let editor_clone3 = editor.clone();
     let editor_clone4 = editor.clone();
+    let editor_clone5 = editor.clone();
     let window_clone1 = window.clone();
     let window_clone2 = window.clone();
     let window_clone3 = window.clone();
     let window_clone4 = window.clone();
+    let window_clone5 = window.clone();
     let filename = Rc::new(RefCell::new(String::new()));
     let filename_clone1 = filename.clone();
     let filename_clone2 = filename.clone();
-    let menu = menu::create_menu(move || editor_clone1.tessellate(),
+    let menu = menu::create_menu(move || {
+                                     editor_clone1.tessellate();
+                                 },
                                  move || {
                                      if let Some(path_str) = get_open_name(Some(&window_clone1)) {
                                          let mut f = filename.borrow_mut();
@@ -61,7 +67,8 @@ fn main() {
                                  move || {
                                      let mut f = filename_clone1.borrow_mut();
                                      if f.is_empty() {
-                                         if let Some(path) = get_save_name(Some(&window_clone2)) {
+                                         if let Some(path) = get_save_name(Some(&window_clone2),
+                                                                           "*.scad") {
                                              *f = path;
                                              editor_clone3.save(&*f);
                                          }
@@ -70,13 +77,25 @@ fn main() {
                                      }
                                  },
                                  move || {
-                                     if let Some(path) = get_save_name(Some(&window_clone3)) {
+                                     if let Some(path) = get_save_name(Some(&window_clone3),
+                                                                       "*.scad") {
                                          let mut f = filename_clone2.borrow_mut();
                                          *f = path;
                                          editor_clone4.save(&*f);
                                      }
                                  },
                                  move || settings::show_settings_dialog(Some(&window_clone4)),
+                                 move || {
+                                     let maybe_mesh = editor_clone5.tessellate();
+                                     if let Some(mesh) = maybe_mesh {
+                                         if let Some(path) = get_save_name(Some(&window_clone5),
+                                                                           "*.stl") {
+                                             println!("writing STL ({:?}): {:?}",
+                                                      path,
+                                                      write_stl(&path, &mesh));
+                                         }
+                                     }
+                                 },
                                  || gtk::main_quit());
 
     let v_pane = gtk::Paned::new(gtk::Orientation::Vertical);
@@ -117,14 +136,16 @@ pub fn get_open_name<T: ::gtk::IsA<::gtk::Window>>(parent: Option<&T>) -> Option
     None
 }
 
-pub fn get_save_name<T: ::gtk::IsA<::gtk::Window>>(parent: Option<&T>) -> Option<String> {
+pub fn get_save_name<T: ::gtk::IsA<::gtk::Window>>(parent: Option<&T>,
+                                                   pattern: &str)
+                                                   -> Option<String> {
     let dialog = FileChooserDialog::new(Some("Choose a filename to Save"),
                                         parent,
                                         FileChooserAction::Save);
     dialog.add_button("Save", ResponseType::Ok.into());
     dialog.add_button("Cancel", ResponseType::Cancel.into());
     let filter = FileFilter::new();
-    filter.add_pattern("*.scad");
+    filter.add_pattern(pattern);
     dialog.add_filter(&filter);
     let res = dialog.run();
     let maybe_filename = dialog.get_filename();
