@@ -42,19 +42,21 @@ impl XplicitWidget {
         {
             let mouse_pos_clone = xw.mouse_pos.clone();
             let renderer_clone = xw.renderer.clone();
-            xw.drawing_area.connect_motion_notify_event(move |da: &DrawingArea, em: &::gdk::EventMotion| -> Inhibit {
+            xw.drawing_area.connect_motion_notify_event(move |da: &DrawingArea,
+                                                              em: &::gdk::EventMotion|
+                                                              -> Inhibit {
                 let da_alloc = da.get_allocation();
                 let (nx, ny) = em.get_position();
                 let (ox, oy) = mouse_pos_clone.get();
-                let (dx, dy) = (((nx - ox) / da_alloc.width as f64) as Float, ((ny - oy) / da_alloc.height as f64) as Float);
+                let (dx, dy) = (((nx - ox) / da_alloc.width as f64) as Float,
+                                ((ny - oy) / da_alloc.height as f64) as Float);
                 mouse_pos_clone.set(em.get_position());
                 match em.get_state() {
-                    ::gdk::BUTTON1_MASK => {
+                    x if ::gdk::BUTTON1_MASK.intersects(x) => {
                         renderer_clone.borrow_mut().rotate_from_screen(dx, dy);
                         da.queue_draw();
-                    },
-//                    ::gdk::BUTTON2_MASK => renderer_clone.get().rotate_from_screen(nx - ox, ny - oy),
-                    ::gdk::BUTTON3_MASK => {
+                    }
+                    x if ::gdk::BUTTON3_MASK.intersects(x) => {
                         renderer_clone.borrow_mut().translate_from_screen(dx, dy);
                         da.queue_draw();
                     }
