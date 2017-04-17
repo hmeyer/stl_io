@@ -56,7 +56,7 @@ impl Object for Union {
     }
     fn set_parameters(&mut self, p: &PrimitiveParameters) {
         self.exact_range = self.r * p.r_multiplier;
-        self.fade_range = self.r * p.r_multiplier;
+        self.fade_range = p.fade_range;
         for o in &mut self.objs {
             o.set_parameters(p);
         }
@@ -76,7 +76,6 @@ impl Object for Union {
                                    (v0, v1)
                                }
                            });
-
         match (v0.1 - v1.1).abs() {
             // if they are close together, calc normal from full object
             diff if diff < (self.exact_range * (1. - self.fade_range)) => {
@@ -154,7 +153,7 @@ impl Object for Intersection {
     }
     fn set_parameters(&mut self, p: &PrimitiveParameters) {
         self.exact_range = self.r * p.r_multiplier;
-        self.fade_range = self.r * p.r_multiplier;
+        self.fade_range = p.fade_range;
         for o in &mut self.objs {
             o.set_parameters(p);
         }
@@ -185,7 +184,7 @@ impl Object for Intersection {
                 (self.objs[v0.0].normal(p) * fader + normal_from_object(self, p) * (1. - fader))
                     .normalize()
             }
-            // they are far apart, use the min's normal
+            // they are far apart, use the max' normal
             _ => self.objs[v0.0].normal(p),
         }
     }
