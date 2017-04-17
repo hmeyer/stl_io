@@ -10,11 +10,11 @@ dependencies = [
  "kiss3d 0.6.0 (git+https://github.com/sebcrozet/kiss3d)",
  "libc 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "nalgebra 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "peg 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "rulinalg 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "truescad_openscad 0.1.0",
  "truescad_primitive 0.0.1",
  "truescad_tessellation 0.0.1",
  "truescad_types 0.0.1",
@@ -676,6 +676,16 @@ version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "rustc-serialize 0.3.19 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "truescad_openscad"
+version = "0.1.0"
+dependencies = [
+ "cgmath 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "peg 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "truescad_primitive 0.0.1",
+ "truescad_types 0.0.1",
 ]
 
 [[package]]

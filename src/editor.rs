@@ -2,7 +2,7 @@ use std::io::prelude::*;
 use std::io::{BufReader, BufWriter};
 use std::fs::File;
 use mesh_view;
-use openscad;
+use truescad_openscad;
 use truescad_primitive;
 use object_widget;
 use settings;
@@ -59,13 +59,13 @@ impl Editor {
                                              &code_buffer.get_end_iter(),
                                              true)
                                    .unwrap();
-        let maybe_pgm = openscad::program(&code_text);
+        let maybe_pgm = truescad_openscad::program(&code_text);
         if let Ok(pgm) = maybe_pgm {
             writeln!(msg, "\nparsed : {:?}", pgm).unwrap();
-            let mut env = openscad::ast::Environment::new();
+            let mut env = truescad_openscad::ast::Environment::new();
             let ast_value = pgm.eval(&mut env, msg);
             writeln!(msg, "\nexecuted : {:?}", ast_value).unwrap();
-            if let openscad::ast::Value::Objects(objs) = ast_value {
+            if let truescad_openscad::ast::Value::Objects(objs) = ast_value {
                 if objs.len() > 0 {
                     let mut result_union = truescad_primitive::Union::from_vec(objs, 0.).unwrap();
                     let s = settings::SettingsData::new();

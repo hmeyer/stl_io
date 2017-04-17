@@ -10,7 +10,6 @@ gdk = "0.5.0"#{ git = "https://github.com/gtk-rs/gdk.git" }#"^0"
 gtk = "0.1.0"#{ git = "https://github.com/gtk-rs/gtk.git" }#"^0"
 cairo-rs = "0.1.0"#{ git = "https://github.com/gtk-rs/cairo.git" }#"^0"
 cgmath = "0.12.0"
-peg = "=0.3.14"
 nalgebra = "0.9.*"
 rand = "0.3"
 rulinalg="0.3.2"
@@ -19,6 +18,7 @@ toml = "0.2"
 truescad_tessellation = { path = "tessellation", version = "0.0.*" }
 truescad_types = { path = "types", version = "0.0.*" }
 truescad_primitive = { path = "primitive", version = "0.0.*" }
+truescad_openscad = { path = "openscad", version = "0.1.*" }
 
 [dependencies.kiss3d]
 git = "https://github.com/sebcrozet/kiss3d"

@@ -1,5 +1,3 @@
-#![feature(plugin)]
-#![plugin(peg_syntax_ext)]
 #![feature(drop_types_in_const)]
 
 // #![deny(missing_docs,
@@ -21,11 +19,11 @@ extern crate toml;
 extern crate truescad_types;
 extern crate truescad_primitive;
 extern crate truescad_tessellation;
+extern crate truescad_openscad;
 
 pub mod render;
 pub mod object_widget;
 pub mod editor;
-pub mod openscad;
 pub mod menu;
 pub mod mesh_view;
 pub mod settings;
