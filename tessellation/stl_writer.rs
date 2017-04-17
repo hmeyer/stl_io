@@ -3,7 +3,7 @@ use std::io::BufWriter;
 use std::io::{Result, Write};
 use Mesh;
 use byteorder::{LittleEndian, WriteBytesExt};
-use xplicit_types::{Point, Vector};
+use truescad_types::{Point, Vector};
 use cgmath::InnerSpace;
 
 // Write as documented in https://en.wikipedia.org/wiki/STL_(file_format)#Binary_STL

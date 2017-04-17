@@ -1,6 +1,6 @@
 [package]
-name = "xplicit"
-version = "0.0.1"
+name = "truescad"
+version = "0.1.0"
 authors = ["Henning Meyer <tutmann@gmail.com>"]
 
 [dependencies]
@@ -16,9 +16,9 @@ rand = "0.3"
 rulinalg="0.3.2"
 rustc-serialize = "0.3"
 toml = "0.2"
-xplicit_tessellation = { path = "tessellation", version = "0.0.*" }
-xplicit_types = { path = "types", version = "0.0.*" }
-xplicit_primitive = { path = "primitive", version = "0.0.*" }
+truescad_tessellation = { path = "tessellation", version = "0.0.*" }
+truescad_types = { path = "types", version = "0.0.*" }
+truescad_primitive = { path = "primitive", version = "0.0.*" }
 
 [dependencies.kiss3d]
 git = "https://github.com/sebcrozet/kiss3d"

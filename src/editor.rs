@@ -3,12 +3,12 @@ use std::io::{BufReader, BufWriter};
 use std::fs::File;
 use mesh_view;
 use openscad;
-use xplicit_primitive;
-use xplicit_widget;
+use truescad_primitive;
+use object_widget;
 use settings;
 use gtk::Inhibit;
 use gtk::traits::*;
-use xplicit_tessellation::{ManifoldDualContouring, Mesh};
+use truescad_tessellation::{ManifoldDualContouring, Mesh};
 
 #[derive(Clone)]
 pub struct Editor {
@@ -18,7 +18,7 @@ pub struct Editor {
 
 
 impl Editor {
-    pub fn new(xw: &xplicit_widget::XplicitWidget, debug_buffer: &::gtk::TextBuffer) -> Editor {
+    pub fn new(xw: &object_widget::ObjectWidget, debug_buffer: &::gtk::TextBuffer) -> Editor {
         let widget = ::gtk::ScrolledWindow::new(None, None);
         let tv = ::gtk::TextView::new();
         widget.add(&tv);
@@ -53,7 +53,7 @@ impl Editor {
         });
         editor
     }
-    fn get_object(&self, msg: &mut Write) -> Option<Box<xplicit_primitive::Object>> {
+    fn get_object(&self, msg: &mut Write) -> Option<Box<truescad_primitive::Object>> {
         let code_buffer = self.text_view.get_buffer().unwrap();
         let code_text = code_buffer.get_text(&code_buffer.get_start_iter(),
                                              &code_buffer.get_end_iter(),
@@ -67,9 +67,9 @@ impl Editor {
             writeln!(msg, "\nexecuted : {:?}", ast_value).unwrap();
             if let openscad::ast::Value::Objects(objs) = ast_value {
                 if objs.len() > 0 {
-                    let mut result_union = xplicit_primitive::Union::from_vec(objs, 0.).unwrap();
+                    let mut result_union = truescad_primitive::Union::from_vec(objs, 0.).unwrap();
                     let s = settings::SettingsData::new();
-                    result_union.set_parameters(&xplicit_primitive::PrimitiveParameters {
+                    result_union.set_parameters(&truescad_primitive::PrimitiveParameters {
                         fade_range: s.fade_range,
                         r_multiplier: s.r_multiplier,
                     });

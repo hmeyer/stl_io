@@ -1,4 +1,4 @@
-use xplicit_types::{Float, INFINITY, Matrix, NEG_INFINITY, Point, Vector};
+use truescad_types::{Float, INFINITY, Matrix, NEG_INFINITY, Point, Vector};
 use cgmath::Transform;
 
 pub static INFINITY_BOX: BoundingBox = BoundingBox {

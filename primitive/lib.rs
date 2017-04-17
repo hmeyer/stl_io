@@ -1,7 +1,7 @@
 extern crate cgmath;
-extern crate xplicit_types;
+extern crate truescad_types;
 use std::fmt::Debug;
-pub use xplicit_types::{Float, Point, Vector, EPSILON_X, EPSILON_Y, EPSILON_Z};
+pub use truescad_types::{Float, Point, Vector, EPSILON_X, EPSILON_Y, EPSILON_Z};
 
 use cgmath::InnerSpace;
 

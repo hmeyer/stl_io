@@ -2,12 +2,12 @@
 extern crate cgmath;
 extern crate rand;
 extern crate nalgebra as na;
-extern crate xplicit_types;
-extern crate xplicit_primitive;
+extern crate truescad_types;
+extern crate truescad_primitive;
 extern crate time;
 extern crate byteorder;
 
-use xplicit_types::{Float, Point, Vector};
+use truescad_types::{Float, Point, Vector};
 
 #[derive(Clone, Debug)]
 pub struct Mesh {

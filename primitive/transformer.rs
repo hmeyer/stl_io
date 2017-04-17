@@ -1,6 +1,6 @@
 use {Object, PrimitiveParameters};
 use bounding_box::BoundingBox;
-use xplicit_types::{Float, Matrix, Point, Vector};
+use truescad_types::{Float, Matrix, Point, Vector};
 use cgmath::{InnerSpace, SquareMatrix, Transform};
 use std::{error, fmt};
 

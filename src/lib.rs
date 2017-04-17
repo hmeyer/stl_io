@@ -18,12 +18,12 @@ extern crate kiss3d;
 extern crate nalgebra;
 extern crate rustc_serialize;
 extern crate toml;
-extern crate xplicit_types;
-extern crate xplicit_primitive;
-extern crate xplicit_tessellation;
+extern crate truescad_types;
+extern crate truescad_primitive;
+extern crate truescad_tessellation;
 
 pub mod render;
-pub mod xplicit_widget;
+pub mod object_widget;
 pub mod editor;
 pub mod openscad;
 pub mod menu;

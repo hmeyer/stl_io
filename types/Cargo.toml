@@ -1,10 +1,10 @@
 [package]
-name = "xplicit_types"
+name = "truescad_types"
 version = "0.0.1"
 authors = ["Henning Meyer <tutmann@gmail.com>"]
 
 [lib]
-name = "xplicit_types"
+name = "truescad_types"
 path = "lib.rs"
 
 [dependencies]

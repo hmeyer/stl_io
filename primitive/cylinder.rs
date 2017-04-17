@@ -1,6 +1,6 @@
 use Object;
 use bounding_box::{BoundingBox, INFINITY_BOX};
-use xplicit_types::{Float, INFINITY, NEG_INFINITY, Point, Vector};
+use truescad_types::{Float, INFINITY, NEG_INFINITY, Point, Vector};
 use cgmath::{EuclideanSpace, InnerSpace};
 
 

@@ -1,5 +1,5 @@
 use Object;
-use xplicit_types::{Float, Point, Vector};
+use truescad_types::{Float, Point, Vector};
 use cgmath::{EuclideanSpace, InnerSpace};
 use bounding_box::BoundingBox;
 

@@ -1,15 +1,15 @@
 
 extern crate gtk;
 extern crate gdk;
-extern crate xplicit;
-extern crate xplicit_tessellation;
+extern crate truescad;
+extern crate truescad_tessellation;
 
 use gtk::{FileChooserAction, FileChooserDialog, FileFilter, Inhibit, ResponseType};
 use gtk::traits::*;
-use xplicit::xplicit_widget;
-use xplicit::menu;
-use xplicit::settings;
-use xplicit_tessellation::write_stl;
+use truescad::object_widget;
+use truescad::menu;
+use truescad::settings;
+use truescad_tessellation::write_stl;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -34,9 +34,9 @@ fn main() {
     debug_view.set_editable(false);
     debug_scrolled_window.add(&debug_view);
     debug_view.set_wrap_mode(gtk::WrapMode::WordChar);
-    let xw = xplicit_widget::XplicitWidget::new();
+    let xw = object_widget::ObjectWidget::new();
     let debug_text = debug_view.get_buffer().unwrap();
-    let editor = ::xplicit::editor::Editor::new(&xw, &debug_text);
+    let editor = ::truescad::editor::Editor::new(&xw, &debug_text);
     let h_pane = gtk::Paned::new(gtk::Orientation::Horizontal);
     h_pane.add2(&xw.drawing_area);
     h_pane.add1(&editor.widget);

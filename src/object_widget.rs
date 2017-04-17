@@ -7,18 +7,18 @@ use gtk::traits::*;
 use gtk::DrawingArea;
 use cairo::{Context, Format, ImageSurface};
 
-use xplicit_types::Float;
+use truescad_types::Float;
 use render;
 
-pub struct XplicitWidget {
+pub struct ObjectWidget {
     pub drawing_area: DrawingArea,
     pub renderer: Rc<RefCell<::render::Renderer>>,
     mouse_pos: Rc<Cell<(f64, f64)>>,
 }
 
-impl XplicitWidget {
-    pub fn new() -> XplicitWidget {
-        let xw = XplicitWidget {
+impl ObjectWidget {
+    pub fn new() -> ObjectWidget {
+        let xw = ObjectWidget {
             drawing_area: DrawingArea::new(),
             renderer: Rc::new(RefCell::new(render::Renderer::new())),
             mouse_pos: Rc::new(Cell::new((0., 0.))),

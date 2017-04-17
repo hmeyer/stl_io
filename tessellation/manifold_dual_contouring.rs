@@ -1,10 +1,10 @@
-use xplicit_primitive::{BoundingBox, NEG_INFINITY_BOX, Object, normal_from_object};
+use truescad_primitive::{BoundingBox, NEG_INFINITY_BOX, Object, normal_from_object};
 use bitset::BitSet;
 use vertex_index::{EDGES_ON_FACE, Index, VarIndex, VertexIndex, neg_offset, offset};
 use qef;
 use {Mesh, Plane};
 use cell_configs::CELL_CONFIGS;
-use xplicit_types::{Float, Point, Vector};
+use truescad_types::{Float, Point, Vector};
 use std::collections::{BTreeSet, HashMap};
 use std::cell::{Cell, RefCell};
 use std::{error, fmt};

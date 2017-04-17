@@ -1,5 +1,5 @@
-use xplicit_types::{EPSILON, Float, NAN, Point};
-use xplicit_primitive::BoundingBox;
+use truescad_types::{EPSILON, Float, NAN, Point};
+use truescad_primitive::BoundingBox;
 use Plane;
 use cgmath::{EuclideanSpace, InnerSpace};
 use na;

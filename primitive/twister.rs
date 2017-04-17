@@ -1,6 +1,6 @@
 use {Object, PrimitiveParameters};
 use bounding_box::BoundingBox;
-use xplicit_types::{Float, PI, Point, Vector};
+use truescad_types::{Float, PI, Point, Vector};
 use cgmath::{InnerSpace, Rotation, Rotation2};
 
 type Point2 = ::cgmath::Point2<Float>;

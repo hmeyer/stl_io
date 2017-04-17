@@ -4,8 +4,8 @@
 // pub type Ray = ray::Ray3<float>;
 // pub type Point = Point<float>;
 use std::cmp;
-use xplicit_types::{Float, Matrix, Point, Ray, Vector};
-use xplicit_primitive::Object;
+use truescad_types::{Float, Matrix, Point, Ray, Vector};
+use truescad_primitive::Object;
 use cgmath::{InnerSpace, SquareMatrix, Transform};
 
 const EPSILON: Float = 0.003;

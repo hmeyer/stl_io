@@ -1,6 +1,6 @@
 use super::ast::{Binding, Callable, Expression, ExpressionFn, Value};
-use xplicit_primitive::{BoundingBox, Intersection, Object, Union};
-use xplicit_types::{Float, INFINITY, NAN, NEG_INFINITY, Point, Vector};
+use truescad_primitive::{BoundingBox, Intersection, Object, Union};
+use truescad_types::{Float, INFINITY, NAN, NEG_INFINITY, Point, Vector};
 use std::io::Write;
 use std::rc::Rc;
 
@@ -58,17 +58,17 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
               "text" => Value::String("".to_string()),
               env);
     add_func!("sphere",
-              |r: &Value, _, _| Value::Objects(vec![::xplicit_primitive::Sphere::new(r.as_Float())]),
+              |r: &Value, _, _| Value::Objects(vec![::truescad_primitive::Sphere::new(r.as_Float())]),
               "r" => Value::Number(1.),
               env);
     add_func!("icylinder",
                         |r: &Value, _, _| Value::Objects(
-                            vec![::xplicit_primitive::Cylinder::new(r.as_Float())]),
+                            vec![::truescad_primitive::Cylinder::new(r.as_Float())]),
                         "r" => Value::Number(1.),
                         env);
     add_func!("icone",
                                   |r: &Value, _, _| Value::Objects(
-                                      vec![::xplicit_primitive::Cone::new(r.as_Float(), 0.)]),
+                                      vec![::truescad_primitive::Cone::new(r.as_Float(), 0.)]),
                                   "slope" => Value::Number(1.),
                                   env);
     add_func_multi_param!("cube",
@@ -85,9 +85,9 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                           });
                       }
                       return Value::Objects(vec![Intersection::from_vec(vec![
-                      ::xplicit_primitive::SlabX::new(v[0]),
-                      ::xplicit_primitive::SlabY::new(v[1]),
-                      ::xplicit_primitive::SlabZ::new(v[2]) ], dim_and_r.get(1).unwrap().as_Float())
+                      ::truescad_primitive::SlabX::new(v[0]),
+                      ::truescad_primitive::SlabY::new(v[1]),
+                      ::truescad_primitive::SlabZ::new(v[2]) ], dim_and_r.get(1).unwrap().as_Float())
                                                      .unwrap()]);
                   }
                   writeln!(msg, "invalid dimension vector: {:?}, using undef",
@@ -118,7 +118,7 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                                 }
                                 let mut conie;
                                 if r1 == r2 {
-                                    conie = ::xplicit_primitive::Cylinder::new(r1) as Box<Object>;
+                                    conie = ::truescad_primitive::Cylinder::new(r1) as Box<Object>;
                                 } else {
                                     let slope = (r2 - r1).abs() / *h as Float;
                                     let offset;
@@ -127,7 +127,7 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                                     } else {
                                         offset = r2/ slope + *h as Float * 0.5;
                                     }
-                                    conie = ::xplicit_primitive::Cone::new(slope, offset) as Box<Object>;
+                                    conie = ::truescad_primitive::Cone::new(slope, offset) as Box<Object>;
                                     let rmax = r1.max(r2);
                                     let conie_box = BoundingBox::new(Point::new(-rmax, -rmax, NEG_INFINITY),
                                                                      Point::new(rmax, rmax, INFINITY));
@@ -135,7 +135,7 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                                 }
                                 Value::Objects(vec![Intersection::from_vec(vec![
                                   conie,
-                                  ::xplicit_primitive::SlabZ::new(*h as Float) ],
+                                  ::truescad_primitive::SlabZ::new(*h as Float) ],
                                 h_r_r1_r2_s.get(4).unwrap().as_Float()).unwrap()])
                             } else {
                                 writeln!(msg, "invalid height, returning undef").unwrap();
@@ -224,7 +224,7 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                                 if let &Value::Number(ref width) = w {
                                     let union_of_subs = Union::from_vec(
                                         subs.clone(), 0.).unwrap();
-                                    let bended = ::xplicit_primitive::Bender::new(
+                                    let bended = ::truescad_primitive::Bender::new(
                                         union_of_subs, *width as Float);
                                     return Value::Objects(vec![bended]);
                                 }
@@ -239,7 +239,7 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                                                     if let &Value::Number(ref height) = h {
                                                         let union_of_subs = Union::from_vec(
                                                             subs.clone(), 0.).unwrap();
-                                                        let twisted = ::xplicit_primitive::Twister::new(
+                                                        let twisted = ::truescad_primitive::Twister::new(
                                                             union_of_subs, *height as Float);
                                                         return Value::Objects(vec![twisted]);
                                                     }
