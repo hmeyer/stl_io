@@ -274,7 +274,7 @@ pub const CELL_CONFIGS: &'static [&'static [BitSet]] = &[&[],
                                                          &[BitSet(7)],
                                                          &[]];
 
-// Following is the code, used to generate this table.
+// Following is the code used to generate this table.
 
 
 //  Corner indexes
