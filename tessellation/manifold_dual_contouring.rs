@@ -1,4 +1,5 @@
 use truescad_primitive::{BoundingBox, NEG_INFINITY_BOX, Object, normal_from_object};
+use truescad_types;
 use bitset::BitSet;
 use vertex_index::{EDGES_ON_FACE, Index, VarIndex, VertexIndex, neg_offset, offset};
 use qef;
@@ -376,10 +377,20 @@ impl ManifoldDualContouring {
         loop {
             match self.try_tessellate() {
                 Ok(mesh) => return Some(mesh),
-                Err(x) => {
-                    let padding = self.res / (10. + rand::random::<Float>().abs());
-                    println!("Error: {:?}. moving by {:?} and retrying.", x, padding);
-                    self.origin.x -= padding;
+                // Tessellation failed, b/c the value in one of the grid cells was exactly zero.
+                // Retry with some random padding and hope for the best.
+                Err(e) => {
+                    let padding = truescad_types::Vector::new(-self.res /
+                                                              (10. +
+                                                               rand::random::<Float>().abs()),
+                                                              -self.res /
+                                                              (10. +
+                                                               rand::random::<Float>().abs()),
+                                                              -self.res /
+                                                              (10. +
+                                                               rand::random::<Float>().abs()));
+                    println!("Error: {:?}. moving by {:?} and retrying.", e, padding);
+                    self.origin += padding;
                     self.value_grid.clear();
                     self.mesh.borrow_mut().vertices.clear();
                     self.mesh.borrow_mut().faces.clear();
@@ -434,7 +445,46 @@ impl ManifoldDualContouring {
         None
     }
 
+    // Delete all values from value grid that do not have a value of opposing signum in any
+    // neighboring index.
+    // This usuall reduces memory usage by ~10x.
+    fn compact_value_grid(&mut self) {
+        // Collect all indexes to remove.
+        let keys_to_remove: Vec<_> = self.value_grid
+                                         .iter()
+                                         .filter(|&(idx, &v)| {
+                                             for z in 0..3 {
+                                                 for y in 0..3 {
+                                                     for x in 0..3 {
+                                                         let mut adjacent_idx = idx.clone();
+                                                         adjacent_idx[0] += x - 1;
+                                                         adjacent_idx[1] += y - 1;
+                                                         adjacent_idx[2] += z - 1;
+                                                         if let Some(&adjacent_value) =
+                                                                self.value_grid
+                                                                    .get(&adjacent_idx) {
+                                                             if v.signum() !=
+                                                                adjacent_value.signum() {
+                                                                 // Don't collect indexes with
+                                                                 // opposing signum.
+                                                                 return false;
+                                                             }
+                                                         }
+                                                     }
+                                                 }
+                                             }
+                                             return true;
+                                         })
+                                         .map(|(k, _)| k.clone())
+                                         .collect();
+        for k in keys_to_remove {
+            self.value_grid.remove(&k);
+        }
+        self.value_grid.shrink_to_fit();
+    }
+
     // This method does the main work of tessellation.
+    // It may fail, if the value in one of the grid cells yields exactly zero.
     fn try_tessellate(&mut self) -> Result<Mesh, DualContouringError> {
         let res = self.res;
         let mut t = Timer::new();
@@ -450,10 +500,17 @@ impl ManifoldDualContouring {
             return Err(e);
         }
 
-        println!("generated value_grid: {:}", t.elapsed());
-        println!("value_grid with {:} for {:} cells.",
-                 self.value_grid.len(),
-                 self.dim[0] * self.dim[1] * self.dim[2]);
+        let total_cells = self.dim[0] * self.dim[1] * self.dim[2];
+        println!("generated value_grid with {:} % of {:} cells in {:}.",
+                 (100 * self.value_grid.len()) as f64 / total_cells as f64,
+                 total_cells,
+                 t.elapsed());
+
+        self.compact_value_grid();
+        println!("compacted value_grid,  now {:} % of {:} cells in {:}.",
+                 (100 * self.value_grid.len()) as f64 / total_cells as f64,
+                 total_cells,
+                 t.elapsed());
 
         // Store crossing positions of edges in edge_grid
         {
