@@ -13,6 +13,7 @@ nalgebra = "0.10"
 rand = "0.3"
 time = "0.1"
 byteorder = "0.5"
+rayon = "0.7.*"
 
 truescad_types = { path = "../types", version = "0.0.*" }
 truescad_primitive = { path = "../primitive", version = "0.0.*" }

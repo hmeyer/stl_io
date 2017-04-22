@@ -12,6 +12,7 @@ use std::{error, fmt};
 use std::cmp;
 use cgmath::Array;
 use rand;
+use rayon::prelude::*;
 
 // How accurately find zero crossings.
 const PRECISION: Float = 0.05;
@@ -450,37 +451,35 @@ impl ManifoldDualContouring {
     // This might reduces memory usage by ~10x.
     fn compact_value_grid(&mut self) {
         // Collect all indexes to remove.
-        let keys_to_remove: Vec<_> = self.value_grid
-                                         .iter()
-                                         .filter(|&(idx, &v)| {
-                                             for z in 0..3 {
-                                                 for y in 0..3 {
-                                                     for x in 0..3 {
-                                                         let mut adjacent_idx = idx.clone();
-                                                         adjacent_idx[0] += x - 1;
-                                                         adjacent_idx[1] += y - 1;
-                                                         adjacent_idx[2] += z - 1;
-                                                         if let Some(&adjacent_value) =
-                                                                self.value_grid
-                                                                    .get(&adjacent_idx) {
-                                                             if v.signum() !=
-                                                                adjacent_value.signum() {
-                                                                 // Don't collect indexes with
-                                                                 // opposing signum.
-                                                                 return false;
-                                                             }
-                                                         }
-                                                     }
-                                                 }
-                                             }
-                                             return true;
-                                         })
-                                         .map(|(k, _)| k.clone())
-                                         .collect();
+        let value_grid = &mut self.value_grid;
+        let keys_to_remove: Vec<_> =
+            value_grid.par_iter()
+                      .filter(|&(idx, &v)| {
+                          for z in 0..3 {
+                              for y in 0..3 {
+                                  for x in 0..3 {
+                                      let mut adjacent_idx = idx.clone();
+                                      adjacent_idx[0] += x - 1;
+                                      adjacent_idx[1] += y - 1;
+                                      adjacent_idx[2] += z - 1;
+                                      if let Some(&adjacent_value) = value_grid.get(&adjacent_idx) {
+                                          if v.signum() != adjacent_value.signum() {
+                                              // Don't collect indexes with
+                                              // opposing signum.
+                                              return false;
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                          return true;
+                      })
+                      .map(|(k, _)| k.clone())
+                      .collect();
         for k in keys_to_remove {
-            self.value_grid.remove(&k);
+            value_grid.remove(&k);
         }
-        self.value_grid.shrink_to_fit();
+        value_grid.shrink_to_fit();
     }
 
     // This method does the main work of tessellation.
@@ -507,7 +506,7 @@ impl ManifoldDualContouring {
                  t.elapsed());
 
         self.compact_value_grid();
-        println!("compacted value_grid,  now {:} % of {:} cells in {:}.",
+        println!("compacted value_grid, now {:} % of {:} cells in {:}.",
                  (100 * self.value_grid.len()) as f64 / total_cells as f64,
                  total_cells,
                  t.elapsed());

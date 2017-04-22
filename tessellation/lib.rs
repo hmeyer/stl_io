@@ -2,6 +2,7 @@
 extern crate cgmath;
 extern crate rand;
 extern crate nalgebra as na;
+extern crate rayon;
 extern crate truescad_types;
 extern crate truescad_primitive;
 extern crate time;
