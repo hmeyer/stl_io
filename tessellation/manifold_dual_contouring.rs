@@ -447,7 +447,7 @@ impl ManifoldDualContouring {
 
     // Delete all values from value grid that do not have a value of opposing signum in any
     // neighboring index.
-    // This usuall reduces memory usage by ~10x.
+    // This might reduces memory usage by ~10x.
     fn compact_value_grid(&mut self) {
         // Collect all indexes to remove.
         let keys_to_remove: Vec<_> = self.value_grid
