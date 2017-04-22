@@ -58,11 +58,29 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
               "text" => Value::String("".to_string()),
               env);
     add_func!("sqrt",
-                        |v: &Value, _, _: &mut Write| {
-                            Value::Number(v.as_Float().sqrt())
-                        },
-                        "v" => Value::Undef,
-                        env);
+              |v: &Value, _, _: &mut Write| {
+                  Value::Number(v.as_Float().sqrt())
+              },
+              "v" => Value::Undef,
+              env);
+    add_func!("ln",
+              |v: &Value, _, _: &mut Write| {
+                  Value::Number(v.as_Float().ln())
+              },
+              "v" => Value::Undef,
+              env);
+    add_func!("log2",
+              |v: &Value, _, _: &mut Write| {
+                  Value::Number(v.as_Float().log2())
+              },
+              "v" => Value::Undef,
+              env);
+    add_func!("log10",
+              |v: &Value, _, _: &mut Write| {
+                Value::Number(v.as_Float().log10())
+              },
+              "v" => Value::Undef,
+              env);
     add_func_multi_param!("pow",
                         |b_e: Vec<Value>, _, _: &mut Write| {
                             if let &Value::Number(ref b) = b_e.get(0).unwrap() {
@@ -74,6 +92,18 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
                         },
                         P "b" => Value::Undef
                         P "e" => Value::Undef,
+                        env);
+    add_func_multi_param!("log",
+                        |p_b: Vec<Value>, _, _: &mut Write| {
+                            if let &Value::Number(ref p) = p_b.get(0).unwrap() {
+                                if let &Value::Number(ref b) = p_b.get(1).unwrap() {
+                                    return Value::Number(p.log(*b));
+                                }
+                            }
+                            return Value::Undef;
+                        },
+                        P "p" => Value::Undef
+                        P "b" => Value::Undef,
                         env);
     add_func!("sin",
                         |v: &Value, _, _: &mut Write| {
