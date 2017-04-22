@@ -44,7 +44,7 @@ pub fn normal_from_object(f: &Object, p: Point) -> Vector {
     Vector::new(dx, dy, dz).normalize()
 }
 
-pub trait Object: ObjectClone + Debug {
+pub trait Object: ObjectClone + Debug + Sync {
     fn bbox(&self) -> &bounding_box::BoundingBox {
         &bounding_box::INFINITY_BOX
     }

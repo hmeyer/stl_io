@@ -13,6 +13,7 @@ extern crate gdk;
 extern crate cgmath;
 extern crate kiss3d;
 extern crate nalgebra;
+extern crate rayon;
 extern crate rustc_serialize;
 extern crate toml;
 extern crate truescad_types;

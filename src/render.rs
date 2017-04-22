@@ -7,6 +7,7 @@ use std::cmp;
 use truescad_types::{Float, Matrix, Point, Ray, Vector};
 use truescad_primitive::Object;
 use cgmath::{InnerSpace, SquareMatrix, Transform};
+use rayon::prelude::*;
 
 const EPSILON: Float = 0.003;
 const APPROX_SLACK: Float = 0.1;
@@ -102,33 +103,40 @@ impl Renderer {
             let dir_tb = self.trans.transform_vector(Vector::new(0., -FOCAL_FACTOR, 0.));
             let light_dir = self.trans.transform_vector(self.light_dir);
             let ray_origin = self.trans.transform_point(Point::new(0., 0., -viewer_dist));
-            let mut ray = Ray::new(ray_origin, dir_front);
+            let ray = Ray::new(ray_origin, dir_front);
 
 
 
             let origin_value = my_obj.approx_value(ray.origin, self.approx_slack);
 
 
-            let mut index = 0 as usize;
-            for y in 0..height {
-                let dir_row = dir_front + dir_tb * ((y - h2) as Float * scale);
+            let mut rows: Vec<_> = buf.chunks_mut((width * 4) as usize)
+                                      .enumerate()
+                                      .collect();
+            rows.par_iter_mut()
+                .for_each(|y_and_buf| {
+                    let y = y_and_buf.0 as i32;
+                    let mut row_buf = &mut y_and_buf.1;
+                    let dir_row = dir_front + dir_tb * ((y - h2) as Float * scale);
+                    let mut row_ray = ray;
+                    let mut index: usize = 0;
 
-                for x in 0..width {
-                    ray.dir = dir_row + dir_rl * ((x - w2) as Float * scale);
+                    for x in 0..width {
+                        row_ray.dir = dir_row + dir_rl * ((x - w2) as Float * scale);
 
-                    let (i, v) = self.cast_ray(my_obj, &ray, &light_dir, origin_value);
+                        let (i, v) = self.cast_ray(my_obj, &row_ray, &light_dir, origin_value);
 
-                    let b = (255.0 * v * v) as u8;
+                        let b = (255.0 * v * v) as u8;
 
-                    buf[index] = i as u8;
-                    index += 1;
-                    buf[index] = b;
-                    index += 1;
-                    buf[index] = b;
-                    index += 1;
-                    index += 1;
-                }
-            }
+                        row_buf[index] = i as u8;
+                        index += 1;
+                        row_buf[index] = b;
+                        index += 1;
+                        row_buf[index] = b;
+                        index += 1;
+                        index += 1;
+                    }
+                })
         }
     }
 
