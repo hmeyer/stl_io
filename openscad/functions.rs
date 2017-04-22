@@ -57,6 +57,60 @@ pub fn add_bindings(env: &mut ::std::collections::HashMap<String, Binding>) {
               },
               "text" => Value::String("".to_string()),
               env);
+    add_func!("sqrt",
+                        |v: &Value, _, _: &mut Write| {
+                            Value::Number(v.as_Float().sqrt())
+                        },
+                        "v" => Value::Undef,
+                        env);
+    add_func_multi_param!("pow",
+                        |b_e: Vec<Value>, _, _: &mut Write| {
+                            if let &Value::Number(ref b) = b_e.get(0).unwrap() {
+                                if let &Value::Number(ref e) = b_e.get(1).unwrap() {
+                                    return Value::Number(b.powf(*e));
+                                }
+                            }
+                            return Value::Undef;
+                        },
+                        P "b" => Value::Undef
+                        P "e" => Value::Undef,
+                        env);
+    add_func!("sin",
+                        |v: &Value, _, _: &mut Write| {
+                            Value::Number(v.as_Float().sin())
+                        },
+                        "v" => Value::Undef,
+                        env);
+    add_func!("cos",
+                        |v: &Value, _, _: &mut Write| {
+                            Value::Number(v.as_Float().cos())
+                        },
+                        "v" => Value::Undef,
+                        env);
+    add_func!("tan",
+                        |v: &Value, _, _: &mut Write| {
+                            Value::Number(v.as_Float().tan())
+                        },
+                        "v" => Value::Undef,
+                        env);
+    add_func!("asin",
+                        |v: &Value, _, _: &mut Write| {
+                            Value::Number(v.as_Float().asin())
+                        },
+                        "v" => Value::Undef,
+                        env);
+    add_func!("acos",
+                        |v: &Value, _, _: &mut Write| {
+                            Value::Number(v.as_Float().acos())
+                        },
+                        "v" => Value::Undef,
+                        env);
+    add_func!("atan",
+                        |v: &Value, _, _: &mut Write| {
+                            Value::Number(v.as_Float().atan())
+                        },
+                        "v" => Value::Undef,
+                        env);
     add_func!("sphere",
               |r: &Value, _, _| Value::Objects(vec![::truescad_primitive::Sphere::new(r.as_Float())]),
               "r" => Value::Number(1.),
