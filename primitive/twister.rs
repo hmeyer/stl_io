@@ -44,7 +44,7 @@ impl Twister {
         let r = mx.hypot(my);
 
         // The ratio of height and circumference (slope on the outer edge).
-        let tan_a = h / (2. * PI * r);
+        let tan_a = h.abs() / (2. * PI * r);
         // The scaler is 1 / sin(a)
         // sin(atan(x)) =   x / sqrt(x^2 + 1)
         let scaler = tan_a / (tan_a * tan_a + 1.).sqrt();
