@@ -13,27 +13,6 @@ pub struct AffineTransformer {
     bbox: BoundingBox,
 }
 
-#[derive(Debug)]
-enum TransformerError {
-    FailedInversion(Matrix),
-}
-
-impl error::Error for TransformerError {
-    fn description(&self) -> &str {
-        match self {
-            &TransformerError::FailedInversion(_) => "Failed to invert Matrix.",
-        }
-    }
-}
-
-impl fmt::Display for TransformerError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &TransformerError::FailedInversion(m) => write!(f, "Failed to invert {:?}", m),
-        }
-    }
-}
-
 impl Object for AffineTransformer {
     fn approx_value(&self, p: Point, slack: Float) -> Float {
         let approx = self.bbox.value(p);
