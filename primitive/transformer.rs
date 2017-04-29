@@ -2,7 +2,6 @@ use {Object, PrimitiveParameters};
 use bounding_box::BoundingBox;
 use truescad_types::{Float, Matrix, Point, Vector};
 use cgmath::{InnerSpace, SquareMatrix, Transform};
-use std::{error, fmt};
 
 #[derive(Clone, Debug)]
 pub struct AffineTransformer {
