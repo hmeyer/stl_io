@@ -13,7 +13,7 @@ dependencies = [
  "rayon 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "truescad_openscad 0.1.0",
+ "truescad_luascad 0.1.0",
  "truescad_primitive 0.0.1",
  "truescad_tessellation 0.0.1",
  "truescad_types 0.0.1",
@@ -377,6 +377,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "hlua"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "libc 0.2.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lua52-sys 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "image"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -452,6 +461,16 @@ dependencies = [
 name = "log"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "lua52-sys"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "gcc 0.3.38 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pkg-config 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "lzw"
@@ -624,11 +643,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "peg"
-version = "0.3.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
 name = "pkg-config"
 version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -705,11 +719,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "truescad_openscad"
+name = "truescad_luascad"
 version = "0.1.0"
 dependencies = [
- "cgmath 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "peg 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hlua 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "truescad_primitive 0.0.1",
  "truescad_types 0.0.1",
 ]
@@ -800,6 +813,7 @@ dependencies = [
 "checksum gobject-sys 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "70a2806ba2978a5072660797bc76c06ebf1b29dd7f857c6b485ac33423677529"
 "checksum gtk 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f4d3d0f046cb1473bfe9e6fbcc8478a5cbab07cfb21495734a37c9d8cd463dc7"
 "checksum gtk-sys 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "91d0e8c624c3b4e8047b960b350b208c82e2eb0d4e3db5da9a55590c10f2616d"
+"checksum hlua 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "943be6896e8b77886a45a0fbb823efa6550a17cf01a8745a8a24435c117144ea"
 "checksum image 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)" = "71a877c12ccf2470fc678107d7850afa1156d5a95b113b20d022fbc65f7ce237"
 "checksum inflate 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "e7e0062d2dc2f17d2f13750d95316ae8a2ff909af0fda957084f5defd87c43bb"
 "checksum kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7507624b29483431c0ba2d82aece8ca6cdba9382bff4ddd0f7490560c056098d"
@@ -810,6 +824,7 @@ dependencies = [
 "checksum libc 0.2.17 (registry+https://github.com/rust-lang/crates.io-index)" = "044d1360593a78f5c8e5e710beccdc24ab71d1f01bc19a29bcacdba22e8475d8"
 "checksum libz-sys 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)" = "40f2df7730b5d29426c3e44ce4d088d8c5def6471c2c93ba98585b89fb201ce6"
 "checksum log 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)" = "ab83497bf8bf4ed2a74259c1c802351fcd67a65baa86394b6ba73c36f4838054"
+"checksum lua52-sys 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "82e9a651ce2bf8cd1ab278740442a4b6b7e03cd212621cadb309eeeda7dec0be"
 "checksum lzw 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "cba82344432e19bcb98fa21c5a6e78f42a06252b4744e2e9162ae98b3a01ee92"
 "checksum miniz-sys 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)" = "9d1f4d337a01c32e1f2122510fed46393d53ca35a7f429cb0450abaedfa3ed54"
 "checksum nalgebra 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)" = "f754f64bd1a5f5899285c2e182df7ddebcecf466369663be2277ca01b6da5d5d"
@@ -828,7 +843,6 @@ dependencies = [
 "checksum num_cpus 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a18c392466409c50b87369414a2680c93e739aedeb498eb2bff7d7eb569744e2"
 "checksum pango 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "9163a579a31a3a07023f8ac47a27b62d3f59fae058f37993ec2815afaeb6d4d9"
 "checksum pango-sys 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "d5d4e9d57dc8bb3a28b59d9339b13f67c456238921d82c3ae8eefd1ac815247b"
-"checksum peg 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)" = "2b5eb263593c6dde7cebf6422e655e1b7fddd0827721c00c05ac0c964ebed4da"
 "checksum pkg-config 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)" = "8cee804ecc7eaf201a4a207241472cc870e825206f6c031e3ee2a72fa425f2fa"
 "checksum png 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)" = "668644d06046819b75098c990e291c4cbadb4a2d1b2424211bf1321005ec764a"
 "checksum rand 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)" = "2791d88c6defac799c3f20d74f094ca33b9332612d9aef9078519c82e4fe04a5"

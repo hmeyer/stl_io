@@ -17,7 +17,7 @@ toml = "0.2"
 truescad_tessellation = { path = "tessellation", version = "0.0.*" }
 truescad_types = { path = "types", version = "0.0.*" }
 truescad_primitive = { path = "primitive", version = "0.0.*" }
-truescad_openscad = { path = "openscad", version = "0.1.*" }
+truescad_luascad = { path = "luascad", version = "0.1.*" }
 
 [dependencies.kiss3d]
 git = "https://github.com/sebcrozet/kiss3d"

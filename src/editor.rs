@@ -2,7 +2,7 @@ use std::io::prelude::*;
 use std::io::{BufReader, BufWriter};
 use std::fs::File;
 use mesh_view;
-use truescad_openscad;
+use truescad_luascad;
 use truescad_primitive;
 use object_widget;
 use settings;
@@ -59,27 +59,24 @@ impl Editor {
                                              &code_buffer.get_end_iter(),
                                              true)
                                    .unwrap();
-        let maybe_pgm = truescad_openscad::program(&code_text);
-        if let Ok(pgm) = maybe_pgm {
-            writeln!(msg, "\nparsed : {:?}", pgm).unwrap();
-            let mut env = truescad_openscad::ast::Environment::new();
-            let ast_value = pgm.eval(&mut env, msg);
-            writeln!(msg, "\nexecuted : {:?}", ast_value).unwrap();
-            if let truescad_openscad::ast::Value::Objects(objs) = ast_value {
-                if objs.len() > 0 {
-                    let mut result_union = truescad_primitive::Union::from_vec(objs, 0.).unwrap();
-                    let s = settings::SettingsData::new();
-                    result_union.set_parameters(&truescad_primitive::PrimitiveParameters {
-                        fade_range: s.fade_range,
-                        r_multiplier: s.r_multiplier,
-                    });
-                    return Some(result_union);
-                }
+        match truescad_luascad::eval(&code_text) {
+            Ok(Some(mut o)) => {
+                let s = settings::SettingsData::new();
+                o.set_parameters(&truescad_primitive::PrimitiveParameters {
+                    fade_range: s.fade_range,
+                    r_multiplier: s.r_multiplier,
+                });
+                Some(o)
             }
-        } else {
-            writeln!(msg, "{:?}", maybe_pgm).unwrap()
+            Ok(None) => {
+                writeln!(msg, "\nwarning : no object - did you call build()?").unwrap();
+                None
+            }
+            Err(x) => {
+                writeln!(msg, "\nerror : {:?}", x).unwrap();
+                None
+            }
         }
-        None
     }
     pub fn open(&self, filename: &str) {
         let open_result = File::open(&filename);

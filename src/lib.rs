@@ -19,7 +19,7 @@ extern crate toml;
 extern crate truescad_types;
 extern crate truescad_primitive;
 extern crate truescad_tessellation;
-extern crate truescad_openscad;
+extern crate truescad_luascad;
 
 pub mod render;
 pub mod object_widget;
