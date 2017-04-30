@@ -4,7 +4,7 @@ use truescad_primitive::{Bender, BoundingBox, Cone, Cylinder, Intersection, Obje
                          Twister, Union};
 
 pub struct LObject {
-    o: Box<Object>,
+    pub o: Box<Object>,
 }
 
 
@@ -34,62 +34,57 @@ impl LObject {
     pub fn into_object(&self) -> Box<Object> {
         self.o.clone()
     }
-    pub fn new_cube(x: Float, y: Float, z: Float, smooth: Float) -> LObject {
-        LObject {
-            o: Intersection::from_vec(vec![::truescad_primitive::SlabX::new(x),
-                                           ::truescad_primitive::SlabY::new(y),
-                                           ::truescad_primitive::SlabZ::new(z)],
-                                      smooth)
-                   .unwrap() as Box<Object>,
-        }
-    }
-    pub fn new_sphere(radius: Float) -> LObject {
-        LObject { o: Sphere::new(radius) as Box<Object> }
-    }
-    pub fn new_icylinder(radius: Float) -> LObject {
-        LObject { o: Cylinder::new(radius) as Box<Object> }
-    }
-    pub fn new_icone(slope: Float) -> LObject {
-        LObject { o: Cone::new(slope, 0.) as Box<Object> }
-    }
-    pub fn new_cylinder(length: Float, radius1: Float, radius2: Float, smooth: Float) -> LObject {
-        let mut conie;
-        if radius1 == radius2 {
-            conie = Cylinder::new(radius1) as Box<Object>;
-        } else {
-            let slope = (radius2 - radius1).abs() / length;
-            let offset;
-            if radius1 < radius2 {
-                offset = -radius1 / slope - length * 0.5;
-            } else {
-                offset = radius2 / slope + length * 0.5;
-            }
-            conie = Cone::new(slope, offset) as Box<Object>;
-            let rmax = radius1.max(radius2);
-            let conie_box = BoundingBox::new(Point::new(-rmax, -rmax, NEG_INFINITY),
-                                             Point::new(rmax, rmax, INFINITY));
-            conie.set_bbox(conie_box);
-        }
-        LObject {
-            o: Intersection::from_vec(vec![conie, SlabZ::new(length)],
-                                      smooth)
-                   .unwrap() as Box<Object>,
-        }
-    }
-    pub fn new_bend(o: Box<Object>, width: Float) -> LObject {
-        LObject { o: Bender::new(o, width) as Box<Object> }
-    }
-    pub fn new_twist(o: Box<Object>, height: Float) -> LObject {
-        LObject { o: Twister::new(o, height) as Box<Object> }
-    }
-    pub fn new_union(v: Vec<Box<Object>>, smooth: Float) -> LObject {
-        LObject { o: Union::from_vec(v, smooth).unwrap() as Box<Object> }
-    }
-    pub fn new_intersection(v: Vec<Box<Object>>, smooth: Float) -> LObject {
-        LObject { o: Intersection::from_vec(v, smooth).unwrap() as Box<Object> }
-    }
-    pub fn new_difference(v: Vec<Box<Object>>, smooth: Float) -> LObject {
-        LObject { o: Intersection::difference_from_vec(v, smooth).unwrap() as Box<Object> }
+    pub fn export_factories(lua: &mut hlua::Lua) {
+        lua.set("__new_cube",
+                hlua::function4(|x: Float, y: Float, z: Float, smooth: Float| {
+                    LObject {
+                        o: Intersection::from_vec(vec![::truescad_primitive::SlabX::new(x),
+                                                       ::truescad_primitive::SlabY::new(y),
+                                                       ::truescad_primitive::SlabZ::new(z)],
+                                                  smooth)
+                               .unwrap() as Box<Object>,
+                    }
+                }));
+        lua.set("__new_sphere",
+                hlua::function1(|radius: Float| LObject { o: Sphere::new(radius) as Box<Object> }));
+        lua.set("__new_icylinder",
+                hlua::function1(|radius: Float| {
+                    LObject { o: Cylinder::new(radius) as Box<Object> }
+                }));
+        lua.set("__new_icone",
+                hlua::function1(|slope: Float| LObject { o: Cone::new(slope, 0.) as Box<Object> }));
+        lua.set("__new_cylinder",
+                hlua::function4(|length: Float, radius1: Float, radius2: Float, smooth: Float| {
+                    let mut conie;
+                    if radius1 == radius2 {
+                        conie = Cylinder::new(radius1) as Box<Object>;
+                    } else {
+                        let slope = (radius2 - radius1).abs() / length;
+                        let offset;
+                        if radius1 < radius2 {
+                            offset = -radius1 / slope - length * 0.5;
+                        } else {
+                            offset = radius2 / slope + length * 0.5;
+                        }
+                        conie = Cone::new(slope, offset) as Box<Object>;
+                        let rmax = radius1.max(radius2);
+                        let conie_box = BoundingBox::new(Point::new(-rmax, -rmax, NEG_INFINITY),
+                                                         Point::new(rmax, rmax, INFINITY));
+                        conie.set_bbox(conie_box);
+                    }
+                    LObject {
+                        o: Intersection::from_vec(vec![conie, SlabZ::new(length)], smooth)
+                               .unwrap() as Box<Object>,
+                    }
+                }));
+        lua.set("__new_bend",
+                hlua::function2(|o: &LObject, width: Float| {
+                    LObject { o: Bender::new(o.into_object(), width) as Box<Object> }
+                }));
+        lua.set("__new_twist",
+                hlua::function2(|o: &LObject, height: Float| {
+                    LObject { o: Twister::new(o.into_object(), height) as Box<Object> }
+                }));
     }
     fn translate(&mut self, x: Float, y: Float, z: Float) {
         self.o = self.o.translate(Vector::new(x, y, z));

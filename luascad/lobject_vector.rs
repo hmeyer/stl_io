@@ -1,5 +1,6 @@
 use hlua;
-use truescad_primitive::Object;
+use truescad_primitive::{Intersection, Object, Union};
+use truescad_types::Float;
 use lobject::LObject;
 
 pub struct LObjectVector {
@@ -26,6 +27,29 @@ implement_lua_read!(LObjectVector);
 impl LObjectVector {
     pub fn new(o: Box<Object>) -> LObjectVector {
         LObjectVector { v: vec![o] }
+    }
+    pub fn export_factories(lua: &mut hlua::Lua) {
+        lua.set("__new_object_vector",
+                hlua::function1(|o: &LObject| LObjectVector::new(o.into_object())));
+        lua.set("__new_union",
+                hlua::function2(|o: &LObjectVector, smooth: Float| {
+                    LObject { o: Union::from_vec(o.into_vec(), smooth).unwrap() as Box<Object> }
+                }));
+        lua.set("__new_intersection",
+                hlua::function2(|o: &LObjectVector, smooth: Float| {
+                    LObject {
+                        o: Intersection::from_vec(o.into_vec(), smooth).unwrap() as Box<Object>,
+                    }
+                }));
+        lua.set("__new_difference",
+                hlua::function2(|o: &LObjectVector, smooth: Float| {
+                    LObject {
+                        o: Intersection::difference_from_vec(o.into_vec(),
+                                                             smooth)
+                               .unwrap() as Box<Object>,
+                    }
+                }));
+
     }
     pub fn push(&mut self, o: Box<Object>) {
         self.v.push(o);
