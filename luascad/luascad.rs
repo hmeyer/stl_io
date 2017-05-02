@@ -12,9 +12,7 @@ pub fn eval(script: &str) -> Result<Option<Box<::truescad_primitive::Object>>, L
         LObjectVector::export_factories(&mut lua);
         lua.set("build",
                 hlua::function1(|o: &LObject| result = Some(o.into_object())));
-        if let Err(e) = lua.execute::<()>(script) {
-            return Err(e);
-        }
+        try!(lua.execute::<()>(script));
     }
     return Ok(result);
 }

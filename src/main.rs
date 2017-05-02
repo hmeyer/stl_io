@@ -68,7 +68,7 @@ fn main() {
                                      let mut f = filename_clone1.borrow_mut();
                                      if f.is_empty() {
                                          if let Some(path) = get_save_name(Some(&window_clone2),
-                                                                           "*.scad") {
+                                                                           "*.lua") {
                                              *f = path;
                                              editor_clone3.save(&*f);
                                          }
@@ -78,7 +78,7 @@ fn main() {
                                  },
                                  move || {
                                      if let Some(path) = get_save_name(Some(&window_clone3),
-                                                                       "*.scad") {
+                                                                       "*.lua") {
                                          let mut f = filename_clone2.borrow_mut();
                                          *f = path;
                                          editor_clone4.save(&*f);
@@ -121,7 +121,7 @@ pub fn get_open_name<T: ::gtk::IsA<::gtk::Window>>(parent: Option<&T>) -> Option
     dialog.add_button("Cancel", ResponseType::Cancel.into());
     dialog.set_select_multiple(false);
     let filter = FileFilter::new();
-    filter.add_pattern("*.scad");
+    filter.add_pattern("*.lua");
     dialog.add_filter(&filter);
     let res = dialog.run();
     let maybe_filename = dialog.get_filename();

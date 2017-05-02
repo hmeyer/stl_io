@@ -1,7 +1,7 @@
 use hlua;
 use truescad_types::{Float, INFINITY, NEG_INFINITY, Point, Vector};
 use truescad_primitive::{Bender, BoundingBox, Cone, Cylinder, Intersection, Object, SlabZ, Sphere,
-                         Twister, Union};
+                         Twister};
 
 pub struct LObject {
     pub o: Box<Object>,
@@ -35,7 +35,7 @@ impl LObject {
         self.o.clone()
     }
     pub fn export_factories(lua: &mut hlua::Lua) {
-        lua.set("__new_cube",
+        lua.set("Cube",
                 hlua::function4(|x: Float, y: Float, z: Float, smooth: Float| {
                     LObject {
                         o: Intersection::from_vec(vec![::truescad_primitive::SlabX::new(x),
@@ -45,15 +45,15 @@ impl LObject {
                                .unwrap() as Box<Object>,
                     }
                 }));
-        lua.set("__new_sphere",
+        lua.set("Sphere",
                 hlua::function1(|radius: Float| LObject { o: Sphere::new(radius) as Box<Object> }));
-        lua.set("__new_icylinder",
+        lua.set("iCylinder",
                 hlua::function1(|radius: Float| {
                     LObject { o: Cylinder::new(radius) as Box<Object> }
                 }));
-        lua.set("__new_icone",
+        lua.set("iCone",
                 hlua::function1(|slope: Float| LObject { o: Cone::new(slope, 0.) as Box<Object> }));
-        lua.set("__new_cylinder",
+        lua.set("Cylinder",
                 hlua::function4(|length: Float, radius1: Float, radius2: Float, smooth: Float| {
                     let mut conie;
                     if radius1 == radius2 {
@@ -77,11 +77,11 @@ impl LObject {
                                .unwrap() as Box<Object>,
                     }
                 }));
-        lua.set("__new_bend",
+        lua.set("Bend",
                 hlua::function2(|o: &LObject, width: Float| {
                     LObject { o: Bender::new(o.into_object(), width) as Box<Object> }
                 }));
-        lua.set("__new_twist",
+        lua.set("Twist",
                 hlua::function2(|o: &LObject, height: Float| {
                     LObject { o: Twister::new(o.into_object(), height) as Box<Object> }
                 }));
