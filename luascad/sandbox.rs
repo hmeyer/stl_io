@@ -4,7 +4,8 @@ pub fn set_sandbox_env(lua: &mut hlua::Lua, env_var_name: &str) {
     lua.execute::<()>(&format!("{} = {};", env_var_name, SANDBOX_ENV)).unwrap();
 }
 
-
+// This env is taken from:
+// http://stackoverflow.com/questions/1224708/how-can-i-create-a-secure-lua-sandbox
 const SANDBOX_ENV: &'static str = "{
   ipairs = ipairs,
   next = next,

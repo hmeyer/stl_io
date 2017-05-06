@@ -3,6 +3,9 @@ use truescad_primitive::{Intersection, Object, Union};
 use truescad_types::Float;
 use lobject::LObject;
 
+// Struct to be used to construct boolean Objects.
+// The lua helpers below pump LObjects from Lua Arrays into this LObjectVector, which is then used
+// to construct the boolean Objects.
 pub struct LObjectVector {
     pub v: Vec<Box<Object>>,
 }

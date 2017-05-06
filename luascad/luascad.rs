@@ -19,8 +19,12 @@ pub fn eval(script: &str) -> Result<Option<Box<::truescad_primitive::Object>>, L
             sandbox_env.set("build",
                             hlua::function1(|o: &LObject| result = Some(o.into_object())));
         }
+        // LObjectVector needs access to full lua object and the SANDBOX_ENV_NAME.
         LObjectVector::export_factories(&mut lua, SANDBOX_ENV_NAME);
+
+        // Store the script in the Lua var USER_FUNCTION_NAME.
         try!(lua.checked_set(USER_FUNCTION_NAME, hlua::LuaCode(script)));
+        // Use this script wrapper to execute USER_FUNCTION_NAME with sandbox env.
         try!(lua.execute::<()>(&format!("debug.setupvalue({}, 1, {}); return {}();",
                                         USER_FUNCTION_NAME,
                                         SANDBOX_ENV_NAME,
