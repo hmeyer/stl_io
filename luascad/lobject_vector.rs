@@ -28,7 +28,7 @@ impl LObjectVector {
     pub fn new(o: Box<Object>) -> LObjectVector {
         LObjectVector { v: vec![o] }
     }
-    pub fn export_factories(lua: &mut hlua::Lua) {
+    pub fn export_factories(lua: &mut hlua::Lua, env_name: &str) {
         lua.set("__new_object_vector",
                 hlua::function1(|o: &LObject| LObjectVector::new(o.into_object())));
         lua.set("__new_union",
@@ -49,7 +49,34 @@ impl LObjectVector {
                                .unwrap() as Box<Object>,
                     }
                 }));
-        lua.execute::<()>(GENERATOR_SCRIPT).unwrap();
+        lua.execute::<()>(&format!("
+            function __array_to_ov(lobjects)
+              ov = __new_object_vector(lobjects[1])
+              for i = 2, #lobjects do
+                ov:push(lobjects[i])
+              end
+              return ov
+            end
+
+            function Union(lobjects, smooth)
+              return __new_union(__array_to_ov(lobjects), smooth)
+            end
+
+            function Intersection(lobjects, smooth)
+              return __new_intersection(__array_to_ov(lobjects), smooth)
+            end
+
+            function Difference(lobjects, smooth)
+              return __new_difference(__array_to_ov(lobjects), smooth)
+            end
+
+            {}.Union = Union;
+            {}.Intersection = Intersection;
+            {}.Difference = Difference;",
+                                   env_name,
+                                   env_name,
+                                   env_name))
+           .unwrap();
     }
     pub fn push(&mut self, o: Box<Object>) {
         self.v.push(o);
@@ -58,25 +85,3 @@ impl LObjectVector {
         self.v.clone()
     }
 }
-
-const GENERATOR_SCRIPT: &'static str = "
-    function __array_to_ov(lobjects)
-      ov = __new_object_vector(lobjects[1])
-      for i = 2, #lobjects do
-        ov:push(lobjects[i])
-      end
-      return ov
-    end
-
-    function Union(lobjects, smooth)
-      return __new_union(__array_to_ov(lobjects), smooth)
-    end
-
-    function Intersection(lobjects, smooth)
-      return __new_intersection(__array_to_ov(lobjects), smooth)
-    end
-
-    function Difference(lobjects, smooth)
-      return __new_difference(__array_to_ov(lobjects), smooth)
-    end
-";

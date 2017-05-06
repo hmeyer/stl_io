@@ -34,8 +34,10 @@ impl LObject {
     pub fn into_object(&self) -> Box<Object> {
         self.o.clone()
     }
-    pub fn export_factories(lua: &mut hlua::Lua) {
-        lua.set("Cube",
+    pub fn export_factories<'a, L>(env: &mut hlua::LuaTable<L>)
+        where L: hlua::AsMutLua<'a>
+    {
+        env.set("Box",
                 hlua::function4(|x: Float, y: Float, z: Float, smooth: Float| {
                     LObject {
                         o: Intersection::from_vec(vec![::truescad_primitive::SlabX::new(x),
@@ -45,15 +47,15 @@ impl LObject {
                                .unwrap() as Box<Object>,
                     }
                 }));
-        lua.set("Sphere",
+        env.set("Sphere",
                 hlua::function1(|radius: Float| LObject { o: Sphere::new(radius) as Box<Object> }));
-        lua.set("iCylinder",
+        env.set("iCylinder",
                 hlua::function1(|radius: Float| {
                     LObject { o: Cylinder::new(radius) as Box<Object> }
                 }));
-        lua.set("iCone",
+        env.set("iCone",
                 hlua::function1(|slope: Float| LObject { o: Cone::new(slope, 0.) as Box<Object> }));
-        lua.set("Cylinder",
+        env.set("Cylinder",
                 hlua::function4(|length: Float, radius1: Float, radius2: Float, smooth: Float| {
                     let mut conie;
                     if radius1 == radius2 {
@@ -77,11 +79,11 @@ impl LObject {
                                .unwrap() as Box<Object>,
                     }
                 }));
-        lua.set("Bend",
+        env.set("Bend",
                 hlua::function2(|o: &LObject, width: Float| {
                     LObject { o: Bender::new(o.into_object(), width) as Box<Object> }
                 }));
-        lua.set("Twist",
+        env.set("Twist",
                 hlua::function2(|o: &LObject, height: Float| {
                     LObject { o: Twister::new(o.into_object(), height) as Box<Object> }
                 }));
