@@ -3,6 +3,7 @@ use truescad_types::{Float, INFINITY, NEG_INFINITY, Point, Vector};
 use truescad_primitive::{Bender, BoundingBox, Cone, Cylinder, Intersection, Object, SlabZ, Sphere,
                          Twister};
 
+#[derive(Clone, Debug)]
 pub struct LObject {
     pub o: Box<Object>,
 }
@@ -11,18 +12,27 @@ pub struct LObject {
 // this macro implements the required trait so that we can *push* the object to lua
 // (ie. move it inside lua)
 implement_lua_push!(LObject, |mut metatable| {
-    // we create a `__index` entry in the metatable
-    // when the lua code calls `object:translate()`, it will look for `translate` in there
-    let mut index = metatable.empty_array("__index");
+    {
+        // we create a `__index` entry in the metatable
+        // when the lua code calls `object:translate()`, it will look for `translate` in there
+        let mut index = metatable.empty_array("__index");
 
-    index.set("translate",
-              ::hlua::function4(|o: &mut LObject, x: Float, y: Float, z: Float| {
-                  o.translate(x, y, z)
-              }));
-    index.set("rotate",
-              ::hlua::function4(|o: &mut LObject, x: Float, y: Float, z: Float| o.rotate(x, y, z)));
-    index.set("scale",
-              ::hlua::function4(|o: &mut LObject, x: Float, y: Float, z: Float| o.scale(x, y, z)));
+        index.set("translate",
+                  ::hlua::function4(|o: &mut LObject, x: Float, y: Float, z: Float| {
+                      o.translate(x, y, z)
+                  }));
+        index.set("rotate",
+                  ::hlua::function4(|o: &mut LObject, x: Float, y: Float, z: Float| {
+                      o.rotate(x, y, z)
+                  }));
+        index.set("scale",
+                  ::hlua::function4(|o: &mut LObject, x: Float, y: Float, z: Float| {
+                      o.scale(x, y, z)
+                  }));
+    }
+    // Add __tostring metamethod for printing LObjects.
+    metatable.set("__tostring",
+                  ::hlua::function1(|o: &mut LObject| format!("{:?}", o)));
 
 });
 

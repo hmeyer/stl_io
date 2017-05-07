@@ -11,6 +11,7 @@ const SANDBOX_ENV: &'static str = "{
   next = next,
   pairs = pairs,
   pcall = pcall,
+  print = print,
   tonumber = tonumber,
   tostring = tostring,
   type = type,
