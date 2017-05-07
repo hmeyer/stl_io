@@ -1,10 +1,9 @@
-use rustc_serialize::Encodable;
+use rustc_serialize::{Decodable, Encodable};
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
 use toml::{Decoder, Encoder, Parser, Value};
-use rustc_serialize::Decodable;
 use gtk::{BoxExt, ContainerExt, DialogExt, SpinButton, SpinButtonSignals, WidgetExt};
 
 const SETTINGS_FILENAME: &'static str = ".xplicit";
