@@ -33,7 +33,7 @@ implement_lua_push!(LObject, |mut metatable| {
     }
     // Add __tostring metamethod for printing LObjects.
     metatable.set("__tostring",
-                  ::hlua::function1(|o: &mut LObject| format!("{:?}", o)));
+                  ::hlua::function1(|o: &mut LObject| format!("{:#?}", o)));
 
 });
 
