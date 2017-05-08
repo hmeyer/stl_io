@@ -73,12 +73,10 @@ impl LObjectVector {
               return __new_difference(__array_to_ov(lobjects), smooth)
             end
 
-            {}.Union = Union;
-            {}.Intersection = Intersection;
-            {}.Difference = Difference;",
-                                   env_name,
-                                   env_name,
-                                   env_name))
+            {env}.Union = Union;
+            {env}.Intersection = Intersection;
+            {env}.Difference = Difference;",
+                                   env = env_name))
            .unwrap();
     }
     pub fn push(&mut self, o: Box<Object>) {

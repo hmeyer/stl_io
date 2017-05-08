@@ -1,7 +1,7 @@
 use hlua;
 
 pub fn set_sandbox_env(lua: &mut hlua::Lua, env_var_name: &str) {
-    lua.execute::<()>(&format!("{} = {};", env_var_name, SANDBOX_ENV)).unwrap();
+    lua.execute::<()>(&format!("{env} = {val};", env = env_var_name, val = SANDBOX_ENV)).unwrap();
 }
 
 // This env is taken from:
