@@ -29,6 +29,7 @@ implement_lua_push!(LObject, |mut metatable| {
                   ::hlua::function4(|o: &mut LObject, x: Float, y: Float, z: Float| {
                       o.scale(x, y, z)
                   }));
+        index.set("clone", ::hlua::function1(|o: &mut LObject| o.clone()));
     }
     // Add __tostring metamethod for printing LObjects.
     metatable.set("__tostring",
