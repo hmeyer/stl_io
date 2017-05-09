@@ -1,3 +1,6 @@
+dist: trusty
+sudo: false
+
 language: rust
 rust:
   - stable
@@ -10,4 +13,4 @@ matrix:
 
 before_install:
   - sudo apt-get -qq update
-  - sudo apt-get install -qq libgtk-3-dev libglfw2 cmake
+  - sudo apt-get install -qq libgtk-3-dev libglfw2
