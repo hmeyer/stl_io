@@ -49,7 +49,11 @@ impl LObject {
         where L: hlua::AsMutLua<'a>
     {
         env.set("Box",
-                hlua::function4(|x: Float, y: Float, z: Float, smooth: Float| {
+                hlua::function4(|x: Float, y: Float, z: Float, smooth_lua: hlua::AnyLuaValue| {
+                    let mut smooth = 0.;
+                    if let hlua::AnyLuaValue::LuaNumber(v) = smooth_lua {
+                        smooth = v;
+                    }
                     LObject {
                         o: Intersection::from_vec(vec![::truescad_primitive::SlabX::new(x),
                                                        ::truescad_primitive::SlabY::new(y),
@@ -67,7 +71,18 @@ impl LObject {
         env.set("iCone",
                 hlua::function1(|slope: Float| LObject { o: Cone::new(slope, 0.) as Box<Object> }));
         env.set("Cylinder",
-                hlua::function4(|length: Float, radius1: Float, radius2: Float, smooth: Float| {
+                hlua::function4(|length: Float,
+                                 radius1: Float,
+                                 radius2_lua: hlua::AnyLuaValue,
+                                 smooth_lua: hlua::AnyLuaValue| {
+                    let mut radius2 = radius1;
+                    let mut smooth = 0.;
+                    if let hlua::AnyLuaValue::LuaNumber(v) = radius2_lua {
+                        radius2 = v;
+                        if let hlua::AnyLuaValue::LuaNumber(v) = smooth_lua {
+                            smooth = v;
+                        }
+                    }
                     let mut conie;
                     if radius1 == radius2 {
                         conie = Cylinder::new(radius1) as Box<Object>;

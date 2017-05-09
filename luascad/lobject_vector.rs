@@ -62,14 +62,17 @@ impl LObjectVector {
             end
 
             function Union(lobjects, smooth)
+              smooth = smooth or 0
               return __new_union(__array_to_ov(lobjects), smooth)
             end
 
             function Intersection(lobjects, smooth)
+              smooth = smooth or 0
               return __new_intersection(__array_to_ov(lobjects), smooth)
             end
 
             function Difference(lobjects, smooth)
+              smooth = smooth or 0
               return __new_difference(__array_to_ov(lobjects), smooth)
             end
 
