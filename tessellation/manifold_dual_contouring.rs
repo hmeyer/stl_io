@@ -82,14 +82,16 @@ const QUADS: [[Edge; 4]; 3] = [[Edge::A, Edge::G, Edge::J, Edge::D],
                                [Edge::B, Edge::E, Edge::K, Edge::H],
                                [Edge::C, Edge::I, Edge::L, Edge::F]];
 
-const OUTSIDE_EDGES_PER_CORNER: [BitSet; 8] = [BitSet::from_3bits(0, 1, 2),
-                                               BitSet::from_3bits(0, 4, 5),
-                                               BitSet::from_3bits(1, 3, 8),
-                                               BitSet::from_3bits(3, 4, 11),
-                                               BitSet::from_3bits(2, 6, 7),
-                                               BitSet::from_3bits(5, 6, 10),
-                                               BitSet::from_3bits(7, 8, 9),
-                                               BitSet::from_3bits(9, 10, 11)];
+lazy_static! {
+    static ref OUTSIDE_EDGES_PER_CORNER: [BitSet; 8] = [BitSet::from_3bits(0, 1, 2),
+                                                        BitSet::from_3bits(0, 4, 5),
+                                                        BitSet::from_3bits(1, 3, 8),
+                                                        BitSet::from_3bits(3, 4, 11),
+                                                        BitSet::from_3bits(2, 6, 7),
+                                                        BitSet::from_3bits(5, 6, 10),
+                                                        BitSet::from_3bits(7, 8, 9),
+                                                        BitSet::from_3bits(9, 10, 11)];
+}
 
 #[derive(Debug)]
 enum DualContouringError {

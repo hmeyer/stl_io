@@ -16,22 +16,24 @@ use bitset::BitSet;
 //  o-------0-------+         +-- higher indexes in x ---->
 
 // Face order X0, X1, Y0, Y1, Z0, Z1
-pub const EDGES_ON_FACE: [BitSet; 6] = [BitSet::from_4bits(1, 2, 7, 8),
-                                        BitSet::from_4bits(4, 5, 10, 11),
-                                        BitSet::from_4bits(0, 2, 5, 6),
-                                        BitSet::from_4bits(3, 8, 9, 11),
-                                        BitSet::from_4bits(0, 1, 3, 4),
-                                        BitSet::from_4bits(6, 7, 9, 10)];
+lazy_static! {
+    pub static ref EDGES_ON_FACE: [BitSet; 6] = [BitSet::from_4bits(1, 2, 7, 8),
+                                                 BitSet::from_4bits(4, 5, 10, 11),
+                                                 BitSet::from_4bits(0, 2, 5, 6),
+                                                 BitSet::from_4bits(3, 8, 9, 11),
+                                                 BitSet::from_4bits(0, 1, 3, 4),
+                                                 BitSet::from_4bits(6, 7, 9, 10)];
+}
 
 fn egdes_on_neighbor(neighbor_index: usize, edges: BitSet) -> BitSet {
     let bits = edges.intersect(EDGES_ON_FACE[neighbor_index]).as_u32();
     match neighbor_index {
-        0 => BitSet::new(bits << 3),
-        1 => BitSet::new(bits >> 3),
-        2 => BitSet::new((bits & 0b1000001) << 3 | (bits & 0b100100) << 6),
-        3 => BitSet::new((bits & 0b1000001000) >> 3 | (bits & 0b100100000000) >> 6),
-        4 => BitSet::new(bits << 6),
-        5 => BitSet::new(bits >> 6),
+        0 => BitSet(bits << 3),
+        1 => BitSet(bits >> 3),
+        2 => BitSet((bits & 0b1000001) << 3 | (bits & 0b100100) << 6),
+        3 => BitSet((bits & 0b1000001000) >> 3 | (bits & 0b100100000000) >> 6),
+        4 => BitSet(bits << 6),
+        5 => BitSet(bits >> 6),
         x => panic!("Invalid neighbor index: {}", x),
     }
 }

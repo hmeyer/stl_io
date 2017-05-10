@@ -4,16 +4,13 @@ use std::fmt;
 pub struct BitSet(pub u32);
 
 impl BitSet {
-    pub const fn zero() -> BitSet {
+    pub fn zero() -> BitSet {
         BitSet(0)
     }
-    pub const fn new(val: u32) -> BitSet {
-        BitSet(val)
-    }
-    pub const fn from_3bits(b0: usize, b1: usize, b2: usize) -> BitSet {
+    pub fn from_3bits(b0: usize, b1: usize, b2: usize) -> BitSet {
         BitSet(1 << b0 | 1 << b1 | 1 << b2)
     }
-    pub const fn from_4bits(b0: usize, b1: usize, b2: usize, b3: usize) -> BitSet {
+    pub fn from_4bits(b0: usize, b1: usize, b2: usize, b3: usize) -> BitSet {
         BitSet(1 << b0 | 1 << b1 | 1 << b2 | 1 << b3)
     }
     pub fn set(&mut self, index: usize) {
