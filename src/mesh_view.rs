@@ -1,21 +1,42 @@
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::mem;
+use std::sync::{Arc, Mutex, ONCE_INIT, Once};
+use std::rc::Rc;
 use nalgebra as na;
 use kiss3d::window::Window;
 use kiss3d::light::Light;
 use kiss3d::resource::Mesh;
 use truescad_tessellation;
-use std::sync::{ONCE_INIT, Once};
+
+#[derive(Clone)]
+struct SingletonWindow {
+    // Since we will be used in many threads, we need to protect
+    // concurrent access
+    inner: Arc<Mutex<Window>>,
+}
+
+fn singleton_window() -> SingletonWindow {
+    // Initialize it to a null value
+    static mut SINGLETON: *const SingletonWindow = 0 as *const SingletonWindow;
+    static ONCE: Once = ONCE_INIT;
+
+    unsafe {
+        ONCE.call_once(|| {
+            // Make it
+            let window = SingletonWindow { inner: Arc::new(Mutex::new(Window::new("MeshView"))) };
+
+            // Put it in the heap so it can outlive this call
+            SINGLETON = mem::transmute(Box::new(window));
+        });
+
+        // Now we give out a copy of the data that is safe to use concurrently.
+        (*SINGLETON).clone()
+    }
+}
 
 pub fn show_mesh(mesh: &truescad_tessellation::Mesh) {
-    static mut KISS3D_SINGLETON: Option<Window> = None;
-    static INIT: Once = ONCE_INIT;
-    let window = unsafe {
-        INIT.call_once(|| {
-            KISS3D_SINGLETON = Some(Window::new("MeshView"));
-        });
-        KISS3D_SINGLETON.as_mut().unwrap()
-    };
+    let window_mutex = singleton_window();
+    let mut window = window_mutex.inner.lock().unwrap();
     window.glfw_window_mut().set_should_close(false);
     window.glfw_window_mut().restore();
 

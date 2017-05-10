@@ -1,5 +1,3 @@
-#![feature(drop_types_in_const)]
-
 // #![deny(missing_docs,
 //         missing_debug_implementations, missing_copy_implementations,
 //         trivial_casts, trivial_numeric_casts,
