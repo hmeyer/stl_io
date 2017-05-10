@@ -3,6 +3,7 @@ sudo: required
 
 language: rust
 rust:
+  - 1.13.0-nightly
   - stable
   - beta
   - nightly
