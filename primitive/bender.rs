@@ -3,10 +3,6 @@ use bounding_box::BoundingBox;
 use truescad_types::{Float, PI, Point, Vector};
 use cgmath::{InnerSpace, Rotation, Rotation2};
 
-type Point2 = ::cgmath::Point2<Float>;
-type Vector2 = ::cgmath::Vector2<Float>;
-
-
 #[derive(Clone, Debug)]
 pub struct Bender {
     object: Box<Object>,
