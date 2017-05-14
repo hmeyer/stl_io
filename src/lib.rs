@@ -12,7 +12,9 @@ extern crate cgmath;
 extern crate kiss3d;
 extern crate nalgebra;
 extern crate rayon;
-extern crate rustc_serialize;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde;
 extern crate toml;
 extern crate truescad_types;
 extern crate truescad_primitive;

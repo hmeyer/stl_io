@@ -12,8 +12,9 @@ cairo-rs = "0.1.0"#{ git = "https://github.com/gtk-rs/cairo.git" }#"^0"
 cgmath = "0.12.0"
 nalgebra = "0.9.*"
 rayon = "0.7.*"
-rustc-serialize = "0.3"
-toml = "0.2"
+serde = "1.0"
+serde_derive = "1.0"
+toml = "0.4"
 truescad_tessellation = { path = "tessellation", version = "0.0.*" }
 truescad_types = { path = "types", version = "0.0.*" }
 truescad_primitive = { path = "primitive", version = "0.0.*" }

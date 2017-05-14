@@ -1,12 +1,10 @@
-use rustc_serialize::{Decodable, Encodable};
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
-use toml::{Decoder, Encoder, Parser, Value};
 use gtk::{BoxExt, ContainerExt, DialogExt, SpinButton, SpinButtonSignals, WidgetExt};
 
-const SETTINGS_FILENAME: &'static str = ".xplicit";
+const SETTINGS_FILENAME: &'static str = ".truescad";
 
 macro_rules! add_setting {
     ($field :ident, $data :expr) => {{
@@ -49,7 +47,7 @@ pub fn show_settings_dialog<T: ::gtk::IsA<::gtk::Window>>(parent: Option<&T>) {
     dialog.destroy();
 }
 
-#[derive(RustcDecodable, RustcEncodable)]
+#[derive(Serialize, Deserialize)]
 pub struct SettingsData {
     pub tessellation_resolution: f64,
     pub tessellation_error: f64,
@@ -57,28 +55,18 @@ pub struct SettingsData {
     pub r_multiplier: f64,
 }
 
-fn join<S: ToString>(l: Vec<S>, sep: &str) -> String {
-    l.iter().fold("".to_string(), |a, b| {
-        if a.len() > 0 {
-            a + sep
-        } else {
-            a
-        }
-    } + &b.to_string())
-}
-
 #[derive(Debug)]
 enum SettingsError {
     Io(::std::io::Error),
-    Dec(::toml::DecodeError),
-    Enc(::toml::Error)
+    Dec(::toml::de::Error),
+    Enc(::toml::ser::Error),
 }
 
 impl SettingsData {
     fn path() -> Result<::std::path::PathBuf, SettingsError> {
         let mut path = match ::std::env::home_dir() {
             Some(p) => p,
-            None => try!(::std::env::current_dir().map_err(SettingsError::Io))
+            None => try!(::std::env::current_dir().map_err(SettingsError::Io)),
         };
         path.push(SETTINGS_FILENAME);
         Ok(path)
@@ -89,49 +77,35 @@ impl SettingsData {
         let mut reader = BufReader::new(f);
         let mut buffer = String::new();
         let _ = try!(reader.read_to_string(&mut buffer).map_err(SettingsError::Io));
-        let mut parser = Parser::new(&buffer);
-        match parser.parse() {
-            Some(value) => {
-                let mut decoder = Decoder::new(Value::Table(value));
-                let settings = try!(Decodable::decode(&mut decoder).map_err(SettingsError::Dec));
-                Ok(settings)
-            },
-            None => {
-                Err(SettingsError::Io(::std::io::Error::new(::std::io::ErrorKind::InvalidInput,
-                                          join(parser.errors
-                                                     .iter()
-                                                     .map(|e| format!("{}", e))
-                                                     .collect(),
-                                               ", "))))
-            }
-        }
+        return ::toml::from_str(&buffer).map_err(SettingsError::Dec);
     }
     pub fn new() -> SettingsData {
         match SettingsData::get_toml() {
             Ok(c) => c,
             Err(e) => {
                 println!("error reading settings: {:?}", e);
-                SettingsData { tessellation_resolution: 0.12,
-                               tessellation_error: 2.,
-                               fade_range: 0.1,
-                               r_multiplier: 1.0 }
+                SettingsData {
+                    tessellation_resolution: 0.12,
+                    tessellation_error: 2.,
+                    fade_range: 0.1,
+                    r_multiplier: 1.0,
+                }
             }
         }
     }
 
     fn put_toml(&self) -> Result<(), SettingsError> {
-        let mut e = Encoder::new();
-        try!(self.encode(&mut e).map_err(SettingsError::Enc));
+        let toml_str = try!(::toml::to_string(self).map_err(SettingsError::Enc));
         let path = try!(SettingsData::path());
         let file = try!(File::create(path).map_err(SettingsError::Io));
         let mut writer = BufWriter::new(file);
-        try!(writer.write(format!("{}", Value::Table(e.toml)).as_bytes()).map_err(SettingsError::Io));
+        try!(writer.write(toml_str.as_bytes()).map_err(SettingsError::Io));
         Ok(())
     }
 
     pub fn save(&self) {
         match self.put_toml() {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(e) => println!("error writing settings: {:?}", e),
         }
     }
