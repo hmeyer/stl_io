@@ -1,4 +1,4 @@
-target/
+**/target/
 ./xplicit.stl
 ./xplicit.scad
 *.stl

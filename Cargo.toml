@@ -25,5 +25,5 @@ kiss3d = "0.8"
 gtk_3_10 = []
 gtk_3_14 = ["gtk_3_10"]
 
-#[profile.release]
-#lto = true
+# [profile.release]
+# lto = true
