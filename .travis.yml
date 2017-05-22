@@ -34,6 +34,7 @@ addons:
     - libbfd-dev # required for `--verify`
     - libiberty-dev
 after_success: |
+  cd primitive; cargo bench; cd ..
   wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
   tar xzf master.tar.gz && mkdir kcov-master/build && cd kcov-master/build &&
   cmake -DCMAKE_INSTALL_PREFIX:PATH=$LOCAL .. && make &&
