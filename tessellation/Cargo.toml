@@ -18,3 +18,10 @@ lazy_static = "0.2.8"
 
 truescad_types = { path = "../types", version = "0.0.*" }
 truescad_primitive = { path = "../primitive", version = "0.0.*" }
+
+bencher = "0.1.*"
+
+
+[[bench]]
+name = "tessellation"
+harness = false

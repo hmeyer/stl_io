@@ -105,64 +105,42 @@ mod tests {
     fn merge() {
         assert_eq!(super::BitSet::zero().merge(super::BitSet::zero()),
                    super::BitSet::zero());
-        assert_eq!(super::BitSet::new(0b01).merge(super::BitSet::new(0b00)),
-                   super::BitSet::new(0b01));
-        assert_eq!(super::BitSet::new(0b00).merge(super::BitSet::new(0b10)),
-                   super::BitSet::new(0b10));
-        assert_eq!(super::BitSet::new(0b01).merge(super::BitSet::new(0b10)),
-                   super::BitSet::new(0b11));
-        assert_eq!(super::BitSet::new(0b11).merge(super::BitSet::new(0b11)),
-                   super::BitSet::new(0b11));
+        assert_eq!(super::BitSet(0b01).merge(super::BitSet(0b00)),
+                   super::BitSet(0b01));
+        assert_eq!(super::BitSet(0b00).merge(super::BitSet(0b10)),
+                   super::BitSet(0b10));
+        assert_eq!(super::BitSet(0b01).merge(super::BitSet(0b10)),
+                   super::BitSet(0b11));
+        assert_eq!(super::BitSet(0b11).merge(super::BitSet(0b11)),
+                   super::BitSet(0b11));
     }
 
     #[test]
     fn intersect() {
         assert_eq!(super::BitSet::zero().intersect(super::BitSet::zero()),
                    super::BitSet::zero());
-        assert_eq!(super::BitSet::new(0b01).intersect(super::BitSet::new(0b00)),
-                   super::BitSet::new(0b00));
-        assert_eq!(super::BitSet::new(0b00).intersect(super::BitSet::new(0b10)),
-                   super::BitSet::new(0b00));
-        assert_eq!(super::BitSet::new(0b01).intersect(super::BitSet::new(0b10)),
-                   super::BitSet::new(0b00));
-        assert_eq!(super::BitSet::new(0b11).intersect(super::BitSet::new(0b11)),
-                   super::BitSet::new(0b11));
+        assert_eq!(super::BitSet(0b01).intersect(super::BitSet(0b00)),
+                   super::BitSet(0b00));
+        assert_eq!(super::BitSet(0b00).intersect(super::BitSet(0b10)),
+                   super::BitSet(0b00));
+        assert_eq!(super::BitSet(0b01).intersect(super::BitSet(0b10)),
+                   super::BitSet(0b00));
+        assert_eq!(super::BitSet(0b11).intersect(super::BitSet(0b11)),
+                   super::BitSet(0b11));
     }
 
     #[test]
     fn empty() {
-        assert_eq!(super::BitSet::new(0b00000000).empty(), true);
-        assert_eq!(super::BitSet::new(0b10000000).empty(), false);
-        assert_eq!(super::BitSet::new(0b01001100).empty(), false);
-        assert_eq!(super::BitSet::new(0b11001101).empty(), false);
-        assert_eq!(super::BitSet::new(0b11111111).empty(), false);
+        assert_eq!(super::BitSet(0b00000000).empty(), true);
+        assert_eq!(super::BitSet(0b10000000).empty(), false);
+        assert_eq!(super::BitSet(0b01001100).empty(), false);
+        assert_eq!(super::BitSet(0b11001101).empty(), false);
+        assert_eq!(super::BitSet(0b11111111).empty(), false);
     }
 
-    #[test]
-    fn size() {
-        assert_eq!(super::BitSet::new(0b00000000).size(), 0);
-        assert_eq!(super::BitSet::new(0b10000000).size(), 1);
-        assert_eq!(super::BitSet::new(0b01001100).size(), 3);
-        assert_eq!(super::BitSet::new(0b11001101).size(), 5);
-        assert_eq!(super::BitSet::new(0b11111111).size(), 8);
-    }
-
-    #[test]
-    fn neg() {
-        assert_eq!(super::BitSet::new(0x12345678).neg(),
-                   super::BitSet::new(!0x12345678));
-    }
-    #[test]
-    fn lowest() {
-        assert_eq!(super::BitSet::new(0b00000000).lowest(), None);
-        assert_eq!(super::BitSet::new(0b10000000).lowest(), Some(7));
-        assert_eq!(super::BitSet::new(0b01001100).lowest(), Some(2));
-        assert_eq!(super::BitSet::new(0b11001101).lowest(), Some(0));
-        assert_eq!(super::BitSet::new(0b11111111).lowest(), Some(0));
-    }
     #[test]
     fn iterate() {
-        let mut b = super::BitSet::new(0b01001010);
+        let mut b = super::BitSet(0b01001010);
         assert_eq!(b.next(), Some(1));
         assert_eq!(b.next(), Some(3));
         assert_eq!(b.next(), Some(6));

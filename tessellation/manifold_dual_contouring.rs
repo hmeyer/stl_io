@@ -560,12 +560,9 @@ impl ManifoldDualContouring {
             if next.len() == self.vertex_octtree.last().unwrap().len() {
                 break;
             }
-            println!("layer #{} {} vertices {:}",
-                     self.vertex_octtree.len(),
-                     next.len(),
-                     t.elapsed());
             self.vertex_octtree.push(next);
         }
+        println!("subsampled octtree {:}", t.elapsed());
 
         let num_qefs_solved = self.solve_qefs();
 

@@ -90,7 +90,7 @@ mod tests {
     #[test]
     fn neighbor() {
         let v = VertexIndex {
-            edges: BitSet::new(0xfff),
+            edges: BitSet(0xfff),
             index: [17, 35, 8],
         };
         for dim in 0..3 {

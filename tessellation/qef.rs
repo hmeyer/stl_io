@@ -126,9 +126,8 @@ impl Qef {
 
 #[cfg(test)]
 mod tests {
-    use super::Qef;
-    use xplicit_primitive::BoundingBox;
-    use xplicit_types::{Point, Vector};
+    use super::{Qef, BoundingBox, Point};
+    use super::super::Vector;
     use super::super::Plane;
     use na;
     use na::{ApproxEq, Norm};
