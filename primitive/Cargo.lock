@@ -2,6 +2,7 @@
 name = "truescad_primitive"
 version = "0.0.1"
 dependencies = [
+ "bencher 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "cgmath 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "truescad_types 0.0.1",
 ]
@@ -9,6 +10,11 @@ dependencies = [
 [[package]]
 name = "approx"
 version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "bencher"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -54,6 +60,7 @@ dependencies = [
 
 [metadata]
 "checksum approx 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "08abcc3b4e9339e33a3d0a5ed15d84a687350c05689d825e0f6655eef9e76a94"
+"checksum bencher 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "1938914a389928f8c2cc0aec747380e0b2b854094710e7d03f8eb3762aa7f7a2"
 "checksum cgmath 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)" = "232472604dbad61c384edfc4d833315d487894826856836b7227b37fe3abe02b"
 "checksum libc 0.2.22 (registry+https://github.com/rust-lang/crates.io-index)" = "babb8281da88cba992fa1f4ddec7d63ed96280a1a53ec9b919fd37b53d71e502"
 "checksum num-traits 0.1.37 (registry+https://github.com/rust-lang/crates.io-index)" = "e1cbfa3781f3fe73dc05321bed52a06d2d491eaa764c52335cf4399f046ece99"
