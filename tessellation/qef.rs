@@ -3,8 +3,6 @@ use truescad_primitive::BoundingBox;
 use Plane;
 use cgmath::{EuclideanSpace, InnerSpace};
 use na;
-use na::Inverse;
-
 
 // Quadratic error function
 
@@ -59,10 +57,11 @@ impl Qef {
         let m = &self.ata;
         let ma = na::Matrix3::new(m[0], m[1], m[2], m[1], m[3], m[4], m[2], m[4], m[5]);
         let mean = self.sum / self.num as Float;
-        if let Some(inv) = ma.inverse() {
-            let b_rel_mean = self.atb - ma * mean;
-            self.solution = b_rel_mean * inv + mean;
+        if let Some(inv) = ma.try_inverse() {
+            let b_rel_mean : na::Vector3<Float> = self.atb - ma * mean;
+            self.solution =  inv * b_rel_mean + mean;
         }
+
         // If solution is not contained in cell bbox, start a binary search for a proper solution.
         // NAN-solution will also not be contained in the bbox.
         if !self.bbox.contains(Point::new(self.solution.x, self.solution.y, self.solution.z)) {

@@ -9,7 +9,7 @@ path = "lib.rs"
 
 [dependencies]
 cgmath = "0.12.0"
-nalgebra = "0.10"
+nalgebra = "0.11"
 rand = "0.3"
 time = "0.1"
 byteorder = "0.5"

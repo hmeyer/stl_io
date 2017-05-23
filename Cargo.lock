@@ -513,16 +513,6 @@ dependencies = [
 
 [[package]]
 name = "nalgebra"
-version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "num 0.1.36 (registry+https://github.com/rust-lang/crates.io-index)",
- "rand 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
- "rustc-serialize 0.3.19 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "nalgebra"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
@@ -821,10 +811,11 @@ dependencies = [
 name = "truescad_tessellation"
 version = "0.0.1"
 dependencies = [
+ "bencher 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "byteorder 0.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "cgmath 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "nalgebra 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "nalgebra 0.11.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "rayon 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.35 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -923,7 +914,6 @@ dependencies = [
 "checksum lua52-sys 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "82e9a651ce2bf8cd1ab278740442a4b6b7e03cd212621cadb309eeeda7dec0be"
 "checksum lzw 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "cba82344432e19bcb98fa21c5a6e78f42a06252b4744e2e9162ae98b3a01ee92"
 "checksum miniz-sys 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)" = "9d1f4d337a01c32e1f2122510fed46393d53ca35a7f429cb0450abaedfa3ed54"
-"checksum nalgebra 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)" = "f754f64bd1a5f5899285c2e182df7ddebcecf466369663be2277ca01b6da5d5d"
 "checksum nalgebra 0.11.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7521e0d6d09ae3df9cc0b39af462a7df85c19936249b31ee5ded7f45e4571fee"
 "checksum ncollide_math 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "85ddfe8f3f3e6e511c71a154fc8e546a892b38841ffed3f00b7b8cf8f6211301"
 "checksum ncollide_procedural 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "870cdf10cd3e23419a1a4b26d59aa47019ee933048fd921a35e38ae6f1458e4a"
