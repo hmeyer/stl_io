@@ -129,7 +129,6 @@ mod tests {
     use super::super::Vector;
     use super::super::Plane;
     use na;
-    use na::{ApproxEq, Norm};
     use cgmath::InnerSpace;
 
     #[test]
@@ -170,7 +169,7 @@ mod tests {
                                  }],
                                BoundingBox::new(Point::new(0., 0., 0.), Point::new(1., 1., 1.)));
         qef.solve();
-        assert!(qef.solution.approx_eq(&na::Vector3::new(0., 0., 0.)));
+        assert!(relative_eq!(qef.solution, &na::Vector3::new(0., 0., 0.)));
     }
 
     #[test]
@@ -190,7 +189,7 @@ mod tests {
                                BoundingBox::new(Point::new(0., 0., 0.), Point::new(1., 2., 3.)));
         qef.solve();
         let expected_solution = na::Vector3::new(1., 2., 3.);
-        assert!(qef.solution.approx_eq(&expected_solution),
+        assert!(relative_eq!(qef.solution, &expected_solution),
                 "{} != {}",
                 qef.solution,
                 expected_solution);

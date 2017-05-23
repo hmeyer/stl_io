@@ -2,6 +2,7 @@
 name = "truescad_tessellation"
 version = "0.0.1"
 dependencies = [
+ "approx 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "bencher 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "byteorder 0.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "cgmath 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",

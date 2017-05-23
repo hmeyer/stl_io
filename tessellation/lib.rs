@@ -31,3 +31,7 @@ mod cell_configs;
 mod stl_writer;
 pub use self::stl_writer::write_stl;
 mod qef;
+
+#[cfg(test)]
+#[macro_use]
+extern crate approx;

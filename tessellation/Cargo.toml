@@ -15,6 +15,7 @@ time = "0.1"
 byteorder = "0.5"
 rayon = "0.7.*"
 lazy_static = "0.2.8"
+approx = "0.1"
 
 truescad_types = { path = "../types", version = "0.0.*" }
 truescad_primitive = { path = "../primitive", version = "0.0.*" }
