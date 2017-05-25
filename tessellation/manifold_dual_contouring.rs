@@ -484,6 +484,37 @@ impl ManifoldDualContouring {
         value_grid.shrink_to_fit();
     }
 
+    // Store crossing positions of edges in edge_grid
+    fn generate_edge_grid(&mut self) {
+        let mut edge_grid = self.edge_grid.borrow_mut();
+        for (&point_idx, &point_value) in &self.value_grid {
+            for &edge in [Edge::A, Edge::B, Edge::C].iter() {
+                let mut adjacent_idx = point_idx.clone();
+                adjacent_idx[edge as usize] += 1;
+                if let Some(&adjacent_value) = self.value_grid
+                                                   .get(&adjacent_idx) {
+                    let point_pos = self.origin +
+                                    self.res *
+                                    Vector::new(point_idx[0] as Float,
+                                                point_idx[1] as Float,
+                                                point_idx[2] as Float);
+                    let mut adjacent_pos = point_pos;
+                    adjacent_pos[edge as usize] += self.res;
+                    if let Some(plane) = self.find_zero(point_pos,
+                                                        point_value,
+                                                        adjacent_pos,
+                                                        adjacent_value) {
+                        edge_grid.insert(EdgeIndex {
+                                             edge: edge,
+                                             index: point_idx,
+                                         },
+                                         plane);
+                    }
+                }
+            }
+        }
+    }
+
     // This method does the main work of tessellation.
     // It may fail, if the value in one of the grid cells yields exactly zero.
     fn try_tessellate(&mut self) -> Result<Mesh, DualContouringError> {
@@ -513,39 +544,11 @@ impl ManifoldDualContouring {
                  total_cells,
                  t.elapsed());
 
-        // Store crossing positions of edges in edge_grid
-        {
-            let mut edge_grid = self.edge_grid.borrow_mut();
-            for (&point_idx, &point_value) in &self.value_grid {
-                for &edge in [Edge::A, Edge::B, Edge::C].iter() {
-                    let mut adjacent_idx = point_idx.clone();
-                    adjacent_idx[edge as usize] += 1;
-                    if let Some(&adjacent_value) = self.value_grid
-                                                       .get(&adjacent_idx) {
-                        let point_pos = self.origin +
-                                        res *
-                                        Vector::new(point_idx[0] as Float,
-                                                    point_idx[1] as Float,
-                                                    point_idx[2] as Float);
-                        let mut adjacent_pos = point_pos;
-                        adjacent_pos[edge as usize] += res;
-                        if let Some(plane) = self.find_zero(point_pos,
-                                                            point_value,
-                                                            adjacent_pos,
-                                                            adjacent_value) {
-                            edge_grid.insert(EdgeIndex {
-                                                 edge: edge,
-                                                 index: point_idx,
-                                             },
-                                             plane);
-                        }
-                    }
-                }
-            }
-            println!("generated edge_grid with {} edges: {:}",
-                     edge_grid.len(),
-                     t.elapsed());
-        }
+        self.generate_edge_grid();
+
+        println!("generated edge_grid with {} edges: {:}",
+                 self.edge_grid.borrow().len(),
+                 t.elapsed());
 
         let (leafs, index_map) = self.generate_leaf_vertices();
         self.vertex_index_map = index_map;
