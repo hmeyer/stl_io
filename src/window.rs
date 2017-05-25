@@ -8,6 +8,20 @@ use truescad_tessellation::write_stl;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+macro_rules! clone {
+    ($($n:ident),+; || $body:block) => (
+        {
+            $( let $n = $n.clone(); )+
+            move || { $body }
+        }
+    );
+    ($($n:ident),+; |$($p:ident),+| $body:block) => (
+        {
+            $( let $n = $n.clone(); )+
+            move |$($p),+| { $body }
+        }
+    );
+}
 
 pub fn create_window() -> ::gtk::Window {
     let window = ::gtk::Window::new(::gtk::WindowType::Toplevel);
@@ -32,61 +46,50 @@ pub fn create_window() -> ::gtk::Window {
     h_pane.add2(&xw.drawing_area);
     h_pane.add1(&editor.widget);
 
-    let editor_clone1 = editor.clone();
-    let editor_clone2 = editor.clone();
-    let editor_clone3 = editor.clone();
-    let editor_clone4 = editor.clone();
-    let editor_clone5 = editor.clone();
-    let window_clone1 = window.clone();
-    let window_clone2 = window.clone();
-    let window_clone3 = window.clone();
-    let window_clone4 = window.clone();
-    let window_clone5 = window.clone();
     let filename = Rc::new(RefCell::new(String::new()));
-    let filename_clone1 = filename.clone();
-    let filename_clone2 = filename.clone();
-    let menu = menu::create_menu(move || {
-                                     editor_clone1.tessellate();
-                                 },
-                                 move || {
-                                     if let Some(path_str) = get_open_name(Some(&window_clone1)) {
+
+    let menu = menu::create_menu(clone!(editor; || {
+                                     editor.tessellate();
+                                 }),
+                                 clone!(window, editor, filename; || {
+                                     if let Some(path_str) = get_open_name(Some(&window)) {
                                          let mut f = filename.borrow_mut();
                                          *f = path_str;
-                                         editor_clone2.open(&*f);
+                                         editor.open(&*f);
                                      }
-                                 },
-                                 move || {
-                                     let mut f = filename_clone1.borrow_mut();
+                                 }),
+                                 clone!(window, editor, filename; || {
+                                     let mut f = filename.borrow_mut();
                                      if f.is_empty() {
-                                         if let Some(path) = get_save_name(Some(&window_clone2),
+                                         if let Some(path) = get_save_name(Some(&window),
                                                                            "*.lua") {
                                              *f = path;
-                                             editor_clone3.save(&*f);
+                                             editor.save(&*f);
                                          }
                                      } else {
-                                         editor_clone3.save(&*f);
+                                         editor.save(&*f);
                                      }
-                                 },
-                                 move || {
-                                     if let Some(path) = get_save_name(Some(&window_clone3),
+                                 }),
+                                 clone!(window, editor, filename; || {
+                                     if let Some(path) = get_save_name(Some(&window),
                                                                        "*.lua") {
-                                         let mut f = filename_clone2.borrow_mut();
+                                         let mut f = filename.borrow_mut();
                                          *f = path;
-                                         editor_clone4.save(&*f);
+                                         editor.save(&*f);
                                      }
-                                 },
-                                 move || settings::show_settings_dialog(Some(&window_clone4)),
-                                 move || {
-                                     let maybe_mesh = editor_clone5.tessellate();
+                                 }),
+                                 clone!(window; || {settings::show_settings_dialog(Some(&window))}),
+                                 clone!(window, editor; || {
+                                     let maybe_mesh = editor.tessellate();
                                      if let Some(mesh) = maybe_mesh {
-                                         if let Some(path) = get_save_name(Some(&window_clone5),
+                                         if let Some(path) = get_save_name(Some(&window),
                                                                            "*.stl") {
                                              println!("writing STL ({:?}): {:?}",
                                                       path,
                                                       write_stl(&path, &mesh));
                                          }
                                      }
-                                 },
+                                 }),
                                  ||::gtk::main_quit());
 
     let v_pane =::gtk::Paned::new(::gtk::Orientation::Vertical);
