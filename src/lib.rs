@@ -27,3 +27,4 @@ pub mod editor;
 pub mod menu;
 pub mod mesh_view;
 pub mod settings;
+pub mod window;
