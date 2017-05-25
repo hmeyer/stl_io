@@ -26,5 +26,6 @@ fn tessellation(b: &mut Bencher) {
     b.iter(|| tess.tessellate().expect("tessellation unsuccessful"));
 }
 
+// TODO: Create benchmarks for the different sub-methods
 benchmark_group!(bench_tessellation, tessellation);
 benchmark_main!(bench_tessellation);
