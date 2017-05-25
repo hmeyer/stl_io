@@ -9,13 +9,13 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 macro_rules! clone {
-    ($($n:ident),+; || $body:block) => (
+    ($($n:ident),+; || $body:stmt) => (
         {
             $( let $n = $n.clone(); )+
             move || { $body }
         }
     );
-    ($($n:ident),+; |$($p:ident),+| $body:block) => (
+    ($($n:ident),+; |$($p:ident),+| $body:stmt) => (
         {
             $( let $n = $n.clone(); )+
             move |$($p),+| { $body }
@@ -78,7 +78,7 @@ pub fn create_window() -> ::gtk::Window {
                                          editor.save(&*f);
                                      }
                                  }),
-                                 clone!(window; || {settings::show_settings_dialog(Some(&window))}),
+                                 clone!(window; || settings::show_settings_dialog(Some(&window))),
                                  clone!(window, editor; || {
                                      let maybe_mesh = editor.tessellate();
                                      if let Some(mesh) = maybe_mesh {
