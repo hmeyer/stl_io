@@ -76,7 +76,6 @@ impl VertexIndex {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-
 pub enum VarIndex {
     VertexIndex(VertexIndex),
     Index(usize),

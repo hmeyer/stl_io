@@ -6,7 +6,7 @@ use na;
 
 // Quadratic error function
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Qef {
     // Point closest to all planes.
     pub solution: na::Vector3<Float>,

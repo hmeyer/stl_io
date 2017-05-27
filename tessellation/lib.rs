@@ -27,6 +27,7 @@ mod bitset;
 mod vertex_index;
 mod manifold_dual_contouring;
 pub use self::manifold_dual_contouring::ManifoldDualContouring;
+pub use self::manifold_dual_contouring::subsample_octtree;
 mod cell_configs;
 mod stl_writer;
 pub use self::stl_writer::write_stl;
