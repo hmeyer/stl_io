@@ -20,7 +20,7 @@ fn creat_tessellation() -> truescad_tessellation::ManifoldDualContouring {
         fade_range: 0.1,
         r_multiplier: 1.0,
     });
-    return truescad_tessellation::ManifoldDualContouring::new(object, 0.01, 0.1);
+    return truescad_tessellation::ManifoldDualContouring::new(object, 0.015, 0.1);
 }
 
 fn sample_value_grid(b: &mut Bencher) {
