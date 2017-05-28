@@ -182,8 +182,24 @@ impl EdgeIndex {
     }
 }
 
-#[derive(Clone)]
 pub struct ManifoldDualContouring {
+    impl_: ManifoldDualContouringImpl,
+}
+impl ManifoldDualContouring {
+    // Constructor
+    // obj: Object to tessellate
+    // res: resolution
+    // relative_error: acceptable error threshold when simplifying the mesh.
+    pub fn new(obj: Box<Object>, res: Float, relative_error: Float) -> ManifoldDualContouring {
+        ManifoldDualContouring { impl_: ManifoldDualContouringImpl::new(obj, res, relative_error)}
+    }
+    pub fn tessellate(&mut self) -> Option<Mesh> {
+        self.impl_.tessellate()
+    }
+}
+
+#[derive(Clone)]
+pub struct ManifoldDualContouringImpl {
     object: Box<Object>,
     origin: Point,
     dim: [usize; 3],
@@ -371,14 +387,14 @@ impl Timer {
     }
 }
 
-impl ManifoldDualContouring {
+impl ManifoldDualContouringImpl {
     // Constructor
     // obj: Object to tessellate
     // res: resolution
     // relative_error: acceptable error threshold when simplifying the mesh.
-    pub fn new(obj: Box<Object>, res: Float, relative_error: Float) -> ManifoldDualContouring {
+    pub fn new(obj: Box<Object>, res: Float, relative_error: Float) -> ManifoldDualContouringImpl {
         let bbox = obj.bbox().dilate(1. + res * 1.1);
-        ManifoldDualContouring {
+        ManifoldDualContouringImpl {
             object: obj,
             origin: bbox.min,
             dim: [(bbox.dim()[0] / res).ceil() as usize,
@@ -397,7 +413,7 @@ impl ManifoldDualContouring {
         }
     }
     pub fn tessellate(&mut self) -> Option<Mesh> {
-        println!("ManifoldDualContouring: res: {:} {:?}", self.res, self.object.bbox());
+        println!("ManifoldDualContouringImpl: res: {:} {:?}", self.res, self.object.bbox());
         loop {
             match self.try_tessellate() {
                 Ok(mesh) => return Some(mesh),

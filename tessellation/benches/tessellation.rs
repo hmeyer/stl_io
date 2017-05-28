@@ -14,13 +14,13 @@ fn create_hollow_cube() -> Box<Object> {
     Intersection::difference_from_vec(vec![create_cube(), Sphere::new(0.5)], 0.2).unwrap() as Box<Object>
 }
 
-fn creat_tessellation() -> truescad_tessellation::ManifoldDualContouring {
+fn creat_tessellation() -> truescad_tessellation::ManifoldDualContouringImpl {
     let mut object = create_hollow_cube();
     object.set_parameters(&truescad_primitive::PrimitiveParameters {
         fade_range: 0.1,
         r_multiplier: 1.0,
     });
-    return truescad_tessellation::ManifoldDualContouring::new(object, 0.02, 0.1);
+    return truescad_tessellation::ManifoldDualContouringImpl::new(object, 0.02, 0.1);
 }
 
 fn sample_value_grid(b: &mut Bencher) {

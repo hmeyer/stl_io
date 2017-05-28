@@ -26,12 +26,16 @@ pub struct Plane {
 mod bitset;
 mod vertex_index;
 mod manifold_dual_contouring;
-pub use self::manifold_dual_contouring::ManifoldDualContouring;
-pub use self::manifold_dual_contouring::subsample_octtree;
 mod cell_configs;
 mod stl_writer;
-pub use self::stl_writer::write_stl;
 mod qef;
+
+pub use self::manifold_dual_contouring::ManifoldDualContouring;
+pub use self::stl_writer::write_stl;
+
+// This is just exposed for the bench test - do not use!
+pub use self::manifold_dual_contouring::ManifoldDualContouringImpl;
+pub use self::manifold_dual_contouring::subsample_octtree;
 
 #[cfg(test)]
 #[macro_use]
