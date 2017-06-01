@@ -1,6 +1,6 @@
 [package]
 name = "truescad"
-version = "0.2"
+version = "0.2.0"
 authors = ["Henning Meyer <tutmann@gmail.com>"]
 
 [dependencies]
@@ -15,9 +15,9 @@ rayon = "0.7.*"
 serde = "1.0"
 serde_derive = "1.0"
 toml = "0.4"
-truescad_tessellation = { path = "tessellation", version = "0.0.*" }
-truescad_types = { path = "types", version = "0.0.*" }
-truescad_primitive = { path = "primitive", version = "0.0.*" }
+truescad_tessellation = { path = "tessellation", version = "0.2.*" }
+truescad_types = { path = "types", version = "0.2.*" }
+truescad_primitive = { path = "primitive", version = "0.2.*" }
 truescad_luascad = { path = "luascad", version = "0.1.*" }
 kiss3d = "0.8"
 bencher = "0.1.*"

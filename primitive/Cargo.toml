@@ -1,6 +1,6 @@
 [package]
 name = "truescad_primitive"
-version = "0.2"
+version = "0.2.0"
 authors = ["Henning Meyer <tutmann@gmail.com>"]
 
 [lib]
@@ -13,7 +13,7 @@ alga = "0.5"
 lazy_static = "0.2.8"
 bencher = "0.1.*"
 
-truescad_types = { path = "../types", version = "0.0.*" }
+truescad_types = { path = "../types", version = "0.2.*" }
 
 [[bench]]
 name = "objects"

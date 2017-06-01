@@ -1,6 +1,6 @@
 [root]
 name = "truescad"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "alga 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "bencher 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -16,9 +16,9 @@ dependencies = [
  "serde_derive 1.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "truescad_luascad 0.1.0",
- "truescad_primitive 0.0.1",
- "truescad_tessellation 0.0.1",
- "truescad_types 0.0.1",
+ "truescad_primitive 0.2.0",
+ "truescad_tessellation 0.2.0",
+ "truescad_types 0.2.0",
 ]
 
 [[package]]
@@ -783,24 +783,24 @@ name = "truescad_luascad"
 version = "0.1.0"
 dependencies = [
  "hlua 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "truescad_primitive 0.0.1",
- "truescad_types 0.0.1",
+ "truescad_primitive 0.2.0",
+ "truescad_types 0.2.0",
 ]
 
 [[package]]
 name = "truescad_primitive"
-version = "0.0.1"
+version = "0.2.0"
 dependencies = [
  "alga 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "bencher 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "nalgebra 0.11.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "truescad_types 0.0.1",
+ "truescad_types 0.2.0",
 ]
 
 [[package]]
 name = "truescad_tessellation"
-version = "0.0.1"
+version = "0.2.0"
 dependencies = [
  "approx 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "bencher 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -810,13 +810,13 @@ dependencies = [
  "rand 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "rayon 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.35 (registry+https://github.com/rust-lang/crates.io-index)",
- "truescad_primitive 0.0.1",
- "truescad_types 0.0.1",
+ "truescad_primitive 0.2.0",
+ "truescad_types 0.2.0",
 ]
 
 [[package]]
 name = "truescad_types"
-version = "0.0.1"
+version = "0.2.0"
 dependencies = [
  "lazy_static 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "nalgebra 0.11.2 (registry+https://github.com/rust-lang/crates.io-index)",

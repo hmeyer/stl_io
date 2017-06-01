@@ -1,6 +1,6 @@
 [package]
 name = "truescad_types"
-version = "0.2"
+version = "0.2.0"
 authors = ["Henning Meyer <tutmann@gmail.com>"]
 
 [lib]
