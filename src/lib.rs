@@ -8,7 +8,8 @@
 extern crate cairo;
 extern crate gtk;
 extern crate gdk;
-extern crate cgmath;
+extern crate nalgebra as na;
+extern crate alga;
 extern crate kiss3d;
 extern crate nalgebra;
 extern crate rayon;

@@ -1,9 +1,11 @@
-extern crate cgmath;
+#[macro_use]
+extern crate lazy_static;
+extern crate nalgebra as na;
 
 pub type Float = f64;
-pub type Point = ::cgmath::Point3<Float>;
-pub type Vector = ::cgmath::Vector3<Float>;
-pub type Matrix = ::cgmath::Matrix4<Float>;
+pub type Point = na::Point3<Float>;
+pub type Vector = na::Vector3<Float>;
+pub type Transform = na::Matrix4<Float>;
 
 
 pub const INFINITY: Float = 1e10;
@@ -13,22 +15,12 @@ pub const PI: Float = ::std::f64::consts::PI;
 
 pub const EPSILON: Float = 1e-10;
 pub const MIN_POSITIVE: Float = ::std::f64::MIN_POSITIVE;
-pub const EPSILON_X: Vector = Vector {
-    x: EPSILON,
-    y: 0.,
-    z: 0.,
-};
-pub const EPSILON_Y: Vector = Vector {
-    x: 0.,
-    y: EPSILON,
-    z: 0.,
-};
-pub const EPSILON_Z: Vector = Vector {
-    x: 0.,
-    y: 0.,
-    z: EPSILON,
-};
 
+lazy_static! {
+    pub static ref EPSILON_X: Vector = Vector::new(EPSILON, 0., 0.);
+    pub static ref EPSILON_Y: Vector = Vector::new(0., EPSILON, 0.);
+    pub static ref EPSILON_Z: Vector = Vector::new(0., 0., EPSILON);
+}
 
 #[derive(Copy, Clone, Debug)]
 pub struct Ray {

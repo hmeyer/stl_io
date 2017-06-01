@@ -1,9 +1,10 @@
-extern crate cgmath;
+#[macro_use]
+extern crate lazy_static;
+extern crate nalgebra as na;
+extern crate alga;
 extern crate truescad_types;
 use std::fmt::Debug;
 pub use truescad_types::{Float, Point, Vector, EPSILON_X, EPSILON_Y, EPSILON_Z};
-
-use cgmath::InnerSpace;
 
 mod bounding_box;
 pub use self::bounding_box::{BoundingBox, INFINITY_BOX, NEG_INFINITY_BOX};
@@ -38,9 +39,9 @@ pub const ALWAYS_PRECISE: Float = 1.;
 
 pub fn normal_from_object(f: &Object, p: Point) -> Vector {
     let center = f.approx_value(p, ALWAYS_PRECISE);
-    let dx = f.approx_value(p + EPSILON_X, ALWAYS_PRECISE) - center;
-    let dy = f.approx_value(p + EPSILON_Y, ALWAYS_PRECISE) - center;
-    let dz = f.approx_value(p + EPSILON_Z, ALWAYS_PRECISE) - center;
+    let dx = f.approx_value(&p + *EPSILON_X, ALWAYS_PRECISE) - center;
+    let dy = f.approx_value(&p + *EPSILON_Y, ALWAYS_PRECISE) - center;
+    let dz = f.approx_value(&p + *EPSILON_Z, ALWAYS_PRECISE) - center;
     Vector::new(dx, dy, dz).normalize()
 }
 

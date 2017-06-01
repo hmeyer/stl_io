@@ -10,7 +10,6 @@ use std::collections::{BTreeSet, HashMap};
 use std::cell::{Cell, RefCell};
 use std::{error, fmt};
 use std::cmp;
-use cgmath::Array;
 use rand;
 use rayon::prelude::*;
 
@@ -891,7 +890,8 @@ impl ManifoldDualContouringImpl {
         if av.signum() == bv.signum() {
             return None;
         }
-        let mut distance = (a - b).min().abs().max((a - b).max());
+        let d = a - b;
+        let mut distance = d.x.abs().max(d.y.abs().max(d.z.abs()));
         distance = distance.min(av.abs()).min(bv.abs());
         if distance < PRECISION * self.res {
             let mut result = &a;

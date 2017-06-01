@@ -1,7 +1,6 @@
 use {ALWAYS_PRECISE, Object, PrimitiveParameters, normal_from_object};
 use bounding_box::{BoundingBox, INFINITY_BOX, NEG_INFINITY_BOX};
 use truescad_types::{Float, INFINITY, NEG_INFINITY, Point, Vector};
-use cgmath::InnerSpace;
 
 pub const FADE_RANGE: Float = 0.1;
 pub const R_MULTIPLIER: Float = 1.0;

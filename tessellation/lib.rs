@@ -1,6 +1,5 @@
 #[macro_use]
 extern crate lazy_static;
-extern crate cgmath;
 extern crate rand;
 extern crate nalgebra as na;
 extern crate rayon;

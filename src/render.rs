@@ -4,10 +4,10 @@
 // pub type Ray = ray::Ray3<float>;
 // pub type Point = Point<float>;
 use std::cmp;
-use truescad_types::{Float, Matrix, Point, Ray, Vector};
+use truescad_types::{Float, Transform, Point, Ray, Vector};
 use truescad_primitive::Object;
-use cgmath::{InnerSpace, SquareMatrix, Transform};
 use rayon::prelude::*;
+use alga::linear::Transformation;
 
 const EPSILON: Float = 0.003;
 const APPROX_SLACK: Float = 0.1;
@@ -19,7 +19,7 @@ const FOCAL_FACTOR: Float = 36. /* 36 mm film */ / 50.;
 #[derive(Clone)]
 pub struct Renderer {
     light_dir: Vector,
-    trans: Matrix,
+    trans: Transform,
     object: Option<Box<Object>>,
     epsilon: Float,
     maxval: Float,
@@ -30,7 +30,7 @@ impl Renderer {
     pub fn new() -> Renderer {
         Renderer {
             light_dir: Vector::new(-2. / 3., 2. / 3., -1. / 3.),
-            trans: Matrix::identity(),
+            trans: Transform::identity(),
             object: None,
             epsilon: EPSILON,
             maxval: 0.,
@@ -46,15 +46,13 @@ impl Renderer {
     }
 
     pub fn rotate_from_screen(&mut self, x: Float, y: Float) {
-        let euler = ::cgmath::Euler::new(::cgmath::Rad(y), ::cgmath::Rad(x), ::cgmath::Rad(0.));
-        let other = Matrix::from(euler);
-        self.trans = self.trans.concat(&other);
+        let euler = ::na::Rotation::from_euler_angles(y, x, 0.).to_homogeneous();
+        self.trans = self.trans * euler;
     }
 
     pub fn translate_from_screen(&mut self, x: Float, y: Float) {
         let v = Vector::new(-x as Float, y as Float, 0.);
-        let other = Matrix::from_translation(v);
-        self.trans = self.trans.concat(&other);
+        self.trans = self.trans.append_translation(&v);
     }
 
     fn cast_ray(&self,
@@ -81,7 +79,7 @@ impl Renderer {
             }
         }
         let norm = obj.normal(cr.origin);
-        let dot = norm.dot(*light_dir);
+        let dot = norm.dot(light_dir);
         if dot < 0. {
             return (iter, 0.);
         }
@@ -98,11 +96,11 @@ impl Renderer {
             let w2 = width / 2;
             let h2 = height / 2;
 
-            let dir_front = self.trans.transform_vector(Vector::new(0., 0., 1.));
-            let dir_rl = self.trans.transform_vector(Vector::new(FOCAL_FACTOR, 0., 0.));
-            let dir_tb = self.trans.transform_vector(Vector::new(0., -FOCAL_FACTOR, 0.));
-            let light_dir = self.trans.transform_vector(self.light_dir);
-            let ray_origin = self.trans.transform_point(Point::new(0., 0., -viewer_dist));
+            let dir_front = self.trans.transform_vector(&Vector::new(0., 0., 1.));
+            let dir_rl = self.trans.transform_vector(&Vector::new(FOCAL_FACTOR, 0., 0.));
+            let dir_tb = self.trans.transform_vector(&Vector::new(0., -FOCAL_FACTOR, 0.));
+            let light_dir = self.trans.transform_vector(&self.light_dir);
+            let ray_origin = self.trans.transform_point(&Point::new(0., 0., -viewer_dist));
             let ray = Ray::new(ray_origin, dir_front);
 
 

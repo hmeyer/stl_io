@@ -1,7 +1,6 @@
 use Object;
 use bounding_box::{BoundingBox, INFINITY_BOX};
 use truescad_types::{Float, INFINITY, NEG_INFINITY, Point, Vector};
-use cgmath::{EuclideanSpace, InnerSpace};
 
 
 // A cylinder along the Z-Axis
@@ -24,9 +23,8 @@ impl Object for Cylinder {
     fn approx_value(&self, p: Point, slack: Float) -> Float {
         let approx = self.bbox.value(p);
         if approx <= slack {
-            let mut pv = p.to_vec();
-            pv.z = 0.;
-            return pv.magnitude() - self.radius;
+            let pv = Vector::new(p.x, p.y, 0.);
+            return pv.norm() - self.radius;
         } else {
             approx
         }
@@ -35,8 +33,7 @@ impl Object for Cylinder {
         &self.bbox
     }
     fn normal(&self, p: Point) -> Vector {
-        let mut pv = p.to_vec();
-        pv.z = 0.;
+        let pv = Vector::new(p.x, p.y, 0.);
         return pv.normalize();
     }
 }
@@ -71,16 +68,15 @@ impl Object for Cone {
         self.bbox = bbox
     }
     fn approx_value(&self, p: Point, _: Float) -> Float {
-        let mut pv = p.to_vec();
-        let radius = self.slope * (pv.z + self.offset).abs();
-        pv.z = 0.;
-        return (pv.magnitude() - radius) * self.distance_multiplier;
+        let radius = self.slope * (p.z + self.offset).abs();
+        let pv = Vector::new(p.x, p.y, 0.);
+        return (pv.norm() - radius) * self.distance_multiplier;
     }
     fn normal(&self, p: Point) -> Vector {
-        let mut pv = p.to_vec();
-        let s = (pv.z + self.offset).signum();
-        pv.z = 0.;
-        pv = pv.normalize_to(self.distance_multiplier);
+        let s = (p.z + self.offset).signum();
+        let mut pv = Vector::new(p.x, p.y, 0.);
+        pv.normalize_mut();
+        pv *= self.distance_multiplier;
         pv.z = -s * self.normal_multiplier;
         return pv;
     }

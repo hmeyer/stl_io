@@ -1,6 +1,5 @@
 use Object;
 use truescad_types::{Float, Point, Vector};
-use cgmath::{EuclideanSpace, InnerSpace};
 use bounding_box::BoundingBox;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -23,7 +22,7 @@ impl Object for Sphere {
     fn approx_value(&self, p: Point, slack: Float) -> Float {
         let approx = self.bbox.value(p);
         if approx <= slack {
-            return p.to_vec().magnitude() - self.radius;
+            return Vector::new(p.x, p.y, p.z).norm() - self.radius;
         } else {
             approx
         }
@@ -32,6 +31,6 @@ impl Object for Sphere {
         &self.bbox
     }
     fn normal(&self, p: Point) -> Vector {
-        return p.to_vec().normalize();
+        return Vector::new(p.x, p.y, p.z).normalize();
     }
 }

@@ -1,7 +1,6 @@
 use truescad_types::{EPSILON, Float, NAN, Point};
 use truescad_primitive::BoundingBox;
 use Plane;
-use cgmath::{EuclideanSpace, InnerSpace};
 use na;
 
 // Quadratic error function
@@ -42,7 +41,8 @@ impl Qef {
             qef.ata[3] += p.n[1] * p.n[1];
             qef.ata[4] += p.n[1] * p.n[2];
             qef.ata[5] += p.n[2] * p.n[2];
-            let pn = p.p.to_vec().dot(p.n);
+            // TODO: use proper dot product api
+            let pn = p.p.x * p.n.x + p.p.y * p.n.y + p.p.z * p.n.z;
             qef.atb[0] += p.n[0] * pn;
             qef.atb[1] += p.n[1] * pn;
             qef.atb[2] += p.n[2] * pn;
@@ -85,7 +85,8 @@ impl Qef {
                        ma: &na::Matrix3<Float>)
                        -> na::Vector3<Float> {
         // Generate bbox mid-point and error value on mid-point.
-        let mid = (bbox.max.to_vec() + bbox.min.to_vec()) * 0.5;
+        // TODO: use proper apis
+        let mid = Point::new((bbox.max.x + bbox.min.x) * 0.5, (bbox.max.y + bbox.min.y) * 0.5, (bbox.max.z + bbox.min.z) * 0.5);
         let na_mid = na::Vector3::new(mid.x, mid.y, mid.z);
         if bbox.max.x - bbox.min.x <= accuracy {
             return na_mid;

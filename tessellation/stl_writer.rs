@@ -4,7 +4,6 @@ use std::io::{Result, Write};
 use Mesh;
 use byteorder::{LittleEndian, WriteBytesExt};
 use truescad_types::{Point, Vector};
-use cgmath::InnerSpace;
 
 // Write as documented in https://en.wikipedia.org/wiki/STL_(file_format)#Binary_STL
 pub fn write_stl(filename: &str, mesh: &Mesh) -> Result<()> {
@@ -38,5 +37,5 @@ fn get_normal(mesh: &Mesh, face: &[usize; 3]) -> Vector {
     let v: Vec<Point> = face.iter()
                             .map(|&i| Point::new(verts[i][0], verts[i][1], verts[i][2]))
                             .collect();
-    (v[1] - v[0]).cross(v[2] - v[0]).normalize()
+    (v[1] - v[0]).cross(&(v[2] - v[0])).normalize()
 }

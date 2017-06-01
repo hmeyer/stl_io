@@ -1,31 +1,16 @@
-use truescad_types::{Float, INFINITY, Matrix, NEG_INFINITY, Point, Vector};
-use cgmath::Transform;
+use truescad_types::{Float, INFINITY, Transform, NEG_INFINITY, Point, Vector};
+use alga::linear::Transformation;
 
-pub static INFINITY_BOX: BoundingBox = BoundingBox {
-    min: Point {
-        x: NEG_INFINITY,
-        y: NEG_INFINITY,
-        z: NEG_INFINITY,
-    },
-    max: Point {
-        x: INFINITY,
-        y: INFINITY,
-        z: INFINITY,
-    },
-};
-
-pub static NEG_INFINITY_BOX: BoundingBox = BoundingBox {
-    min: Point {
-        x: INFINITY,
-        y: INFINITY,
-        z: INFINITY,
-    },
-    max: Point {
-        x: NEG_INFINITY,
-        y: NEG_INFINITY,
-        z: NEG_INFINITY,
-    },
-};
+lazy_static! {
+    pub static ref INFINITY_BOX: BoundingBox = BoundingBox {
+        min: Point::new(NEG_INFINITY, NEG_INFINITY,NEG_INFINITY),
+        max: Point::new(INFINITY, INFINITY, INFINITY),
+    };
+    pub static ref NEG_INFINITY_BOX: BoundingBox = BoundingBox {
+        min: Point::new(INFINITY, INFINITY, INFINITY),
+        max: Point::new(NEG_INFINITY, NEG_INFINITY,NEG_INFINITY),
+    };
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BoundingBox {
@@ -76,17 +61,17 @@ impl BoundingBox {
             max: point_min(&[self.max, other.max]),
         }
     }
-    pub fn transform(&self, mat: &Matrix) -> BoundingBox {
+    pub fn transform(&self, mat: &Transform) -> BoundingBox {
         let a = &self.min;
         let b = &self.max;
-        let corners = [mat.transform_point(Point::new(a.x, a.y, a.z)),
-                       mat.transform_point(Point::new(a.x, a.y, b.z)),
-                       mat.transform_point(Point::new(a.x, b.y, a.z)),
-                       mat.transform_point(Point::new(a.x, b.y, b.z)),
-                       mat.transform_point(Point::new(b.x, a.y, a.z)),
-                       mat.transform_point(Point::new(b.x, a.y, b.z)),
-                       mat.transform_point(Point::new(b.x, b.y, a.z)),
-                       mat.transform_point(Point::new(b.x, b.y, b.z))];
+        let corners = [mat.transform_point(&Point::new(a.x, a.y, a.z)),
+                       mat.transform_point(&Point::new(a.x, a.y, b.z)),
+                       mat.transform_point(&Point::new(a.x, b.y, a.z)),
+                       mat.transform_point(&Point::new(a.x, b.y, b.z)),
+                       mat.transform_point(&Point::new(b.x, a.y, a.z)),
+                       mat.transform_point(&Point::new(b.x, a.y, b.z)),
+                       mat.transform_point(&Point::new(b.x, b.y, a.z)),
+                       mat.transform_point(&Point::new(b.x, b.y, b.z))];
         BoundingBox {
             min: point_min(&corners),
             max: point_max(&corners),

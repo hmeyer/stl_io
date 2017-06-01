@@ -1,7 +1,7 @@
 use {Object, PrimitiveParameters};
 use bounding_box::BoundingBox;
 use truescad_types::{Float, PI, Point, Vector};
-use cgmath::{InnerSpace, Rotation, Rotation2};
+use alga::linear::{Similarity, Transformation};
 
 #[derive(Clone, Debug)]
 pub struct Twister {
@@ -55,24 +55,25 @@ impl Twister {
         })
     }
     fn twist_point(&self, p: Point) -> Point {
-        let p2 = ::cgmath::Point2::new(p.x, p.y);
-        let angle = ::cgmath::Rad(p.z * self.height_scaler);
-        let trans = ::cgmath::Basis2::from_angle(angle);
-        let rp2 = trans.rotate_point(p2);
+        let p2 = ::na::Point2::new(p.x, p.y);
+        let angle = p.z * self.height_scaler;
+        type Rota = ::na::Rotation<Float,::na::U2>;
+        let trans = Rota::new(angle);
+        let rp2 = trans.transform_point(&p2);
         Point::new(rp2.x, rp2.y, p.z)
     }
     // Apply tilt to the vector.
     // Since Surfaces are twisted, all normals will be tilted, depending on the radius.
     fn tilt_normal(&self, normal: Vector, p: Point) -> Vector {
-        let radius_v = ::cgmath::Vector2::new(p.x, p.y);
-        let radius = radius_v.magnitude();
+        let radius_v = ::na::Vector2::new(p.x, p.y);
+        let radius = radius_v.norm();
         let radius_v = radius_v / radius;
         // Calculate tangential unit vector at p.
-        let tangent_v = ::cgmath::Vector2::new(radius_v.y, -radius_v.x);
+        let tangent_v = ::na::Vector2::new(radius_v.y, -radius_v.x);
 
         // Project the in plane component of normal onto tangent.
-        let planar_normal = ::cgmath::Vector2::new(normal.x, normal.y);
-        let tangential_projection = tangent_v.dot(planar_normal);
+        let planar_normal = ::na::Vector2::new(normal.x, normal.y);
+        let tangential_projection = tangent_v.dot(&planar_normal);
 
         // Calculate the shear at p.
         let tangential_shear = radius * self.height_scaler;
@@ -85,10 +86,10 @@ impl Twister {
         return result.normalize();
     }
     fn untwist_normal(&self, v: Vector, p: Point) -> Vector {
-        let v2 = ::cgmath::Vector2::new(v.x, v.y);
-        let angle = ::cgmath::Rad(-p.z * self.height_scaler);
-        let trans = ::cgmath::Basis2::from_angle(angle);
-        let rv2 = trans.rotate_vector(v2);
+        let v2 = ::na::Vector2::new(v.x, v.y);
+        let angle = -p.z * self.height_scaler;
+        let trans = ::na::Rotation2::new(angle);
+        let rv2 = trans.rotate_vector(&v2);
         self.tilt_normal(Vector::new(rv2.x, rv2.y, v.z), p)
     }
 }

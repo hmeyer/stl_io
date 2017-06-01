@@ -1,7 +1,7 @@
 use {Object, PrimitiveParameters};
 use bounding_box::BoundingBox;
 use truescad_types::{Float, PI, Point, Vector};
-use cgmath::{InnerSpace, Rotation, Rotation2};
+use alga::linear::Similarity;
 
 #[derive(Clone, Debug)]
 pub struct Bender {
@@ -77,10 +77,10 @@ impl Bender {
     }
     fn bend_normal(&self, v: Vector, polar_p: Point) -> Vector {
         let v = self.tilt_normal(v, polar_p);
-        let phi = ::cgmath::Rad(polar_p.x + PI);
-        let v2 = ::cgmath::Vector2::new(v.x, v.y);
-        let trans = ::cgmath::Basis2::from_angle(phi);
-        let rv2 = trans.rotate_vector(v2);
+        let phi = polar_p.x + PI;
+        let v2 = ::na::Vector2::new(v.x, v.y);
+        let trans = ::na::Rotation2::new(phi);
+        let rv2 = trans.rotate_vector(&v2);
         Vector::new(rv2.x, rv2.y, v.z)
     }
 }

@@ -8,4 +8,5 @@ name = "truescad_types"
 path = "lib.rs"
 
 [dependencies]
-cgmath = "0.12.0"
+nalgebra = "0.11"
+lazy_static = "0.2.8"
