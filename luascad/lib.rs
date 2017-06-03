@@ -7,6 +7,7 @@ extern crate truescad_primitive;
 pub mod lobject;
 pub mod lobject_vector;
 pub mod sandbox;
+pub mod printbuffer;
 pub mod luascad;
 
 pub use self::luascad::eval;

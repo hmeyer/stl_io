@@ -60,17 +60,22 @@ impl Editor {
                                              true)
                                    .unwrap();
         match truescad_luascad::eval(&code_text) {
-            Ok(Some(mut o)) => {
-                let s = settings::SettingsData::new();
-                o.set_parameters(&truescad_primitive::PrimitiveParameters {
-                    fade_range: s.fade_range,
-                    r_multiplier: s.r_multiplier,
-                });
-                Some(o)
-            }
-            Ok(None) => {
-                writeln!(msg, "\nwarning : no object - did you call build()?").unwrap();
-                None
+            Ok((print_result, maybe_object)) => {
+                writeln!(msg, "{}", print_result).unwrap();
+                match maybe_object {
+                    Some(mut o) => {
+                        let s = settings::SettingsData::new();
+                        o.set_parameters(&truescad_primitive::PrimitiveParameters {
+                            fade_range: s.fade_range,
+                            r_multiplier: s.r_multiplier,
+                        });
+                        Some(o)
+                    }
+                    None => {
+                        writeln!(msg, "\nwarning : no object - did you call build()?").unwrap();
+                        None
+                    }
+                }
             }
             Err(x) => {
                 writeln!(msg, "\nerror : {:?}", x).unwrap();
