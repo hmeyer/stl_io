@@ -1,13 +1,13 @@
-use std::io::prelude::*;
-use std::io::{BufReader, BufWriter};
-use std::fs::File;
-use mesh_view;
-use truescad_luascad;
-use truescad_primitive;
-use object_widget;
-use settings;
 use gtk::Inhibit;
 use gtk::traits::*;
+use mesh_view;
+use object_widget;
+use settings;
+use std::fs::File;
+use std::io::{BufReader, BufWriter};
+use std::io::prelude::*;
+use truescad_luascad;
+use truescad_primitive;
 use truescad_tessellation::{ManifoldDualContouring, Mesh};
 
 #[derive(Clone)]
@@ -33,32 +33,35 @@ impl Editor {
         };
         let editor_clone = editor.clone();
 
-        editor.text_view.connect_key_release_event(move |_: &::gtk::TextView,
-                                                         key: &::gdk::EventKey|
-                                                         -> Inhibit {
-            match key.get_keyval() {
-                ::gdk::enums::key::F5 => {
-                    // compile
-                    let mut output = Vec::new();
-                    let obj = editor_clone.get_object(&mut output);
-                    debug_buffer_clone.set_text(&String::from_utf8(output).unwrap());
-                    renderer.borrow_mut().set_object(obj);
-                    drawing_area.queue_draw();
+        editor
+            .text_view
+            .connect_key_release_event(move |_: &::gtk::TextView,
+                                             key: &::gdk::EventKey|
+                                             -> Inhibit {
+                match key.get_keyval() {
+                    ::gdk::enums::key::F5 => {
+                        // compile
+                        let mut output = Vec::new();
+                        let obj = editor_clone.get_object(&mut output);
+                        debug_buffer_clone.set_text(&String::from_utf8(output).unwrap());
+                        renderer.borrow_mut().set_object(obj);
+                        drawing_area.queue_draw();
+                    }
+                    _ => {
+                        // println!("unbound key release: {:?}", x);
+                    }
                 }
-                _ => {
-                    // println!("unbound key release: {:?}", x);
-                }
-            }
-            Inhibit(false)
-        });
+                Inhibit(false)
+            });
         editor
     }
     fn get_object(&self, msg: &mut Write) -> Option<Box<truescad_primitive::Object>> {
         let code_buffer = self.text_view.get_buffer().unwrap();
-        let code_text = code_buffer.get_text(&code_buffer.get_start_iter(),
-                                             &code_buffer.get_end_iter(),
-                                             true)
-                                   .unwrap();
+        let code_text = code_buffer
+            .get_text(&code_buffer.get_start_iter(),
+                      &code_buffer.get_end_iter(),
+                      true)
+            .unwrap();
         match truescad_luascad::eval(&code_text) {
             Ok((print_result, maybe_object)) => {
                 writeln!(msg, "{}", print_result).unwrap();
@@ -66,9 +69,9 @@ impl Editor {
                     Some(mut o) => {
                         let s = settings::SettingsData::new();
                         o.set_parameters(&truescad_primitive::PrimitiveParameters {
-                            fade_range: s.fade_range,
-                            r_multiplier: s.r_multiplier,
-                        });
+                                             fade_range: s.fade_range,
+                                             r_multiplier: s.r_multiplier,
+                                         });
                         Some(o)
                     }
                     None => {
@@ -106,10 +109,9 @@ impl Editor {
         let maybe_obj = self.get_object(&mut ::std::io::stdout());
         if let Some(obj) = maybe_obj {
             let s = settings::SettingsData::new();
-            let mesh = ManifoldDualContouring::new(obj,
-                                                   s.tessellation_resolution,
-                                                   s.tessellation_error)
-                           .tessellate();
+            let mesh =
+                ManifoldDualContouring::new(obj, s.tessellation_resolution, s.tessellation_error)
+                    .tessellate();
             if let Some(ref mesh) = mesh {
                 mesh_view::show_mesh(&mesh);
             }
@@ -123,10 +125,11 @@ fn save_from_textview(text_view: &::gtk::TextView, filename: &str) {
     let open_result = File::create(filename);
     if let Ok(f) = open_result {
         let code_buffer = text_view.get_buffer().unwrap();
-        let code_text = code_buffer.get_text(&code_buffer.get_start_iter(),
-                                             &code_buffer.get_end_iter(),
-                                             true)
-                                   .unwrap();
+        let code_text = code_buffer
+            .get_text(&code_buffer.get_start_iter(),
+                      &code_buffer.get_end_iter(),
+                      true)
+            .unwrap();
         let mut writer = BufWriter::new(f);
         let write_result = writer.write(code_text.as_bytes());
         println!("writing {:?}: {:?}", &filename, write_result);

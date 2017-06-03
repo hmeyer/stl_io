@@ -1,8 +1,8 @@
+use gtk::{BoxExt, ContainerExt, DialogExt, SpinButton, SpinButtonSignals, WidgetExt};
 use std::cell::RefCell;
-use std::rc::Rc;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
-use gtk::{BoxExt, ContainerExt, DialogExt, SpinButton, SpinButtonSignals, WidgetExt};
+use std::rc::Rc;
 
 const SETTINGS_FILENAME: &'static str = ".truescad";
 
@@ -33,10 +33,18 @@ pub fn show_settings_dialog<T: ::gtk::IsA<::gtk::Window>>(parent: Option<&T>) {
                                                  &[("OK", ::gtk::ResponseType::Ok.into()),
                                                    ("Cancel", ::gtk::ResponseType::Cancel.into())]);
     // TODO: use rustc_serialize::Encodable to generate settings items
-    dialog.get_content_area().add(&add_setting!(tessellation_resolution, &data));
-    dialog.get_content_area().add(&add_setting!(tessellation_error, &data));
-    dialog.get_content_area().add(&add_setting!(fade_range, &data));
-    dialog.get_content_area().add(&add_setting!(r_multiplier, &data));
+    dialog
+        .get_content_area()
+        .add(&add_setting!(tessellation_resolution, &data));
+    dialog
+        .get_content_area()
+        .add(&add_setting!(tessellation_error, &data));
+    dialog
+        .get_content_area()
+        .add(&add_setting!(fade_range, &data));
+    dialog
+        .get_content_area()
+        .add(&add_setting!(r_multiplier, &data));
 
     dialog.show_all();
     let ret = dialog.run();
@@ -76,7 +84,9 @@ impl SettingsData {
         let f = try!(File::open(path).map_err(SettingsError::Io));
         let mut reader = BufReader::new(f);
         let mut buffer = String::new();
-        let _ = try!(reader.read_to_string(&mut buffer).map_err(SettingsError::Io));
+        let _ = try!(reader
+                         .read_to_string(&mut buffer)
+                         .map_err(SettingsError::Io));
         return ::toml::from_str(&buffer).map_err(SettingsError::Dec);
     }
     pub fn new() -> SettingsData {

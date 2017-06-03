@@ -8,7 +8,7 @@ use bencher::Bencher;
 
 
 
-static TWISTED_CUBE: &'static str  = "
+static TWISTED_CUBE: &'static str = "
 t=Twist(Difference({Box(1,1,1,.2), Sphere(0.5)},.2),4)
 t:rotate(-math.pi/4,0,0)
 build(t)";
@@ -19,10 +19,13 @@ const NUM_CHANNELS: usize = 4;
 fn render(b: &mut Bencher) {
 
     let mut object = ::truescad_luascad::eval(TWISTED_CUBE).unwrap();
-    object.as_mut().unwrap().set_parameters(&truescad_primitive::PrimitiveParameters {
-        fade_range: 0.1,
-        r_multiplier: 1.0,
-    });
+    object
+        .as_mut()
+        .unwrap()
+        .set_parameters(&truescad_primitive::PrimitiveParameters {
+                            fade_range: 0.1,
+                            r_multiplier: 1.0,
+                        });
 
     let mut renderer = ::truescad::render::Renderer::new();
     renderer.set_object(object);

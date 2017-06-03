@@ -1,12 +1,12 @@
-use::gtk::{FileChooserAction, FileChooserDialog, FileFilter, Inhibit, ResponseType};
-use::gtk::traits::*;
-use object_widget;
-use menu;
 use editor;
+use gtk::{FileChooserAction, FileChooserDialog, FileFilter, Inhibit, ResponseType};
+use gtk::traits::*;
+use menu;
+use object_widget;
 use settings;
-use truescad_tessellation::write_stl;
 use std::cell::RefCell;
 use std::rc::Rc;
+use truescad_tessellation::write_stl;
 
 macro_rules! clone {
     ($($n:ident),+; || $body:stmt) => (
@@ -29,20 +29,20 @@ pub fn create_window() -> ::gtk::Window {
     window.set_default_size(640, 480);
 
     window.connect_delete_event(|_, _| {
-       ::gtk::main_quit();
-        Inhibit(false)
-    });
+                                    ::gtk::main_quit();
+                                    Inhibit(false)
+                                });
 
-    let v_box =::gtk::Box::new(::gtk::Orientation::Vertical, 0);
-    let debug_scrolled_window =::gtk::ScrolledWindow::new(None, None);
-    let debug_view =::gtk::TextView::new();
+    let v_box = ::gtk::Box::new(::gtk::Orientation::Vertical, 0);
+    let debug_scrolled_window = ::gtk::ScrolledWindow::new(None, None);
+    let debug_view = ::gtk::TextView::new();
     debug_view.set_editable(false);
     debug_scrolled_window.add(&debug_view);
     debug_view.set_wrap_mode(::gtk::WrapMode::WordChar);
     let xw = object_widget::ObjectWidget::new();
     let debug_text = debug_view.get_buffer().unwrap();
     let editor = editor::Editor::new(&xw, &debug_text);
-    let h_pane =::gtk::Paned::new(::gtk::Orientation::Horizontal);
+    let h_pane = ::gtk::Paned::new(::gtk::Orientation::Horizontal);
     h_pane.add2(&xw.drawing_area);
     h_pane.add1(&editor.widget);
 
@@ -90,9 +90,9 @@ pub fn create_window() -> ::gtk::Window {
                                          }
                                      }
                                  }),
-                                 ||::gtk::main_quit());
+                                 || ::gtk::main_quit());
 
-    let v_pane =::gtk::Paned::new(::gtk::Orientation::Vertical);
+    let v_pane = ::gtk::Paned::new(::gtk::Orientation::Vertical);
     v_pane.set_border_width(5);
     v_pane.add1(&h_pane);
     v_pane.add2(&debug_scrolled_window);
@@ -132,8 +132,8 @@ fn get_open_name<T: ::gtk::IsA<::gtk::Window>>(parent: Option<&T>) -> Option<Str
 }
 
 fn get_save_name<T: ::gtk::IsA<::gtk::Window>>(parent: Option<&T>,
-                                                   pattern: &str)
-                                                   -> Option<String> {
+                                               pattern: &str)
+                                               -> Option<String> {
     let dialog = FileChooserDialog::new(Some("Choose a filename to Save"),
                                         parent,
                                         FileChooserAction::Save);

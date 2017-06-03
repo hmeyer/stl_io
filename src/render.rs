@@ -3,11 +3,12 @@
 
 // pub type Ray = ray::Ray3<float>;
 // pub type Point = Point<float>;
-use std::cmp;
-use truescad_types::{Float, Transform, Point, Ray, Vector};
-use truescad_primitive::Object;
-use rayon::prelude::*;
+
 use alga::linear::Transformation;
+use rayon::prelude::*;
+use std::cmp;
+use truescad_primitive::Object;
+use truescad_types::{Float, Transform, Point, Ray, Vector};
 
 const EPSILON: Float = 0.003;
 const APPROX_SLACK: Float = 0.1;
@@ -97,10 +98,13 @@ impl Renderer {
             let h2 = height / 2;
 
             let dir_front = self.trans.transform_vector(&Vector::new(0., 0., 1.));
-            let dir_rl = self.trans.transform_vector(&Vector::new(FOCAL_FACTOR, 0., 0.));
-            let dir_tb = self.trans.transform_vector(&Vector::new(0., -FOCAL_FACTOR, 0.));
+            let dir_rl = self.trans
+                .transform_vector(&Vector::new(FOCAL_FACTOR, 0., 0.));
+            let dir_tb = self.trans
+                .transform_vector(&Vector::new(0., -FOCAL_FACTOR, 0.));
             let light_dir = self.trans.transform_vector(&self.light_dir);
-            let ray_origin = self.trans.transform_point(&Point::new(0., 0., -viewer_dist));
+            let ray_origin = self.trans
+                .transform_point(&Point::new(0., 0., -viewer_dist));
             let ray = Ray::new(ray_origin, dir_front);
 
 
@@ -108,9 +112,7 @@ impl Renderer {
             let origin_value = my_obj.approx_value(ray.origin, self.approx_slack);
 
 
-            let mut rows: Vec<_> = buf.chunks_mut((width * 4) as usize)
-                                      .enumerate()
-                                      .collect();
+            let mut rows: Vec<_> = buf.chunks_mut((width * 4) as usize).enumerate().collect();
             rows.par_iter_mut()
                 .for_each(|y_and_buf| {
                     let y = y_and_buf.0 as i32;
@@ -140,21 +142,15 @@ impl Renderer {
 
     fn object_width(&self) -> Float {
         if let Some(ref my_obj) = self.object {
-            return my_obj.bbox()
-                         .max
-                         .x
-                         .abs()
-                         .max(my_obj.bbox().min.x.abs())
-                         .max(my_obj.bbox()
-                                    .max
-                                    .y
-                                    .abs()
-                                    .max(my_obj.bbox().min.y.abs()))
-                         .max(my_obj.bbox()
-                                    .max
-                                    .z
-                                    .abs()
-                                    .max(my_obj.bbox().min.z.abs())) * 2.;
+            return my_obj
+                       .bbox()
+                       .max
+                       .x
+                       .abs()
+                       .max(my_obj.bbox().min.x.abs())
+                       .max(my_obj.bbox().max.y.abs().max(my_obj.bbox().min.y.abs()))
+                       .max(my_obj.bbox().max.z.abs().max(my_obj.bbox().min.z.abs())) *
+                   2.;
         }
         0.
     }

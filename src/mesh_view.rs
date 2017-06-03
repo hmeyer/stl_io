@@ -1,11 +1,11 @@
-use std::cell::RefCell;
-use std::mem;
-use std::sync::{Arc, Mutex, ONCE_INIT, Once};
-use std::rc::Rc;
-use nalgebra as na;
-use kiss3d::window::Window;
 use kiss3d::light::Light;
 use kiss3d::resource::Mesh;
+use kiss3d::window::Window;
+use nalgebra as na;
+use std::cell::RefCell;
+use std::mem;
+use std::rc::Rc;
+use std::sync::{Arc, Mutex, ONCE_INIT, Once};
 use truescad_tessellation;
 
 #[derive(Clone)]
