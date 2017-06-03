@@ -130,7 +130,6 @@ mod tests {
     use super::super::Vector;
     use super::super::Plane;
     use na;
-    use cgmath::InnerSpace;
 
     #[test]
     fn origin() {
