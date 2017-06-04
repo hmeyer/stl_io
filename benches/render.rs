@@ -18,7 +18,7 @@ const NUM_CHANNELS: usize = 4;
 
 fn render(b: &mut Bencher) {
 
-    let mut object = ::truescad_luascad::eval(TWISTED_CUBE).unwrap();
+    let (_, mut object) = ::truescad_luascad::eval(TWISTED_CUBE).unwrap();
     object
         .as_mut()
         .unwrap()
