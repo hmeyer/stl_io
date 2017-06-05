@@ -8,13 +8,7 @@ extern crate truescad_primitive;
 extern crate time;
 extern crate byteorder;
 
-use truescad_types::{Float, Point, Vector};
-
-#[derive(Clone, Debug)]
-pub struct Mesh {
-    pub vertices: Vec<[Float; 3]>,
-    pub faces: Vec<[usize; 3]>,
-}
+use truescad_types::{Point, Vector};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Plane {

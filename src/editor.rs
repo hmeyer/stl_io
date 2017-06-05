@@ -8,7 +8,8 @@ use std::io::{BufReader, BufWriter};
 use std::io::prelude::*;
 use truescad_luascad;
 use truescad_primitive;
-use truescad_tessellation::{ManifoldDualContouring, Mesh};
+use truescad_tessellation::ManifoldDualContouring;
+use truescad_types::Mesh;
 
 #[derive(Clone)]
 pub struct Editor {

@@ -1,12 +1,11 @@
 use kiss3d::light::Light;
-use kiss3d::resource::Mesh;
 use kiss3d::window::Window;
 use nalgebra as na;
 use std::cell::RefCell;
 use std::mem;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex, ONCE_INIT, Once};
-use truescad_tessellation;
+use truescad_types::Mesh;
 
 #[derive(Clone)]
 struct SingletonWindow {
@@ -34,7 +33,7 @@ fn singleton_window() -> SingletonWindow {
     }
 }
 
-pub fn show_mesh(mesh: &truescad_tessellation::Mesh) {
+pub fn show_mesh(mesh: &Mesh) {
     let window_mutex = singleton_window();
     let mut window = window_mutex.inner.lock().unwrap();
     window.glfw_window_mut().set_should_close(false);
@@ -53,7 +52,7 @@ pub fn show_mesh(mesh: &truescad_tessellation::Mesh) {
     window.hide();
 }
 
-fn tessellation_to_kiss3d_mesh(mesh: &truescad_tessellation::Mesh) -> Rc<RefCell<Mesh>> {
+fn tessellation_to_kiss3d_mesh(mesh: &Mesh) -> Rc<RefCell<::kiss3d::resource::Mesh>> {
     let mut na_verts = Vec::new();
     let mut na_faces = Vec::new();
     for face in mesh.faces.iter() {
@@ -64,5 +63,5 @@ fn tessellation_to_kiss3d_mesh(mesh: &truescad_tessellation::Mesh) -> Rc<RefCell
             na_verts.push(na::Point3::new(p[0] as f32, p[1] as f32, p[2] as f32));
         }
     }
-    Rc::new(RefCell::new(Mesh::new(na_verts, na_faces, None, None, true)))
+    Rc::new(RefCell::new(::kiss3d::resource::Mesh::new(na_verts, na_faces, None, None, true)))
 }

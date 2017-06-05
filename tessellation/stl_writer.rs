@@ -1,9 +1,8 @@
 use std::fs::OpenOptions;
 use std::io::BufWriter;
 use std::io::{Result, Write};
-use Mesh;
 use byteorder::{LittleEndian, WriteBytesExt};
-use truescad_types::{Point, Vector};
+use truescad_types::{Point, Vector, Mesh};
 
 // Write as documented in https://en.wikipedia.org/wiki/STL_(file_format)#Binary_STL
 pub fn write_stl(filename: &str, mesh: &Mesh) -> Result<()> {

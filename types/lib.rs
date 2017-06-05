@@ -36,3 +36,9 @@ impl Ray {
         }
     }
 }
+
+#[derive(Clone, Debug)]
+pub struct Mesh {
+    pub vertices: Vec<[Float; 3]>,
+    pub faces: Vec<[usize; 3]>,
+}
