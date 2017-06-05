@@ -20,6 +20,8 @@ truescad_types = { path = "types", version = "0.2.*" }
 truescad_primitive = { path = "primitive", version = "0.2.*" }
 truescad_luascad = { path = "luascad", version = "0.1.*" }
 kiss3d = "0.8"
+
+[dev-dependencies]
 bencher = "0.1.*"
 
 [features]

@@ -11,9 +11,10 @@ path = "lib.rs"
 nalgebra = "0.11"
 alga = "0.5"
 lazy_static = "0.2.8"
-bencher = "0.1.*"
-
 truescad_types = { path = "../types", version = "0.2.*" }
+
+[dev-dependencies]
+bencher = "0.1.*"
 
 [[bench]]
 name = "objects"
