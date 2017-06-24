@@ -6,7 +6,7 @@ use object_widget;
 use settings;
 use std::cell::RefCell;
 use std::rc::Rc;
-use truescad_tessellation::write_stl;
+use stl_io::write_stl;
 
 macro_rules! clone {
     ($($n:ident),+; || $body:stmt) => (
@@ -84,9 +84,16 @@ pub fn create_window() -> ::gtk::Window {
                                      if let Some(mesh) = maybe_mesh {
                                          if let Some(path) = get_save_name(Some(&window),
                                                                            "*.stl") {
+                                             let stl_mesh = mesh.faces.iter().enumerate().map(|(i, f)| {
+                                                 let normal = mesh.normal32(i);
+                                                 ::stl_io::Triangle{ normal:[normal[0], normal[1], normal[2]],
+                                                     vertices: [mesh.vertex32(f[0]),
+                                                      mesh.vertex32(f[1]),
+                                                      mesh.vertex32(f[2])]}
+                                             }).collect::<Vec<_>>();
                                              println!("writing STL ({:?}): {:?}",
                                                       path,
-                                                      write_stl(&path, &mesh));
+                                                      write_stl(&path, &stl_mesh[..]));
                                          }
                                      }
                                  }),

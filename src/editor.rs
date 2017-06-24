@@ -9,7 +9,7 @@ use std::io::prelude::*;
 use truescad_luascad;
 use truescad_primitive;
 use truescad_tessellation::ManifoldDualContouring;
-use truescad_types::Mesh;
+use truescad_tessellation::Mesh;
 
 #[derive(Clone)]
 pub struct Editor {

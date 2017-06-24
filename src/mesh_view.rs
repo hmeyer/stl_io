@@ -5,7 +5,7 @@ use std::cell::RefCell;
 use std::mem;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex, ONCE_INIT, Once};
-use truescad_types::Mesh;
+use truescad_tessellation::Mesh;
 
 #[derive(Clone)]
 struct SingletonWindow {

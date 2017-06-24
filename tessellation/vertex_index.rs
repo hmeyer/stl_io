@@ -69,9 +69,9 @@ impl VertexIndex {
             neighbor_index = neg_offset(self.index, off);
         }
         Some(VertexIndex {
-            edges: neighbor_edge_set,
-            index: neighbor_index,
-        })
+                 edges: neighbor_edge_set,
+                 index: neighbor_index,
+             })
     }
 }
 
