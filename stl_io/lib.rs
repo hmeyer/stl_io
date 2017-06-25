@@ -1,6 +1,22 @@
 //! ```stl_io``` is crate for reading and writing [STL (STereoLithography)](https://en.wikipedia.org/wiki/STL_(file_format)) files.
 //! It can read both, binary and ascii STL in a safe manner.
 //! Writing is limited to binary STL, which is more compact anyway.
+//! # Examples
+//!
+//! Read STL file:
+//!
+//! ```rust,no_run
+//! let stl = stl_io::read_stl("mesh.stl").unwrap();
+//! ```
+//! Write STL file:
+//!
+//! ```rust,no_run
+//! let mesh = [stl_io::Triangle { normal: [1.0, 0.0, 0.0],
+//!                                vertices: [[0.0, -1.0, 0.0],
+//!                                           [0.0, 1.0, 0.0],
+//!                                           [0.0, 0.0, 0.5]]}];
+//! stl_io::write_stl("mesh.stl", &mesh).unwrap();
+//! ```
 
 #![warn(missing_docs)]
 
@@ -56,12 +72,13 @@ pub fn write_stl(filename: &str, mesh: &[Triangle]) -> Result<()> {
         .write(true)
         .create_new(true)
         .open(filename)?;
-    return write_binary_stl(&mut file, mesh);
+    return write_stl_to_write(&mut file, mesh);
 }
 
-/// Write as documented in [Wikipedia](https://en.wikipedia.org/wiki/STL_(file_format)#Binary_STL).
-pub fn write_binary_stl(out: &mut ::std::io::Write, mesh: &[Triangle]) -> Result<()> {
-    let mut writer = BufWriter::new(out);
+/// Write to std::io::Write as documented in
+/// [Wikipedia](https://en.wikipedia.org/wiki/STL_(file_format)#Binary_STL).
+pub fn write_stl_to_write(writer: &mut ::std::io::Write, mesh: &[Triangle]) -> Result<()> {
+    let mut writer = BufWriter::new(writer);
 
     // Write 80 byte header
     writer.write(&[0u8; 80])?;
@@ -88,7 +105,7 @@ pub fn read_stl(filename: &str) -> Result<IndexedMesh> {
 }
 
 /// Attempts to create a [TriangleIterator](trait.TriangleIterator.html) for either ascii or binary
-/// STL from reader.
+/// STL from std::io::Read.
 pub fn create_stl_reader<'a, F: ::std::io::Read + ::std::io::Seek>
     (read: &'a mut F)
      -> Result<Box<TriangleIterator<Item = Result<Triangle>> + 'a>> {
@@ -478,7 +495,7 @@ mod test {
         let bunny_mesh = AsciiStlReader::new(&mut reader);
         let bunny_mesh = bunny_mesh.unwrap().map(|t| t.unwrap()).collect::<Vec<_>>();
         let mut binary_bunny_stl = Vec::<u8>::new();
-        let write_result = super::write_binary_stl(&mut binary_bunny_stl, &bunny_mesh);
+        let write_result = super::write_stl_to_write(&mut binary_bunny_stl, &bunny_mesh);
         assert!(write_result.is_ok(), "{:?}", write_result);
         assert_eq!(BUNNY_99.to_vec(), binary_bunny_stl);
     }
