@@ -5,6 +5,7 @@ use menu;
 use object_widget;
 use settings;
 use std::cell::RefCell;
+use std::fs::OpenOptions;
 use std::rc::Rc;
 use stl_io::write_stl;
 
@@ -91,9 +92,15 @@ pub fn create_window() -> ::gtk::Window {
                                                       mesh.vertex32(f[1]),
                                                       mesh.vertex32(f[2])]}
                                              }).collect::<Vec<_>>();
-                                             println!("writing STL ({:?}): {:?}",
-                                                      path,
-                                                      write_stl(&path, stl_mesh.iter()));
+                                             match OpenOptions::new()
+                                                 .write(true)
+                                                 .create_new(true)
+                                                 .open(&path) {
+                                                     Ok(mut file) => println!("writing STL {:}: {:?}",
+                                                            path,
+                                                              write_stl(&mut file, stl_mesh.iter())),
+                                                              Err(e) =>println!("could not open {:} for writing: {:?}", path, e)
+                                                 }
                                          }
                                      }
                                  }),

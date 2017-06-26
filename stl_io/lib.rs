@@ -6,16 +6,20 @@
 //! Read STL file:
 //!
 //! ```rust,no_run
-//! let stl = stl_io::read_stl("mesh.stl").unwrap();
+//! use std::fs::OpenOptions;
+//! let mut file = OpenOptions::new().read(true).open("mesh.stl").unwrap();
+//! let stl = stl_io::read_stl(&mut file).unwrap();
 //! ```
 //! Write STL file:
 //!
 //! ```rust,no_run
+//! use std::fs::OpenOptions;
 //! let mesh = [stl_io::Triangle { normal: [1.0, 0.0, 0.0],
 //!                                vertices: [[0.0, -1.0, 0.0],
 //!                                           [0.0, 1.0, 0.0],
 //!                                           [0.0, 0.0, 0.5]]}];
-//! stl_io::write_stl("mesh.stl", mesh.iter()).unwrap();
+//! let mut file = OpenOptions::new().write(true).create_new(true).open("mesh.stl").unwrap();
+//! stl_io::write_stl(&mut file, mesh.iter()).unwrap();
 //! ```
 
 #![warn(missing_docs)]
@@ -23,7 +27,6 @@
 extern crate byteorder;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use std::fs::OpenOptions;
 use std::io::{BufRead, BufReader, BufWriter};
 use std::io::{Result, Read, Write};
 use std::iter::Iterator;
@@ -66,21 +69,27 @@ pub struct IndexedMesh {
     pub faces: Vec<IndexedTriangle>,
 }
 
-/// Write mesh into a binary STL file.
-pub fn write_stl<'a, I>(filename: &str, mesh: I) -> Result<()>
-    where I: ::std::iter::ExactSizeIterator<Item = &'a Triangle>
-{
-    let mut file = OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(filename)?;
-    return write_stl_to_write(&mut file, mesh);
+/// Convert an [IndexedMesh](struct.IndexedMesh.html) to an Iterator over
+/// [Triangles](struct.Triangle.html).
+pub fn indexed_to_iterator<'a, F>(mesh: &'a IndexedMesh)
+                                  -> Box<::std::iter::Iterator<Item = Triangle> + 'a> {
+    Box::new(mesh.faces
+                 .iter()
+                 .map(move |t| {
+                          Triangle {
+                              normal: t.normal,
+                              vertices: [mesh.vertices[t.vertices[0]],
+                                         mesh.vertices[t.vertices[1]],
+                                         mesh.vertices[t.vertices[2]]],
+                          }
+                      }))
 }
 
 /// Write to std::io::Write as documented in
 /// [Wikipedia](https://en.wikipedia.org/wiki/STL_(file_format)#Binary_STL).
-pub fn write_stl_to_write<'a, I>(writer: &mut ::std::io::Write, mesh: I) -> Result<()>
-    where I: ::std::iter::ExactSizeIterator<Item = &'a Triangle>
+pub fn write_stl<'a, W, I>(writer: &mut W, mesh: I) -> Result<()>
+    where W: ::std::io::Write,
+          I: ::std::iter::ExactSizeIterator<Item = &'a Triangle>
 {
     let mut writer = BufWriter::new(writer);
 
@@ -102,10 +111,11 @@ pub fn write_stl_to_write<'a, I>(writer: &mut ::std::io::Write, mesh: I) -> Resu
     writer.flush()
 }
 
-/// Attempts to read either ascci or binary STL from file.
-pub fn read_stl(filename: &str) -> Result<IndexedMesh> {
-    let mut file = OpenOptions::new().read(true).open(filename)?;
-    return create_stl_reader(&mut file)?.to_indexed_triangles();
+/// Attempts to read either ascci or binary STL from std::io::Read.
+pub fn read_stl<R>(read: &mut R) -> Result<IndexedMesh>
+    where R: ::std::io::Read + ::std::io::Seek
+{
+    return create_stl_reader(read)?.to_indexed_triangles();
 }
 
 /// Attempts to create a [TriangleIterator](trait.TriangleIterator.html) for either ascii or binary
@@ -498,7 +508,7 @@ mod test {
         let bunny_mesh = AsciiStlReader::new(&mut reader);
         let bunny_mesh = bunny_mesh.unwrap().map(|t| t.unwrap()).collect::<Vec<_>>();
         let mut binary_bunny_stl = Vec::<u8>::new();
-        let write_result = super::write_stl_to_write(&mut binary_bunny_stl, bunny_mesh.iter());
+        let write_result = super::write_stl(&mut binary_bunny_stl, bunny_mesh.iter());
         assert!(write_result.is_ok(), "{:?}", write_result);
         assert_eq!(BUNNY_99.to_vec(), binary_bunny_stl);
     }
