@@ -120,9 +120,10 @@ pub fn read_stl<R>(read: &mut R) -> Result<IndexedMesh>
 
 /// Attempts to create a [TriangleIterator](trait.TriangleIterator.html) for either ascii or binary
 /// STL from std::io::Read.
-pub fn create_stl_reader<'a, F: ::std::io::Read + ::std::io::Seek>
-    (read: &'a mut F)
-     -> Result<Box<TriangleIterator<Item = Result<Triangle>> + 'a>> {
+pub fn create_stl_reader<'a, R>(read: &'a mut R)
+                                -> Result<Box<TriangleIterator<Item = Result<Triangle>> + 'a>>
+    where R: ::std::io::Read + ::std::io::Seek
+{
     match AsciiStlReader::probe(read) {
         Ok(()) => return AsciiStlReader::new(read),
         Err(_) => return BinaryStlReader::new(read),
