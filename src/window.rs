@@ -93,7 +93,7 @@ pub fn create_window() -> ::gtk::Window {
                                              }).collect::<Vec<_>>();
                                              println!("writing STL ({:?}): {:?}",
                                                       path,
-                                                      write_stl(&path, &stl_mesh[..]));
+                                                      write_stl(&path, stl_mesh.iter()));
                                          }
                                      }
                                  }),

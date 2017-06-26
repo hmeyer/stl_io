@@ -15,7 +15,7 @@
 //!                                vertices: [[0.0, -1.0, 0.0],
 //!                                           [0.0, 1.0, 0.0],
 //!                                           [0.0, 0.0, 0.5]]}];
-//! stl_io::write_stl("mesh.stl", &mesh).unwrap();
+//! stl_io::write_stl("mesh.stl", mesh.iter()).unwrap();
 //! ```
 
 #![warn(missing_docs)]
@@ -67,7 +67,9 @@ pub struct IndexedMesh {
 }
 
 /// Write mesh into a binary STL file.
-pub fn write_stl(filename: &str, mesh: &[Triangle]) -> Result<()> {
+pub fn write_stl<'a, I>(filename: &str, mesh: I) -> Result<()>
+    where I: ::std::iter::ExactSizeIterator<Item = &'a Triangle>
+{
     let mut file = OpenOptions::new()
         .write(true)
         .create_new(true)
@@ -77,13 +79,15 @@ pub fn write_stl(filename: &str, mesh: &[Triangle]) -> Result<()> {
 
 /// Write to std::io::Write as documented in
 /// [Wikipedia](https://en.wikipedia.org/wiki/STL_(file_format)#Binary_STL).
-pub fn write_stl_to_write(writer: &mut ::std::io::Write, mesh: &[Triangle]) -> Result<()> {
+pub fn write_stl_to_write<'a, I>(writer: &mut ::std::io::Write, mesh: I) -> Result<()>
+    where I: ::std::iter::ExactSizeIterator<Item = &'a Triangle>
+{
     let mut writer = BufWriter::new(writer);
 
     // Write 80 byte header
     writer.write(&[0u8; 80])?;
     writer.write_u32::<LittleEndian>(mesh.len() as u32)?;
-    for t in mesh.iter() {
+    for t in mesh {
         for f in t.normal.iter() {
             writer.write_f32::<LittleEndian>(*f as f32)?;
         }
@@ -111,7 +115,7 @@ pub fn create_stl_reader<'a, F: ::std::io::Read + ::std::io::Seek>
      -> Result<Box<TriangleIterator<Item = Result<Triangle>> + 'a>> {
     match AsciiStlReader::probe(read) {
         Ok(()) => return AsciiStlReader::new(read),
-        Err(_) => return BinaryStlReader::new(read)
+        Err(_) => return BinaryStlReader::new(read),
     }
 }
 
@@ -171,8 +175,7 @@ impl<'a> ::std::iter::Iterator for BinaryStlReader<'a> {
 }
 
 /// Iterates over all Triangles in a STL.
-pub trait TriangleIterator
-    : ::std::iter::Iterator<Item = Result<Triangle>> {
+pub trait TriangleIterator: ::std::iter::Iterator<Item = Result<Triangle>> {
     /// Consumes this iterator and generates an [indexed Mesh](struct.IndexedMesh.html).
     fn to_indexed_triangles(&mut self) -> Result<IndexedMesh> {
         let mut vertices = Vec::new();
@@ -495,7 +498,7 @@ mod test {
         let bunny_mesh = AsciiStlReader::new(&mut reader);
         let bunny_mesh = bunny_mesh.unwrap().map(|t| t.unwrap()).collect::<Vec<_>>();
         let mut binary_bunny_stl = Vec::<u8>::new();
-        let write_result = super::write_stl_to_write(&mut binary_bunny_stl, &bunny_mesh);
+        let write_result = super::write_stl_to_write(&mut binary_bunny_stl, bunny_mesh.iter());
         assert!(write_result.is_ok(), "{:?}", write_result);
         assert_eq!(BUNNY_99.to_vec(), binary_bunny_stl);
     }
