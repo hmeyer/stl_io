@@ -1,37 +1,15 @@
 [package]
-name = "truescad"
-version = "0.2.0"
+name = "stl_io"
+version = "0.3.0"
 authors = ["Henning Meyer <tutmann@gmail.com>"]
 
+description = "STL input and output."
+repository = "https://github.com/hmeyer/stl_io"
+readme = "README.md"
+
+[lib]
+name = "stl_io"
+path = "lib.rs"
+
 [dependencies]
-libc = "0.1"
-glib = "0.1.0"#{ git = "https://github.com/gtk-rs/glib.git" }#"^0"
-gdk = "0.5.0"#{ git = "https://github.com/gtk-rs/gdk.git" }#"^0"
-gtk = "0.1.0"#{ git = "https://github.com/gtk-rs/gtk.git" }#"^0"
-cairo-rs = "0.1.0"#{ git = "https://github.com/gtk-rs/cairo.git" }#"^0"
-nalgebra = "0.11"
-alga = "0.5"
-rayon = "0.7.*"
-serde = "1.0"
-serde_derive = "1.0"
-toml = "0.4"
-truescad_tessellation = { path = "tessellation", version = "0.2.*" }
-truescad_types = { path = "types", version = "0.2.*" }
-truescad_primitive = { path = "primitive", version = "0.2.*" }
-truescad_luascad = { path = "luascad", version = "0.1.*" }
-stl_io = { path = "stl_io", version = "0.2.*" }
-kiss3d = "0.8"
-
-[dev-dependencies]
-bencher = "0.1.*"
-
-[features]
-gtk_3_10 = []
-gtk_3_14 = ["gtk_3_10"]
-
-# [profile.release]
-# lto = true
-
-[[bench]]
-name = "render"
-harness = false
+byteorder = "1.0.0"

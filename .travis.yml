@@ -1,5 +1,5 @@
-dist: trusty
-sudo: required
+#dist: trusty
+#sudo: required
 
 language: rust
 rust:
@@ -11,28 +11,19 @@ matrix:
   allow_failures:
     - rust: beta
 
-before_install:
-  - sudo apt-get -qq update
-  - sudo apt-get install -qq libgtk-3-dev libglfw2
-
 notifications:
   email:
     on_success: change
     on_failure: always
 
 before_script: |
-  PKGNAME="truescad" # must match with cargo.toml
+  PKGNAME="stl_io" # must match with cargo.toml
   LOCAL="~/.local" # install here to avoid `sudo`
   export PATH=$LOCAL/bin:$PATH
 
 script:
   - cargo build
   - cargo test
-  - cargo bench
-  - cd stl_io; cargo build; cargo test; cd ..
-  - cd luascad; cargo build; cargo test; cargo bench; cd ..
-  - cd primitive; cargo build; cargo test; cargo bench; cd ..
-  - cd tessellation; cargo build; cargo test; cargo bench; cd ..
 
 # addons:
 #   apt:

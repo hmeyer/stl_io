@@ -1,14 +1,4 @@
-# truescad
-[![Build Status](https://travis-ci.org/hmeyer/truescad.svg?branch=master)](https://travis-ci.org/hmeyer/truescad)
+# stl_io
+[![Build Status](https://travis-ci.org/hmeyer/stl_io.svg?branch=master)](https://travis-ci.org/hmeyer/stl_io)
 
-Truescad is a script based CAD program similar to http://www.openscad.org/.
-Similar to http://www.implicitcad.org/ Truescad uses implcit functions to represent geometry and hence offers very precise geometry.
-
-In order to generate meshes, e.g. for 3D-printing, Truescad tessellates the geometry into a mesh with arbritrary precision.
-
-Truescad offers rounded CSG, which allows for smooth and rounded looking objects.
-
-![Alt text](doc/true_view.png "accurate geometry view")
-![Alt text](doc/tessellated.png "generated mesh")
-
-Truescad is written in Rust.
+stl_io is crate for reading and writing [STL (STereoLithography)](https://en.wikipedia.org/wiki/STL_(file_format)) files. It can read both, binary and ascii STL in a safe manner. Writing is limited to binary STL, which is more compact anyway.
