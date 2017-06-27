@@ -69,24 +69,17 @@ pub struct IndexedMesh {
     pub faces: Vec<IndexedTriangle>,
 }
 
-/// Convert an [IndexedMesh](struct.IndexedMesh.html) to an Iterator over
-/// [Triangles](struct.Triangle.html).
-pub fn indexed_to_iterator<'a, F>(mesh: &'a IndexedMesh)
-                                  -> Box<::std::iter::Iterator<Item = Triangle> + 'a> {
-    Box::new(mesh.faces
-                 .iter()
-                 .map(move |t| {
-                          Triangle {
-                              normal: t.normal,
-                              vertices: [mesh.vertices[t.vertices[0]],
-                                         mesh.vertices[t.vertices[1]],
-                                         mesh.vertices[t.vertices[2]]],
-                          }
-                      }))
-}
-
 /// Write to std::io::Write as documented in
 /// [Wikipedia](https://en.wikipedia.org/wiki/STL_(file_format)#Binary_STL).
+///
+/// ```
+/// let mesh = [stl_io::Triangle { normal: [1.0, 0.0, 0.0],
+///                                vertices: [[0.0, -1.0, 0.0],
+///                                           [0.0, 1.0, 0.0],
+///                                           [0.0, 0.0, 0.5]]}];
+/// let mut binary_stl = Vec::<u8>::new();
+/// stl_io::write_stl(&mut binary_stl, mesh.iter()).unwrap();
+/// ```
 pub fn write_stl<'a, W, I>(writer: &mut W, mesh: I) -> Result<()>
     where W: ::std::io::Write,
           I: ::std::iter::ExactSizeIterator<Item = &'a Triangle>
@@ -112,6 +105,20 @@ pub fn write_stl<'a, W, I>(writer: &mut W, mesh: I) -> Result<()>
 }
 
 /// Attempts to read either ascci or binary STL from std::io::Read.
+///
+/// ```
+/// let mut reader = ::std::io::Cursor::new(
+///     b"solid foobar
+///       facet normal 0.1 0.2 0.3
+///           outer loop
+///               vertex 1 2 3
+///               vertex 4 5 6e-15
+///               vertex 7 8 9.87654321
+///           endloop
+///       endfacet
+///       endsolid foobar".to_vec());
+/// let mesh = stl_io::read_stl(&mut reader).unwrap();
+/// ```
 pub fn read_stl<R>(read: &mut R) -> Result<IndexedMesh>
     where R: ::std::io::Read + ::std::io::Seek
 {
@@ -120,6 +127,19 @@ pub fn read_stl<R>(read: &mut R) -> Result<IndexedMesh>
 
 /// Attempts to create a [TriangleIterator](trait.TriangleIterator.html) for either ascii or binary
 /// STL from std::io::Read.
+///
+/// ```
+/// let mut reader = ::std::io::Cursor::new(b"solid foobar
+/// facet normal 1 2 3
+///     outer loop
+///         vertex 7 8 9
+///         vertex 4 5 6
+///         vertex 7 8 9
+///     endloop
+/// endfacet
+/// endsolid foobar".to_vec());
+/// let stl = stl_io::create_stl_reader(&mut reader).unwrap();
+/// ```
 pub fn create_stl_reader<'a, R>(read: &'a mut R)
                                 -> Result<Box<TriangleIterator<Item = Result<Triangle>> + 'a>>
     where R: ::std::io::Read + ::std::io::Seek
@@ -188,6 +208,20 @@ impl<'a> ::std::iter::Iterator for BinaryStlReader<'a> {
 /// Iterates over all Triangles in a STL.
 pub trait TriangleIterator: ::std::iter::Iterator<Item = Result<Triangle>> {
     /// Consumes this iterator and generates an [indexed Mesh](struct.IndexedMesh.html).
+    ///
+    /// ```
+    /// let mut reader = ::std::io::Cursor::new(b"solid foobar
+    /// facet normal 1 2 3
+    ///     outer loop
+    ///         vertex 7 8 9
+    ///         vertex 4 5 6
+    ///         vertex 7 8 9
+    ///     endloop
+    /// endfacet
+    /// endsolid foobar".to_vec());
+    /// let mut stl = stl_io::create_stl_reader(&mut reader).unwrap();
+    /// let indexed_mesh = stl.to_indexed_triangles().unwrap();
+    /// ```
     fn to_indexed_triangles(&mut self) -> Result<IndexedMesh> {
         let mut vertices = Vec::new();
         let mut triangles = Vec::new();
