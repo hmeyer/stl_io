@@ -9,7 +9,7 @@ readme = "README.md"
 
 [lib]
 name = "stl_io"
-path = "lib.rs"
+path = "src/lib.rs"
 
 [dependencies]
 byteorder = "1.0.0"
