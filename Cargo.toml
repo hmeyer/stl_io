@@ -6,7 +6,7 @@ authors = ["Henning Meyer <tutmann@gmail.com>"]
 description = "STL input and output."
 repository = "https://github.com/hmeyer/stl_io"
 readme = "README.md"
-keywords = ["stl","binary", "ascii", "3d","mesh","polygons"]
+keywords = ["stl","binary", "ascii", "3d", "mesh"]
 license = "GPL-3.0"
 
 [lib]
