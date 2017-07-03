@@ -50,7 +50,7 @@ pub struct Triangle {
 /// vertex list.
 /// This format is more compact, since in real world Meshes Triangles usually share vertices with
 /// other Triangles.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct IndexedTriangle {
     /// Normal vector of the Triangle.
     pub normal: Normal,
@@ -61,7 +61,7 @@ pub struct IndexedTriangle {
 
 /// STL Mesh in indexed form, consisting of a list of [Vertices](type.Vertex.html) and a list of
 /// [indexed Triangles](struct.IndexedTriangle.html).
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct IndexedMesh {
     /// List of vertices.
     pub vertices: Vec<Vertex>,
