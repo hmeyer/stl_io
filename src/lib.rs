@@ -164,7 +164,6 @@ impl<'a> BinaryStlReader<'a> {
         let mut reader = Box::new(BufReader::new(read));
         reader.read_exact(&mut [0u8; 80])?;
         let num_faces = reader.read_u32::<LittleEndian>()? as usize;
-        println!("num_faces: {:?}", num_faces);
         Ok(Box::new(BinaryStlReader {
                         reader: reader,
                         index: 0,
