@@ -69,6 +69,48 @@ pub struct IndexedMesh {
     pub faces: Vec<IndexedTriangle>,
 }
 
+impl IndexedMesh {
+    /// Checks that the Mesh has no holes and no zero-area faces.
+    /// Also makes sure that all triangles are faced in the same direction.
+    pub fn validate(&self) -> Result<()> {
+        for (fi, face) in self.faces.iter().enumerate() {
+            for i in  0..3 {
+                // Verify that all vertices are different.
+                if self.vertices[face.vertices[i]] == self.vertices[face.vertices[(i + 1) % 3]] {
+                    return Err(::std::io::Error::new(::std::io::ErrorKind::InvalidData,
+                        format!("face #{} has identical vertices #v{} and #v{}",
+                                fi, i, (i + 1) % 3)));
+                }
+                let mut found_edge = false;
+                for (fi2, face2) in self.faces.iter().enumerate() {
+                    if fi == fi2 {
+                        // Don't look for matching edge in this face.
+                        continue;
+                    }
+                    for i2 in  0..3 {
+                        if (self.vertices[face.vertices[i]] ==
+                            self.vertices[face2.vertices[(i2 + 1) % 3]]) && (
+                            self.vertices[face.vertices[(i + 1) % 3]] ==
+                            self.vertices[face2.vertices[i2]]) {
+                            found_edge = true;
+                            break;
+                        }
+                    }
+                    if found_edge {
+                        break;
+                    }
+                }
+                if !found_edge {
+                    return Err(::std::io::Error::new(::std::io::ErrorKind::InvalidData,
+                       format!("did not find facing edge for face #{}, edge #v{} -> #v{}",
+                               fi, i, (i + 1) % 3)));
+                }
+            }
+        }
+        return Ok(());
+    }
+}
+
 /// Write to std::io::Write as documented in
 /// [Wikipedia](https://en.wikipedia.org/wiki/STL_(file_format)#Binary_STL).
 ///
@@ -569,5 +611,16 @@ mod test {
         let ascii_mesh = sort_vertices(ascii_mesh);
         let binary_mesh = sort_vertices(binary_mesh);
         assert_eq!(ascii_mesh, binary_mesh);
+    }
+
+    #[test]
+    fn validate_bunny() {
+        let mut reader = ::std::io::Cursor::new(BUNNY_99_ASCII);
+        let stl = AsciiStlReader::new(&mut reader)
+            .unwrap()
+            .to_indexed_triangles().unwrap();
+        assert_eq!(stl.validate().err().unwrap().kind(),
+                   ::std::io::ErrorKind::InvalidData,
+                   "{:?}", stl.validate().err());
     }
 }
