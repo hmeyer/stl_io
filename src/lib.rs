@@ -367,7 +367,7 @@ impl<'a> AsciiStlReader<'a> {
                                              "EOF while expecting facet or endsolid."));
         }
         let face_header = try!(face_header.unwrap());
-        if face_header.len() == 2 && face_header[0] == "endsolid" {
+        if face_header.len() >= 2 && face_header[0] == "endsolid" {
             return Ok(None);
         }
         if face_header.len() != 5 || face_header[0] != "facet" || face_header[1] != "normal" {
@@ -481,6 +481,32 @@ mod test {
                                    }],
                    });
     }
+
+    #[test]
+    fn read_ascii_stl_name_with_spaces_success() {
+        let mut reader = ::std::io::Cursor::new(b"solid foo bar
+        facet normal 0.1 0.2 0.3
+            outer loop
+                vertex 1 2 3
+                vertex 4 5 6e-15
+                vertex 7 8 9.87654321
+            endloop
+        endfacet
+        endsolid foo bar"
+                                                        .to_vec());
+        assert_eq!(AsciiStlReader::new(&mut reader)
+                       .unwrap()
+                       .to_indexed_triangles()
+                       .unwrap(),
+                   super::IndexedMesh {
+                       vertices: vec![[1., 2., 3.], [4., 5., 6e-15], [7., 8., 9.87654321]],
+                       faces: vec![IndexedTriangle {
+                                       normal: [0.1, 0.2, 0.3],
+                                       vertices: [0, 1, 2],
+                                   }],
+                   });
+    }
+
 
     #[test]
     fn read_ascii_stl_sort_and_depup_vertices() {
