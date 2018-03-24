@@ -438,6 +438,7 @@ mod test {
     use super::*;
     const BUNNY_99: &'static [u8] = include_bytes!("testdata/bunny_99.stl");
     const BUNNY_99_ASCII: &'static [u8] = include_bytes!("testdata/bunny_99_ascii.stl");
+    const MODEL: &'static [u8] = include_bytes!("testdata/model.stl");
 
     // Will sort the vertices of the Mesh and fix the indices in the faces.
     fn sort_vertices(mut mesh: super::IndexedMesh) -> super::IndexedMesh {
@@ -597,6 +598,16 @@ mod test {
     #[test]
     fn read_ascii_stl_bunny() {
         let mut reader = ::std::io::Cursor::new(BUNNY_99_ASCII);
+        let stl = AsciiStlReader::new(&mut reader)
+            .unwrap()
+            .to_indexed_triangles();
+        assert!(stl.is_ok(), "{:?}", stl);
+        assert_eq!(stl.unwrap().faces.len(), 99);
+    }
+
+    #[test]
+    fn read_model() {
+        let mut reader = ::std::io::Cursor::new(MODEL);
         let stl = AsciiStlReader::new(&mut reader)
             .unwrap()
             .to_indexed_triangles();
