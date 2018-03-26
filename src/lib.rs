@@ -408,9 +408,9 @@ impl<'a> AsciiStlReader<'a> {
                                           ::std::io::Error::new(::std::io::ErrorKind::InvalidData,
                                                                 e.to_string())
                                       }));
-            if !f.is_normal() {
+            if f != 0f32 && !f.is_normal() {
                 return Err(::std::io::Error::new(::std::io::ErrorKind::InvalidData,
-                                                 format!("expected normal f32, got {}", f)));
+                                                 format!("expected 0 or normal f32, got {}", f)));
             }
             output[i] = f;
         }
