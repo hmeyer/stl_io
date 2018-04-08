@@ -28,7 +28,7 @@ extern crate byteorder;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{BufRead, BufReader, BufWriter};
-use std::io::{Result, Read, Write};
+use std::io::{Read, Result, Write};
 use std::iter::Iterator;
 
 /// STL vertex - a corner of a Triangle in a 3D Mesh.
@@ -74,12 +74,18 @@ impl IndexedMesh {
     /// Also makes sure that all triangles are faced in the same direction.
     pub fn validate(&self) -> Result<()> {
         for (fi, face) in self.faces.iter().enumerate() {
-            for i in  0..3 {
+            for i in 0..3 {
                 // Verify that all vertices are different.
                 if self.vertices[face.vertices[i]] == self.vertices[face.vertices[(i + 1) % 3]] {
-                    return Err(::std::io::Error::new(::std::io::ErrorKind::InvalidData,
-                        format!("face #{} has identical vertices #v{} and #v{}",
-                                fi, i, (i + 1) % 3)));
+                    return Err(::std::io::Error::new(
+                        ::std::io::ErrorKind::InvalidData,
+                        format!(
+                            "face #{} has identical vertices #v{} and #v{}",
+                            fi,
+                            i,
+                            (i + 1) % 3
+                        ),
+                    ));
                 }
                 let mut found_edge = false;
                 for (fi2, face2) in self.faces.iter().enumerate() {
@@ -87,11 +93,12 @@ impl IndexedMesh {
                         // Don't look for matching edge in this face.
                         continue;
                     }
-                    for i2 in  0..3 {
-                        if (self.vertices[face.vertices[i]] ==
-                            self.vertices[face2.vertices[(i2 + 1) % 3]]) && (
-                            self.vertices[face.vertices[(i + 1) % 3]] ==
-                            self.vertices[face2.vertices[i2]]) {
+                    for i2 in 0..3 {
+                        if (self.vertices[face.vertices[i]]
+                            == self.vertices[face2.vertices[(i2 + 1) % 3]])
+                            && (self.vertices[face.vertices[(i + 1) % 3]]
+                                == self.vertices[face2.vertices[i2]])
+                        {
                             found_edge = true;
                             break;
                         }
@@ -101,9 +108,15 @@ impl IndexedMesh {
                     }
                 }
                 if !found_edge {
-                    return Err(::std::io::Error::new(::std::io::ErrorKind::InvalidData,
-                       format!("did not find facing edge for face #{}, edge #v{} -> #v{}",
-                               fi, i, (i + 1) % 3)));
+                    return Err(::std::io::Error::new(
+                        ::std::io::ErrorKind::InvalidData,
+                        format!(
+                            "did not find facing edge for face #{}, edge #v{} -> #v{}",
+                            fi,
+                            i,
+                            (i + 1) % 3
+                        ),
+                    ));
                 }
             }
         }
@@ -123,8 +136,9 @@ impl IndexedMesh {
 /// stl_io::write_stl(&mut binary_stl, mesh.iter()).unwrap();
 /// ```
 pub fn write_stl<'a, W, I>(writer: &mut W, mesh: I) -> Result<()>
-    where W: ::std::io::Write,
-          I: ::std::iter::ExactSizeIterator<Item = &'a Triangle>
+where
+    W: ::std::io::Write,
+    I: ::std::iter::ExactSizeIterator<Item = &'a Triangle>,
 {
     let mut writer = BufWriter::new(writer);
 
@@ -162,7 +176,8 @@ pub fn write_stl<'a, W, I>(writer: &mut W, mesh: I) -> Result<()>
 /// let mesh = stl_io::read_stl(&mut reader).unwrap();
 /// ```
 pub fn read_stl<R>(read: &mut R) -> Result<IndexedMesh>
-    where R: ::std::io::Read + ::std::io::Seek
+where
+    R: ::std::io::Read + ::std::io::Seek,
 {
     return create_stl_reader(read)?.to_indexed_triangles();
 }
@@ -182,9 +197,11 @@ pub fn read_stl<R>(read: &mut R) -> Result<IndexedMesh>
 /// endsolid foobar".to_vec());
 /// let stl = stl_io::create_stl_reader(&mut reader).unwrap();
 /// ```
-pub fn create_stl_reader<'a, R>(read: &'a mut R)
-                                -> Result<Box<TriangleIterator<Item = Result<Triangle>> + 'a>>
-    where R: ::std::io::Read + ::std::io::Seek
+pub fn create_stl_reader<'a, R>(
+    read: &'a mut R,
+) -> Result<Box<TriangleIterator<Item = Result<Triangle>> + 'a>>
+where
+    R: ::std::io::Read + ::std::io::Seek,
 {
     match AsciiStlReader::probe(read) {
         Ok(()) => return AsciiStlReader::new(read),
@@ -201,16 +218,17 @@ pub struct BinaryStlReader<'a> {
 
 impl<'a> BinaryStlReader<'a> {
     /// Factory to create a new BinaryStlReader from read.
-    pub fn new(read: &'a mut ::std::io::Read)
-               -> Result<Box<TriangleIterator<Item = Result<Triangle>> + 'a>> {
+    pub fn new(
+        read: &'a mut ::std::io::Read,
+    ) -> Result<Box<TriangleIterator<Item = Result<Triangle>> + 'a>> {
         let mut reader = Box::new(BufReader::new(read));
         reader.read_exact(&mut [0u8; 80])?;
         let num_faces = reader.read_u32::<LittleEndian>()? as usize;
         Ok(Box::new(BinaryStlReader {
-                        reader: reader,
-                        index: 0,
-                        size: num_faces,
-                    }) as Box<TriangleIterator<Item = Result<Triangle>>>)
+            reader: reader,
+            index: 0,
+            size: num_faces,
+        }) as Box<TriangleIterator<Item = Result<Triangle>>>)
     }
 
     fn next_face(&mut self) -> Result<Triangle> {
@@ -226,9 +244,9 @@ impl<'a> BinaryStlReader<'a> {
         }
         self.reader.read_u16::<LittleEndian>()?;
         Ok(Triangle {
-               normal: normal,
-               vertices: face,
-           })
+            normal: normal,
+            vertices: face,
+        })
     }
 }
 
@@ -282,16 +300,16 @@ pub trait TriangleIterator: ::std::iter::Iterator<Item = Result<Triangle>> {
                 vertex_indices[i] = index;
             }
             triangles.push(IndexedTriangle {
-                               normal: t.normal,
-                               vertices: vertex_indices,
-                           });
+                normal: t.normal,
+                vertices: vertex_indices,
+            });
         }
         vertices.shrink_to_fit();
         triangles.shrink_to_fit();
         Ok(IndexedMesh {
-               vertices: vertices,
-               faces: triangles,
-           })
+            vertices: vertices,
+            faces: triangles,
+        })
     }
 }
 
@@ -323,25 +341,32 @@ impl<'a> AsciiStlReader<'a> {
         read.seek(::std::io::SeekFrom::Start(0))?;
         maybe_read_error?;
         if !header.starts_with("solid ") {
-            return Err(::std::io::Error::new(::std::io::ErrorKind::InvalidData,
-                                             "ascii STL does not start with \"solid \""));
+            return Err(::std::io::Error::new(
+                ::std::io::ErrorKind::InvalidData,
+                "ascii STL does not start with \"solid \"",
+            ));
         } else {
             return Ok(());
         }
     }
     /// Factory to create a new ascii STL Reader from read.
-    pub fn new(read: &'a mut ::std::io::Read)
-               -> Result<Box<TriangleIterator<Item = Result<Triangle>> + 'a>> {
+    pub fn new(
+        read: &'a mut ::std::io::Read,
+    ) -> Result<Box<TriangleIterator<Item = Result<Triangle>> + 'a>> {
         let mut lines = BufReader::new(read).lines();
         match lines.next() {
             Some(Err(e)) => return Err(e),
             Some(Ok(ref line)) if !line.starts_with("solid ") => {
-                return Err(::std::io::Error::new(::std::io::ErrorKind::InvalidData,
-                                                 "ascii STL does not start with \"solid \""))
+                return Err(::std::io::Error::new(
+                    ::std::io::ErrorKind::InvalidData,
+                    "ascii STL does not start with \"solid \"",
+                ))
             }
             None => {
-                return Err(::std::io::Error::new(::std::io::ErrorKind::UnexpectedEof,
-                                                 "empty file?"))
+                return Err(::std::io::Error::new(
+                    ::std::io::ErrorKind::UnexpectedEof,
+                    "empty file?",
+                ))
             }
             _ => {}
         }
@@ -356,61 +381,74 @@ impl<'a> AsciiStlReader<'a> {
                  })
              // filter empty lines.
             .filter(|result| result.is_err() || (result.as_ref().unwrap().len() > 0));
-        Ok(Box::new(AsciiStlReader { lines: Box::new(lines) }) as
-           Box<TriangleIterator<Item = Result<Triangle>>>)
+        Ok(Box::new(AsciiStlReader {
+            lines: Box::new(lines),
+        }) as Box<TriangleIterator<Item = Result<Triangle>>>)
     }
     // Tries to read a triangle.
     fn next_face(&mut self) -> Result<Option<Triangle>> {
         let face_header: Option<Result<Vec<String>>> = self.lines.next();
         if face_header.is_none() {
-            return Err(::std::io::Error::new(::std::io::ErrorKind::UnexpectedEof,
-                                             "EOF while expecting facet or endsolid."));
+            return Err(::std::io::Error::new(
+                ::std::io::ErrorKind::UnexpectedEof,
+                "EOF while expecting facet or endsolid.",
+            ));
         }
         let face_header = try!(face_header.unwrap());
         if face_header.len() >= 2 && face_header[0] == "endsolid" {
             return Ok(None);
         }
         if face_header.len() != 5 || face_header[0] != "facet" || face_header[1] != "normal" {
-            return Err(::std::io::Error::new(::std::io::ErrorKind::InvalidData,
-                                             "invalid facet header."));
+            return Err(::std::io::Error::new(
+                ::std::io::ErrorKind::InvalidData,
+                "invalid facet header.",
+            ));
         }
         let mut result_normal = [0.; 3];
-        try!(AsciiStlReader::tokens_to_f32(&face_header[2..5], &mut result_normal[0..3]));
+        try!(AsciiStlReader::tokens_to_f32(
+            &face_header[2..5],
+            &mut result_normal[0..3]
+        ));
         try!(self.expect_static(&["outer", "loop"]));
         let mut result_vertices = [[0.; 3]; 3];
         for vertex_result in result_vertices.iter_mut() {
             if let Some(line) = self.lines.next() {
                 let line = try!(line);
                 if line.len() != 4 || line[0] != "vertex" {
-                    return Err(::std::io::Error::new(::std::io::ErrorKind::InvalidData,
-                                                     format!("vertex f32 f32 f32, got {:?}",
-                                                             line)));
+                    return Err(::std::io::Error::new(
+                        ::std::io::ErrorKind::InvalidData,
+                        format!("vertex f32 f32 f32, got {:?}", line),
+                    ));
                 }
-                try!(AsciiStlReader::tokens_to_f32(&line[1..4], &mut vertex_result[0..3]));
+                try!(AsciiStlReader::tokens_to_f32(
+                    &line[1..4],
+                    &mut vertex_result[0..3]
+                ));
             } else {
-                return Err(::std::io::Error::new(::std::io::ErrorKind::UnexpectedEof,
-                                                 "EOF while expecting vertex"));
+                return Err(::std::io::Error::new(
+                    ::std::io::ErrorKind::UnexpectedEof,
+                    "EOF while expecting vertex",
+                ));
             }
         }
         try!(self.expect_static(&["endloop"]));
         try!(self.expect_static(&["endfacet"]));
         Ok(Some(Triangle {
-                    normal: result_normal,
-                    vertices: result_vertices,
-                }))
+            normal: result_normal,
+            vertices: result_vertices,
+        }))
     }
     fn tokens_to_f32(tokens: &[String], output: &mut [f32]) -> Result<()> {
         assert_eq!(tokens.len(), output.len());
         for i in 0..tokens.len() {
-            let f = try!(tokens[i]
-                             .parse::<f32>()
-                             .map_err(|e| {
-                                          ::std::io::Error::new(::std::io::ErrorKind::InvalidData,
-                                                                e.to_string())
-                                      }));
+            let f = try!(tokens[i].parse::<f32>().map_err(|e| {
+                ::std::io::Error::new(::std::io::ErrorKind::InvalidData, e.to_string())
+            }));
             if f != 0f32 && !f.is_normal() {
-                return Err(::std::io::Error::new(::std::io::ErrorKind::InvalidData,
-                                                 format!("expected 0 or normal f32, got {}", f)));
+                return Err(::std::io::Error::new(
+                    ::std::io::ErrorKind::InvalidData,
+                    format!("expected 0 or normal f32, got {}", f),
+                ));
             }
             output[i] = f;
         }
@@ -420,14 +458,16 @@ impl<'a> AsciiStlReader<'a> {
         if let Some(line) = self.lines.next() {
             let line = try!(line);
             if line != expectation {
-                return Err(::std::io::Error::new(::std::io::ErrorKind::InvalidData,
-                                                 format!("expected {:?}, got {:?}",
-                                                         expectation,
-                                                         line)));
+                return Err(::std::io::Error::new(
+                    ::std::io::ErrorKind::InvalidData,
+                    format!("expected {:?}, got {:?}", expectation, line),
+                ));
             }
         } else {
-            return Err(::std::io::Error::new(::std::io::ErrorKind::UnexpectedEof,
-                                             format!("EOF while expecting {:?}", expectation)));
+            return Err(::std::io::Error::new(
+                ::std::io::ErrorKind::UnexpectedEof,
+                format!("EOF while expecting {:?}", expectation),
+            ));
         }
         return Ok(());
     }
@@ -442,7 +482,9 @@ mod test {
     // Will sort the vertices of the Mesh and fix the indices in the faces.
     fn sort_vertices(mut mesh: super::IndexedMesh) -> super::IndexedMesh {
         let mut index_map = (0..mesh.vertices.len()).collect::<Vec<_>>();
-        index_map.sort_by(|a, b| mesh.vertices[*a].partial_cmp(&mesh.vertices[*b]).unwrap());
+        index_map.sort_by(|a, b| {
+            mesh.vertices[*a].partial_cmp(&mesh.vertices[*b]).unwrap()
+        });
         let new_vertices = index_map
             .iter()
             .map(|i| mesh.vertices[*i])
@@ -459,7 +501,8 @@ mod test {
 
     #[test]
     fn read_ascii_stl_simple_success() {
-        let mut reader = ::std::io::Cursor::new(b"solid foobar
+        let mut reader = ::std::io::Cursor::new(
+            b"solid foobar
         facet normal 0.1 0.2 0.3
             outer loop
                 vertex 1 2 3
@@ -468,23 +511,29 @@ mod test {
             endloop
         endfacet
         endsolid foobar"
-                                                        .to_vec());
-        assert_eq!(AsciiStlReader::new(&mut reader)
-                       .unwrap()
-                       .to_indexed_triangles()
-                       .unwrap(),
-                   super::IndexedMesh {
-                       vertices: vec![[1., 2., 3.], [4., 5., 6e-15], [7., 8., 9.87654321]],
-                       faces: vec![IndexedTriangle {
-                                       normal: [0.1, 0.2, 0.3],
-                                       vertices: [0, 1, 2],
-                                   }],
-                   });
+                .to_vec(),
+        );
+        assert_eq!(
+            AsciiStlReader::new(&mut reader)
+                .unwrap()
+                .to_indexed_triangles()
+                .unwrap(),
+            super::IndexedMesh {
+                vertices: vec![[1., 2., 3.], [4., 5., 6e-15], [7., 8., 9.87654321]],
+                faces: vec![
+                    IndexedTriangle {
+                        normal: [0.1, 0.2, 0.3],
+                        vertices: [0, 1, 2],
+                    },
+                ],
+            }
+        );
     }
 
     #[test]
     fn read_ascii_stl_name_with_spaces_success() {
-        let mut reader = ::std::io::Cursor::new(b"solid foo bar
+        let mut reader = ::std::io::Cursor::new(
+            b"solid foo bar
         facet normal 0.1 0.2 0.3
             outer loop
                 vertex 1 2 3
@@ -493,24 +542,30 @@ mod test {
             endloop
         endfacet
         endsolid foo bar"
-                                                        .to_vec());
-        assert_eq!(AsciiStlReader::new(&mut reader)
-                       .unwrap()
-                       .to_indexed_triangles()
-                       .unwrap(),
-                   super::IndexedMesh {
-                       vertices: vec![[1., 2., 3.], [4., 5., 6e-15], [7., 8., 9.87654321]],
-                       faces: vec![IndexedTriangle {
-                                       normal: [0.1, 0.2, 0.3],
-                                       vertices: [0, 1, 2],
-                                   }],
-                   });
+                .to_vec(),
+        );
+        assert_eq!(
+            AsciiStlReader::new(&mut reader)
+                .unwrap()
+                .to_indexed_triangles()
+                .unwrap(),
+            super::IndexedMesh {
+                vertices: vec![[1., 2., 3.], [4., 5., 6e-15], [7., 8., 9.87654321]],
+                faces: vec![
+                    IndexedTriangle {
+                        normal: [0.1, 0.2, 0.3],
+                        vertices: [0, 1, 2],
+                    },
+                ],
+            }
+        );
     }
 
 
     #[test]
     fn read_ascii_stl_sort_and_depup_vertices() {
-        let mut reader = ::std::io::Cursor::new(b"solid foobar
+        let mut reader = ::std::io::Cursor::new(
+            b"solid foobar
         facet normal 27 28 29
             outer loop
                 vertex 7 8 9
@@ -519,24 +574,30 @@ mod test {
             endloop
         endfacet
         endsolid foobar"
-                                                        .to_vec());
+                .to_vec(),
+        );
         let stl = AsciiStlReader::new(&mut reader)
             .unwrap()
             .to_indexed_triangles()
             .unwrap();
-        assert_eq!(sort_vertices(stl),
-                   super::IndexedMesh {
-                       vertices: vec![[4., 5., 6.], [7., 8., 9.]],
-                       faces: vec![IndexedTriangle {
-                                       normal: [27., 28., 29.],
-                                       vertices: [1, 0, 1],
-                                   }],
-                   });
+        assert_eq!(
+            sort_vertices(stl),
+            super::IndexedMesh {
+                vertices: vec![[4., 5., 6.], [7., 8., 9.]],
+                faces: vec![
+                    IndexedTriangle {
+                        normal: [27., 28., 29.],
+                        vertices: [1, 0, 1],
+                    },
+                ],
+            }
+        );
     }
 
     #[test]
     fn read_ascii_stl_no_header() {
-        let mut reader = ::std::io::Cursor::new(b"non-solid foobar
+        let mut reader = ::std::io::Cursor::new(
+            b"non-solid foobar
         facet normal 1 2 3
             outer loop
                 vertex 7 8 9
@@ -545,17 +606,21 @@ mod test {
             endloop
         endfacet
         endsolid foobar"
-                                                        .to_vec());
+                .to_vec(),
+        );
         let stl = AsciiStlReader::new(&mut reader);
-        assert_eq!(stl.as_ref().err().unwrap().kind(),
-                   ::std::io::ErrorKind::InvalidData,
-                   "{:?}",
-                   stl.err());
+        assert_eq!(
+            stl.as_ref().err().unwrap().kind(),
+            ::std::io::ErrorKind::InvalidData,
+            "{:?}",
+            stl.err()
+        );
     }
 
     #[test]
     fn read_ascii_stl_wrong_number() {
-        let mut reader = ::std::io::Cursor::new(b"solid foobar
+        let mut reader = ::std::io::Cursor::new(
+            b"solid foobar
         facet normal 1 2 3
             outer loop
                 vertex 7 8 9,
@@ -564,19 +629,23 @@ mod test {
             endloop
         endfacet
         endsolid foobar"
-                                                        .to_vec());
+                .to_vec(),
+        );
         let stl = AsciiStlReader::new(&mut reader)
             .unwrap()
             .to_indexed_triangles();
-        assert_eq!(stl.as_ref().err().unwrap().kind(),
-                   ::std::io::ErrorKind::InvalidData,
-                   "{:?}",
-                   stl.err());
+        assert_eq!(
+            stl.as_ref().err().unwrap().kind(),
+            ::std::io::ErrorKind::InvalidData,
+            "{:?}",
+            stl.err()
+        );
     }
 
     #[test]
     fn read_ascii_stl_missing_vertex() {
-        let mut reader = ::std::io::Cursor::new(b"solid foobar
+        let mut reader = ::std::io::Cursor::new(
+            b"solid foobar
         facet normal 1 2 3
             outer loop
                 vertex 7 8 9,
@@ -584,14 +653,17 @@ mod test {
             endloop
         endfacet
         endsolid foobar"
-                                                        .to_vec());
+                .to_vec(),
+        );
         let stl = AsciiStlReader::new(&mut reader)
             .unwrap()
             .to_indexed_triangles();
-        assert_eq!(stl.as_ref().err().unwrap().kind(),
-                   ::std::io::ErrorKind::InvalidData,
-                   "{:?}",
-                   stl);
+        assert_eq!(
+            stl.as_ref().err().unwrap().kind(),
+            ::std::io::ErrorKind::InvalidData,
+            "{:?}",
+            stl
+        );
     }
 
     #[test]
@@ -644,9 +716,13 @@ mod test {
         let mut reader = ::std::io::Cursor::new(BUNNY_99_ASCII);
         let stl = AsciiStlReader::new(&mut reader)
             .unwrap()
-            .to_indexed_triangles().unwrap();
-        assert_eq!(stl.validate().err().unwrap().kind(),
-                   ::std::io::ErrorKind::InvalidData,
-                   "{:?}", stl.validate().err());
+            .to_indexed_triangles()
+            .unwrap();
+        assert_eq!(
+            stl.validate().err().unwrap().kind(),
+            ::std::io::ErrorKind::InvalidData,
+            "{:?}",
+            stl.validate().err()
+        );
     }
 }
