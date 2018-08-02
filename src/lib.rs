@@ -395,13 +395,13 @@ impl<'a> AsciiStlReader<'a> {
             ));
         }
         let face_header = try!(face_header.unwrap());
-        if face_header.len() >= 2 && face_header[0] == "endsolid" {
+        if face_header.len() >= 1 && face_header[0] == "endsolid" {
             return Ok(None);
         }
         if face_header.len() != 5 || face_header[0] != "facet" || face_header[1] != "normal" {
             return Err(::std::io::Error::new(
                 ::std::io::ErrorKind::InvalidData,
-                "invalid facet header.",
+                format!("invalid facet header: {:?}", face_header),
             ));
         }
         let mut result_normal = [0.; 3];
@@ -441,13 +441,14 @@ impl<'a> AsciiStlReader<'a> {
     fn tokens_to_f32(tokens: &[String], output: &mut [f32]) -> Result<()> {
         assert_eq!(tokens.len(), output.len());
         for i in 0..tokens.len() {
-            let f = try!(tokens[i].parse::<f32>().map_err(|e| {
-                ::std::io::Error::new(::std::io::ErrorKind::InvalidData, e.to_string())
-            }));
-            if f != 0f32 && !f.is_normal() {
+            let f = try!(tokens[i].parse::<f32>().map_err(|e| ::std::io::Error::new(
+                ::std::io::ErrorKind::InvalidData,
+                e.to_string()
+            )));
+            if !f.is_finite() {
                 return Err(::std::io::Error::new(
                     ::std::io::ErrorKind::InvalidData,
-                    format!("expected 0 or normal f32, got {}", f),
+                    format!("expected finite f32, got {} which is {:?}", f, f.classify()),
                 ));
             }
             output[i] = f;
@@ -482,9 +483,7 @@ mod test {
     // Will sort the vertices of the Mesh and fix the indices in the faces.
     fn sort_vertices(mut mesh: super::IndexedMesh) -> super::IndexedMesh {
         let mut index_map = (0..mesh.vertices.len()).collect::<Vec<_>>();
-        index_map.sort_by(|a, b| {
-            mesh.vertices[*a].partial_cmp(&mesh.vertices[*b]).unwrap()
-        });
+        index_map.sort_by(|a, b| mesh.vertices[*a].partial_cmp(&mesh.vertices[*b]).unwrap());
         let new_vertices = index_map
             .iter()
             .map(|i| mesh.vertices[*i])
@@ -497,7 +496,6 @@ mod test {
         }
         return mesh;
     }
-
 
     #[test]
     fn read_ascii_stl_simple_success() {
@@ -520,12 +518,10 @@ mod test {
                 .unwrap(),
             super::IndexedMesh {
                 vertices: vec![[1., 2., 3.], [4., 5., 6e-15], [7., 8., 9.87654321]],
-                faces: vec![
-                    IndexedTriangle {
-                        normal: [0.1, 0.2, 0.3],
-                        vertices: [0, 1, 2],
-                    },
-                ],
+                faces: vec![IndexedTriangle {
+                    normal: [0.1, 0.2, 0.3],
+                    vertices: [0, 1, 2],
+                }],
             }
         );
     }
@@ -551,16 +547,13 @@ mod test {
                 .unwrap(),
             super::IndexedMesh {
                 vertices: vec![[1., 2., 3.], [4., 5., 6e-15], [7., 8., 9.87654321]],
-                faces: vec![
-                    IndexedTriangle {
-                        normal: [0.1, 0.2, 0.3],
-                        vertices: [0, 1, 2],
-                    },
-                ],
+                faces: vec![IndexedTriangle {
+                    normal: [0.1, 0.2, 0.3],
+                    vertices: [0, 1, 2],
+                }],
             }
         );
     }
-
 
     #[test]
     fn read_ascii_stl_sort_and_depup_vertices() {
@@ -584,12 +577,10 @@ mod test {
             sort_vertices(stl),
             super::IndexedMesh {
                 vertices: vec![[4., 5., 6.], [7., 8., 9.]],
-                faces: vec![
-                    IndexedTriangle {
-                        normal: [27., 28., 29.],
-                        vertices: [1, 0, 1],
-                    },
-                ],
+                faces: vec![IndexedTriangle {
+                    normal: [27., 28., 29.],
+                    vertices: [1, 0, 1],
+                }],
             }
         );
     }
@@ -724,5 +715,25 @@ mod test {
             "{:?}",
             stl.validate().err()
         );
+    }
+
+    #[test]
+    fn read_ascii_stl_tiny_numbers() {
+        let mut reader = ::std::io::Cursor::new(
+            b"solid ASCII
+                  facet normal 8.491608e-001 1.950388e-001 -4.908011e-001
+                    outer loop
+                    vertex   -8.222098e-001 2.326105e+001 5.724931e-046
+                    vertex   -8.811435e-001 2.351764e+001 1.135191e-045
+                    vertex   3.688022e+000 2.340444e+001 7.860367e+000
+                    endloop
+                endfacet
+            endsolid"
+                .to_vec(),
+        );
+        let stl = AsciiStlReader::new(&mut reader)
+            .unwrap()
+            .to_indexed_triangles();
+        assert!(stl.is_ok(), "{:?}", stl);
     }
 }
