@@ -15,3 +15,7 @@ path = "src/lib.rs"
 
 [dependencies]
 byteorder = "1"
+
+[badges]
+travis-ci = { repository = "hmeyer/stl_io", branch = "master" }
+codecov = { repository = "hmeyer/stl_io", branch = "master", service = "github" }
