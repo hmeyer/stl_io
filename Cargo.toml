@@ -1,6 +1,6 @@
 [package]
 name = "stl_io"
-version = "0.3.8"
+version = "0.4.0"
 authors = ["Henning Meyer <tutmann@gmail.com>"]
 
 description = "STL input and output."
