@@ -38,7 +38,7 @@ pub type Normal = [f32; 3];
 
 /// STL Triangle, consisting of a normal and three vertices.
 /// This is the format Triangles are usually stored in STL files.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Triangle {
     /// Normal vector of the Triangle.
     pub normal: Normal,
