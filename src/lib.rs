@@ -10,6 +10,15 @@
 //! let mut file = OpenOptions::new().read(true).open("mesh.stl").unwrap();
 //! let stl = stl_io::read_stl(&mut file).unwrap();
 //! ```
+//!
+//! Read number of triangles in a STL file:
+//!
+//! ```rust,no_run
+//! use std::fs::OpenOptions;
+//! let mut file = OpenOptions::new().read(true).open("mesh.stl").unwrap();
+//! let size_hint = stl_io::create_stl_reader(&mut file).unwrap().size_hint();
+//! ```
+//!
 //! Write STL file:
 //!
 //! ```rust,no_run
