@@ -33,7 +33,7 @@
 
 #![warn(missing_docs)]
 
-extern crate byteorder;
+//extern crate byteorder;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{BufRead, BufReader, BufWriter};
@@ -208,7 +208,7 @@ where
 /// ```
 pub fn create_stl_reader<'a, R>(
     read: &'a mut R,
-) -> Result<Box<TriangleIterator<Item = Result<Triangle>> + 'a>>
+) -> Result<Box<dyn TriangleIterator<Item = Result<Triangle>> + 'a>>
 where
     R: ::std::io::Read + ::std::io::Seek,
 {
@@ -220,7 +220,7 @@ where
 
 /// Struct for binary STL reader.
 pub struct BinaryStlReader<'a> {
-    reader: Box<::std::io::Read + 'a>,
+    reader: Box<dyn::std::io::Read + 'a>,
     index: usize,
     size: usize,
 }
@@ -228,8 +228,8 @@ pub struct BinaryStlReader<'a> {
 impl<'a> BinaryStlReader<'a> {
     /// Factory to create a new BinaryStlReader from read.
     pub fn create_triangle_iterator(
-        read: &'a mut ::std::io::Read,
-    ) -> Result<Box<TriangleIterator<Item = Result<Triangle>> + 'a>> {
+        read: &'a mut dyn (::std::io::Read),
+    ) -> Result<Box<dyn TriangleIterator<Item = Result<Triangle>> + 'a>> {
         let mut reader = Box::new(BufReader::new(read));
         reader.read_exact(&mut [0u8; 80])?;
         let num_faces = reader.read_u32::<LittleEndian>()? as usize;
@@ -237,7 +237,8 @@ impl<'a> BinaryStlReader<'a> {
             reader,
             index: 0,
             size: num_faces,
-        }) as Box<TriangleIterator<Item = Result<Triangle>>>)
+        })
+            as Box<dyn TriangleIterator<Item = Result<Triangle>>>)
     }
 
     fn next_face(&mut self) -> Result<Triangle> {
@@ -326,7 +327,7 @@ pub trait TriangleIterator: ::std::iter::Iterator<Item = Result<Triangle>> {
 
 /// Struct for ascii STL reader.
 pub struct AsciiStlReader<'a> {
-    lines: Box<::std::iter::Iterator<Item = Result<Vec<String>>> + 'a>,
+    lines: Box<dyn::std::iter::Iterator<Item = Result<Vec<String>>> + 'a>,
 }
 
 impl<'a> TriangleIterator for BinaryStlReader<'a> {}
@@ -362,8 +363,8 @@ impl<'a> AsciiStlReader<'a> {
     }
     /// Factory to create a new ascii STL Reader from read.
     pub fn create_triangle_iterator(
-        read: &'a mut ::std::io::Read,
-    ) -> Result<Box<TriangleIterator<Item = Result<Triangle>> + 'a>> {
+        read: &'a mut dyn (::std::io::Read),
+    ) -> Result<Box<dyn TriangleIterator<Item = Result<Triangle>> + 'a>> {
         let mut lines = BufReader::new(read).lines();
         match lines.next() {
             Some(Err(e)) => return Err(e),
@@ -383,18 +384,19 @@ impl<'a> AsciiStlReader<'a> {
         }
         let lines = lines
             .map(|result| {
-                     result.map(|l| {
-                                    // Make lines into iterator over vectors of tokens
-                                    l.split_whitespace()
-                                        .map(|t| t.to_string())
-                                        .collect::<Vec<_>>()
-                                })
-                 })
-             // filter empty lines.
+                result.map(|l| {
+                    // Make lines into iterator over vectors of tokens
+                    l.split_whitespace()
+                        .map(|t| t.to_string())
+                        .collect::<Vec<_>>()
+                })
+            })
+            // filter empty lines.
             .filter(|result| result.is_err() || (!result.as_ref().unwrap().is_empty()));
         Ok(Box::new(AsciiStlReader {
             lines: Box::new(lines),
-        }) as Box<TriangleIterator<Item = Result<Triangle>>>)
+        })
+            as Box<dyn TriangleIterator<Item = Result<Triangle>>>)
     }
     // Tries to read a triangle.
     fn next_face(&mut self) -> Result<Option<Triangle>> {
@@ -405,7 +407,7 @@ impl<'a> AsciiStlReader<'a> {
                 "EOF while expecting facet or endsolid.",
             ));
         }
-        let face_header = try!(face_header.unwrap());
+        let face_header = face_header.unwrap()?;
         if !face_header.is_empty() && face_header[0] == "endsolid" {
             return Ok(None);
         }
@@ -416,25 +418,19 @@ impl<'a> AsciiStlReader<'a> {
             ));
         }
         let mut result_normal = [0.; 3];
-        try!(AsciiStlReader::tokens_to_f32(
-            &face_header[2..5],
-            &mut result_normal[0..3]
-        ));
-        try!(self.expect_static(&["outer", "loop"]));
+        AsciiStlReader::tokens_to_f32(&face_header[2..5], &mut result_normal[0..3])?;
+        self.expect_static(&["outer", "loop"])?;
         let mut result_vertices = [[0.; 3]; 3];
         for vertex_result in &mut result_vertices {
             if let Some(line) = self.lines.next() {
-                let line = try!(line);
+                let line = line?;
                 if line.len() != 4 || line[0] != "vertex" {
                     return Err(::std::io::Error::new(
                         ::std::io::ErrorKind::InvalidData,
                         format!("vertex f32 f32 f32, got {:?}", line),
                     ));
                 }
-                try!(AsciiStlReader::tokens_to_f32(
-                    &line[1..4],
-                    &mut vertex_result[0..3]
-                ));
+                AsciiStlReader::tokens_to_f32(&line[1..4], &mut vertex_result[0..3])?;
             } else {
                 return Err(::std::io::Error::new(
                     ::std::io::ErrorKind::UnexpectedEof,
@@ -442,8 +438,8 @@ impl<'a> AsciiStlReader<'a> {
                 ));
             }
         }
-        try!(self.expect_static(&["endloop"]));
-        try!(self.expect_static(&["endfacet"]));
+        self.expect_static(&["endloop"])?;
+        self.expect_static(&["endfacet"])?;
         Ok(Some(Triangle {
             normal: result_normal,
             vertices: result_vertices,
@@ -452,10 +448,9 @@ impl<'a> AsciiStlReader<'a> {
     fn tokens_to_f32(tokens: &[String], output: &mut [f32]) -> Result<()> {
         assert_eq!(tokens.len(), output.len());
         for i in 0..tokens.len() {
-            let f = try!(tokens[i].parse::<f32>().map_err(|e| ::std::io::Error::new(
-                ::std::io::ErrorKind::InvalidData,
-                e.to_string()
-            )));
+            let f = tokens[i].parse::<f32>().map_err(|e| {
+                ::std::io::Error::new(::std::io::ErrorKind::InvalidData, e.to_string())
+            })?;
             if !f.is_finite() {
                 return Err(::std::io::Error::new(
                     ::std::io::ErrorKind::InvalidData,
@@ -468,7 +463,7 @@ impl<'a> AsciiStlReader<'a> {
     }
     fn expect_static(&mut self, expectation: &[&str]) -> Result<()> {
         if let Some(line) = self.lines.next() {
-            let line = try!(line);
+            let line = line?;
             if line != expectation {
                 return Err(::std::io::Error::new(
                     ::std::io::ErrorKind::InvalidData,
