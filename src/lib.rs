@@ -173,10 +173,11 @@ impl IndexedMesh {
 /// let mut binary_stl = Vec::<u8>::new();
 /// stl_io::write_stl(&mut binary_stl, mesh.iter()).unwrap();
 /// ```
-pub fn write_stl<'a, W, I>(writer: &mut W, mesh: I) -> Result<()>
+pub fn write_stl<T, W, I>(writer: &mut W, mesh: I) -> Result<()>
 where
     W: ::std::io::Write,
-    I: ::std::iter::ExactSizeIterator<Item = &'a Triangle>,
+    I: ::std::iter::ExactSizeIterator<Item = T>,
+    T: std::borrow::Borrow<Triangle>,
 {
     let mut writer = BufWriter::new(writer);
 
@@ -184,6 +185,7 @@ where
     writer.write_all(&[0u8; 80])?;
     writer.write_u32::<LittleEndian>(mesh.len() as u32)?;
     for t in mesh {
+        let t = t.borrow();
         for f in &t.normal.0 {
             writer.write_f32::<LittleEndian>(*f as f32)?;
         }
