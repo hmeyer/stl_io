@@ -53,14 +53,22 @@ impl<F> Vector<F> {
     }
 }
 
+impl<F> std::ops::Index<usize> for Vector<F> {
+    type Output = F;
+    fn index(&self, i: usize) -> &Self::Output {
+        assert!(i < 3);
+        &self.0[i]
+    }
+}
+
 impl<'a, M: Copy + Default, F: Copy + ApproxEq<Margin = M>> ApproxEq for &'a Vector<F> {
     type Margin = M;
 
     fn approx_eq<T: Into<Self::Margin>>(self, other: Self, margin: T) -> bool {
         let margin = margin.into();
-        self.0[0].approx_eq(other.0[0], margin)
-            && self.0[1].approx_eq(other.0[1], margin)
-            && self.0[2].approx_eq(other.0[2], margin)
+        self[0].approx_eq(other[0], margin)
+            && self[1].approx_eq(other[1], margin)
+            && self[2].approx_eq(other[2], margin)
     }
 }
 
