@@ -23,10 +23,11 @@
 //!
 //! ```rust,no_run
 //! use std::fs::OpenOptions;
-//! let mesh = [stl_io::Triangle { normal: [1.0, 0.0, 0.0],
-//!                                vertices: [[0.0, -1.0, 0.0],
-//!                                           [0.0, 1.0, 0.0],
-//!                                           [0.0, 0.0, 0.5]]}];
+//! use stl_io::{Normal, Vertex};
+//! let mesh = [stl_io::Triangle { normal: Normal::new([1.0, 0.0, 0.0]),
+//!                                vertices: [Vertex::new([0.0, -1.0, 0.0]),
+//!                                           Vertex::new([0.0, 1.0, 0.0]),
+//!                                           Vertex::new([0.0, 0.0, 0.5])]}];
 //! let mut file = OpenOptions::new().write(true).create_new(true).open("mesh.stl").unwrap();
 //! stl_io::write_stl(&mut file, mesh.iter()).unwrap();
 //! ```
@@ -36,14 +37,37 @@
 //extern crate byteorder;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use float_cmp::{ApproxEq, F32Margin};
 use std::io::{BufRead, BufReader, BufWriter};
 use std::io::{Read, Result, Write};
 use std::iter::Iterator;
 
+/// Float Vector with approx_eq.
+#[derive(Default, Clone, Copy, Debug, PartialEq, PartialOrd)]
+pub struct Vector<F>([F; 3]);
+
+impl<F> Vector<F> {
+    /// Constructor from array.
+    pub fn new(v: [F; 3]) -> Self {
+        Self(v)
+    }
+}
+
+impl<'a, M: Copy + Default, F: Copy + ApproxEq<Margin = M>> ApproxEq for &'a Vector<F> {
+    type Margin = M;
+
+    fn approx_eq<T: Into<Self::Margin>>(self, other: Self, margin: T) -> bool {
+        let margin = margin.into();
+        self.0[0].approx_eq(other.0[0], margin)
+            && self.0[1].approx_eq(other.0[1], margin)
+            && self.0[2].approx_eq(other.0[2], margin)
+    }
+}
+
 /// STL vertex - a corner of a Triangle in a 3D Mesh.
-pub type Vertex = [f32; 3];
+pub type Vertex = Vector<f32>;
 /// STL Normal - a vector perpendicular to a Triangle in a 3D Mesh.
-pub type Normal = [f32; 3];
+pub type Normal = Vector<f32>;
 
 /// STL Triangle, consisting of a normal and three vertices.
 /// This is the format Triangles are usually stored in STL files.
@@ -85,7 +109,10 @@ impl IndexedMesh {
         for (fi, face) in self.faces.iter().enumerate() {
             for i in 0..3 {
                 // Verify that all vertices are different.
-                if self.vertices[face.vertices[i]] == self.vertices[face.vertices[(i + 1) % 3]] {
+                if self.vertices[face.vertices[i]].approx_eq(
+                    &self.vertices[face.vertices[(i + 1) % 3]],
+                    F32Margin::default(),
+                ) {
                     return Err(::std::io::Error::new(
                         ::std::io::ErrorKind::InvalidData,
                         format!(
@@ -103,10 +130,11 @@ impl IndexedMesh {
                         continue;
                     }
                     for i2 in 0..3 {
-                        if (self.vertices[face.vertices[i]]
-                            == self.vertices[face2.vertices[(i2 + 1) % 3]])
-                            && (self.vertices[face.vertices[(i + 1) % 3]]
-                                == self.vertices[face2.vertices[i2]])
+                        if self.vertices[face.vertices[i]].approx_eq(
+                            &self.vertices[face2.vertices[(i2 + 1) % 3]],
+                            F32Margin::default(),
+                        ) && self.vertices[face.vertices[(i + 1) % 3]]
+                            .approx_eq(&self.vertices[face2.vertices[i2]], F32Margin::default())
                         {
                             found_edge = true;
                             break;
@@ -137,10 +165,11 @@ impl IndexedMesh {
 /// [Wikipedia](https://en.wikipedia.org/wiki/STL_(file_format)#Binary_STL).
 ///
 /// ```
-/// let mesh = [stl_io::Triangle { normal: [1.0, 0.0, 0.0],
-///                                vertices: [[0.0, -1.0, 0.0],
-///                                           [0.0, 1.0, 0.0],
-///                                           [0.0, 0.0, 0.5]]}];
+/// use stl_io::{Vertex, Normal};
+/// let mesh = [stl_io::Triangle { normal: Normal::new([1.0, 0.0, 0.0]),
+///                                vertices: [Vertex::new([0.0, -1.0, 0.0]),
+///                                           Vertex::new([0.0, 1.0, 0.0]),
+///                                           Vertex::new([0.0, 0.0, 0.5])]}];
 /// let mut binary_stl = Vec::<u8>::new();
 /// stl_io::write_stl(&mut binary_stl, mesh.iter()).unwrap();
 /// ```
@@ -155,11 +184,11 @@ where
     writer.write_all(&[0u8; 80])?;
     writer.write_u32::<LittleEndian>(mesh.len() as u32)?;
     for t in mesh {
-        for f in &t.normal {
+        for f in &t.normal.0 {
             writer.write_f32::<LittleEndian>(*f as f32)?;
         }
         for &p in &t.vertices {
-            for c in &p {
+            for c in &p.0 {
                 writer.write_f32::<LittleEndian>(*c as f32)?;
             }
         }
@@ -242,13 +271,13 @@ impl<'a> BinaryStlReader<'a> {
     }
 
     fn next_face(&mut self) -> Result<Triangle> {
-        let mut normal = [0.; 3];
-        for f in &mut normal {
+        let mut normal = Normal::default();
+        for f in &mut normal.0 {
             *f = self.reader.read_f32::<LittleEndian>()?;
         }
-        let mut face = [[0.; 3]; 3];
+        let mut face = [Vertex::default(); 3];
         for vertex in &mut face {
-            for c in vertex.iter_mut() {
+            for c in vertex.0.iter_mut() {
                 *c = self.reader.read_f32::<LittleEndian>()?;
             }
         }
@@ -302,7 +331,7 @@ pub trait TriangleIterator: ::std::iter::Iterator<Item = Result<Triangle>> {
             let t = t?;
             for (i, vertex) in t.vertices.iter().enumerate() {
                 // This is ugly, but f32 has no Eq and no Hash.
-                let bitpattern = unsafe { std::mem::transmute::<[f32; 3], [u32; 3]>(*vertex) };
+                let bitpattern = unsafe { std::mem::transmute::<[f32; 3], [u32; 3]>(vertex.0) };
                 let index = *vertex_to_index
                     .entry(bitpattern)
                     .or_insert_with(|| vertices.len());
@@ -417,10 +446,10 @@ impl<'a> AsciiStlReader<'a> {
                 format!("invalid facet header: {:?}", face_header),
             ));
         }
-        let mut result_normal = [0.; 3];
-        AsciiStlReader::tokens_to_f32(&face_header[2..5], &mut result_normal[0..3])?;
+        let mut result_normal = Normal::default();
+        AsciiStlReader::tokens_to_f32(&face_header[2..5], &mut result_normal.0[0..3])?;
         self.expect_static(&["outer", "loop"])?;
-        let mut result_vertices = [[0.; 3]; 3];
+        let mut result_vertices = [Vertex::default(); 3];
         for vertex_result in &mut result_vertices {
             if let Some(line) = self.lines.next() {
                 let line = line?;
@@ -430,7 +459,7 @@ impl<'a> AsciiStlReader<'a> {
                         format!("vertex f32 f32 f32, got {:?}", line),
                     ));
                 }
-                AsciiStlReader::tokens_to_f32(&line[1..4], &mut vertex_result[0..3])?;
+                AsciiStlReader::tokens_to_f32(&line[1..4], &mut vertex_result.0[0..3])?;
             } else {
                 return Err(::std::io::Error::new(
                     ::std::io::ErrorKind::UnexpectedEof,
@@ -523,9 +552,13 @@ mod test {
                 .to_indexed_triangles()
                 .unwrap(),
             super::IndexedMesh {
-                vertices: vec![[1., 2., 3.], [4., 5., 6e-15], [7., 8., 9.876_543]],
+                vertices: vec![
+                    Vertex::new([1., 2., 3.]),
+                    Vertex::new([4., 5., 6e-15]),
+                    Vertex::new([7., 8., 9.876_543])
+                ],
                 faces: vec![IndexedTriangle {
-                    normal: [0.1, 0.2, 0.3],
+                    normal: Normal::new([0.1, 0.2, 0.3]),
                     vertices: [0, 1, 2],
                 }],
             }
@@ -552,9 +585,13 @@ mod test {
                 .to_indexed_triangles()
                 .unwrap(),
             super::IndexedMesh {
-                vertices: vec![[1., 2., 3.], [4., 5., 6e-15], [7., 8., 9.876_543]],
+                vertices: vec![
+                    Vertex::new([1., 2., 3.]),
+                    Vertex::new([4., 5., 6e-15]),
+                    Vertex::new([7., 8., 9.876_543])
+                ],
                 faces: vec![IndexedTriangle {
-                    normal: [0.1, 0.2, 0.3],
+                    normal: Normal::new([0.1, 0.2, 0.3]),
                     vertices: [0, 1, 2],
                 }],
             }
@@ -582,9 +619,9 @@ mod test {
         assert_eq!(
             sort_vertices(stl),
             super::IndexedMesh {
-                vertices: vec![[4., 5., 6.], [7., 8., 9.]],
+                vertices: vec![Vertex::new([4., 5., 6.]), Vertex::new([7., 8., 9.])],
                 faces: vec![IndexedTriangle {
-                    normal: [27., 28., 29.],
+                    normal: Normal::new([27., 28., 29.]),
                     vertices: [1, 0, 1],
                 }],
             }

@@ -16,6 +16,7 @@ path = "src/lib.rs"
 
 [dependencies]
 byteorder = "1"
+float-cmp = "0.8"
 
 [badges]
 travis-ci = { repository = "hmeyer/stl_io", branch = "master" }
