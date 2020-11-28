@@ -53,6 +53,12 @@ impl<F> Vector<F> {
     }
 }
 
+impl<F> From<Vector<F>> for [F; 3] {
+    fn from(v: Vector<F>) -> Self {
+        v.0
+    }
+}
+
 impl<F> std::ops::Index<usize> for Vector<F> {
     type Output = F;
     fn index(&self, i: usize) -> &Self::Output {
