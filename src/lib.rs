@@ -233,7 +233,7 @@ pub fn read_stl<R>(read: &mut R) -> Result<IndexedMesh>
 where
     R: ::std::io::Read + ::std::io::Seek,
 {
-    create_stl_reader(read)?.to_indexed_triangles()
+    create_stl_reader(read)?.as_indexed_triangles()
 }
 
 /// Attempts to create a [TriangleIterator](trait.TriangleIterator.html) for either ascii or binary
@@ -334,9 +334,9 @@ pub trait TriangleIterator: ::std::iter::Iterator<Item = Result<Triangle>> {
     /// endfacet
     /// endsolid foobar".to_vec());
     /// let mut stl = stl_io::create_stl_reader(&mut reader).unwrap();
-    /// let indexed_mesh = stl.to_indexed_triangles().unwrap();
+    /// let indexed_mesh = stl.as_indexed_triangles().unwrap();
     /// ```
-    fn to_indexed_triangles(&mut self) -> Result<IndexedMesh> {
+    fn as_indexed_triangles(&mut self) -> Result<IndexedMesh> {
         let mut vertices = Vec::new();
         let mut triangles = Vec::new();
         let mut vertex_to_index = ::std::collections::HashMap::new();
@@ -565,7 +565,7 @@ mod test {
         assert_eq!(
             AsciiStlReader::create_triangle_iterator(&mut reader)
                 .unwrap()
-                .to_indexed_triangles()
+                .as_indexed_triangles()
                 .unwrap(),
             super::IndexedMesh {
                 vertices: vec![
@@ -598,7 +598,7 @@ mod test {
         assert_eq!(
             AsciiStlReader::create_triangle_iterator(&mut reader)
                 .unwrap()
-                .to_indexed_triangles()
+                .as_indexed_triangles()
                 .unwrap(),
             super::IndexedMesh {
                 vertices: vec![
@@ -630,7 +630,7 @@ mod test {
         );
         let stl = AsciiStlReader::create_triangle_iterator(&mut reader)
             .unwrap()
-            .to_indexed_triangles()
+            .as_indexed_triangles()
             .unwrap();
         assert_eq!(
             sort_vertices(stl),
@@ -683,7 +683,7 @@ mod test {
         );
         let stl = AsciiStlReader::create_triangle_iterator(&mut reader)
             .unwrap()
-            .to_indexed_triangles();
+            .as_indexed_triangles();
         assert_eq!(
             stl.as_ref().err().unwrap().kind(),
             ::std::io::ErrorKind::InvalidData,
@@ -707,7 +707,7 @@ mod test {
         );
         let stl = AsciiStlReader::create_triangle_iterator(&mut reader)
             .unwrap()
-            .to_indexed_triangles();
+            .as_indexed_triangles();
         assert_eq!(
             stl.as_ref().err().unwrap().kind(),
             ::std::io::ErrorKind::InvalidData,
@@ -721,7 +721,7 @@ mod test {
         let mut reader = ::std::io::Cursor::new(BUNNY_99_ASCII);
         let stl = AsciiStlReader::create_triangle_iterator(&mut reader)
             .unwrap()
-            .to_indexed_triangles();
+            .as_indexed_triangles();
         assert!(stl.is_ok(), "{:?}", stl);
         assert_eq!(stl.unwrap().faces.len(), 99);
     }
@@ -741,7 +741,7 @@ mod test {
     fn read_binary_stl_bunny() {
         let mut reader = ::std::io::Cursor::new(BUNNY_99);
         let stl = BinaryStlReader::create_triangle_iterator(&mut reader);
-        assert_eq!(stl.unwrap().to_indexed_triangles().unwrap().faces.len(), 99);
+        assert_eq!(stl.unwrap().as_indexed_triangles().unwrap().faces.len(), 99);
     }
 
     #[test]
@@ -749,12 +749,12 @@ mod test {
         let mut binary_reader = ::std::io::Cursor::new(BUNNY_99);
         let binary_mesh = create_stl_reader(&mut binary_reader)
             .unwrap()
-            .to_indexed_triangles()
+            .as_indexed_triangles()
             .unwrap();
         let mut ascii_reader = ::std::io::Cursor::new(BUNNY_99_ASCII);
         let ascii_mesh = create_stl_reader(&mut ascii_reader)
             .unwrap()
-            .to_indexed_triangles()
+            .as_indexed_triangles()
             .unwrap();
         let ascii_mesh = sort_vertices(ascii_mesh);
         let binary_mesh = sort_vertices(binary_mesh);
@@ -766,7 +766,7 @@ mod test {
         let mut reader = ::std::io::Cursor::new(BUNNY_99_ASCII);
         let stl = AsciiStlReader::create_triangle_iterator(&mut reader)
             .unwrap()
-            .to_indexed_triangles()
+            .as_indexed_triangles()
             .unwrap();
         assert_eq!(
             stl.validate().err().unwrap().kind(),
@@ -792,7 +792,7 @@ mod test {
         );
         let stl = AsciiStlReader::create_triangle_iterator(&mut reader)
             .unwrap()
-            .to_indexed_triangles();
+            .as_indexed_triangles();
         assert!(stl.is_ok(), "{:?}", stl);
     }
 }
