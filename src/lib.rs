@@ -37,10 +37,11 @@
 //extern crate byteorder;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use float_cmp::{ApproxEq, F32Margin};
+use float_cmp::{ApproxEq};
 use std::io::{BufRead, BufReader, BufWriter};
 use std::io::{Read, Result, Write};
 use std::iter::Iterator;
+use std::collections::HashMap;
 
 /// Float Vector with approx_eq.
 #[derive(Default, Clone, Copy, Debug, PartialEq, PartialOrd)]
@@ -120,13 +121,14 @@ impl IndexedMesh {
     /// Checks that the Mesh has no holes and no zero-area faces.
     /// Also makes sure that all triangles are faced in the same direction.
     pub fn validate(&self) -> Result<()> {
+        let mut unconnected_edges: HashMap<(usize, usize), (usize, usize, usize)> = HashMap::new();
+
         for (fi, face) in self.faces.iter().enumerate() {
             for i in 0..3 {
+                let u = face.vertices[i];
+                let v = face.vertices[(i + 1) % 3];
                 // Verify that all vertices are different.
-                if self.vertices[face.vertices[i]].approx_eq(
-                    &self.vertices[face.vertices[(i + 1) % 3]],
-                    F32Margin::default(),
-                ) {
+                if u != v {
                     return Err(::std::io::Error::new(
                         ::std::io::ErrorKind::InvalidData,
                         format!(
@@ -137,41 +139,28 @@ impl IndexedMesh {
                         ),
                     ));
                 }
-                let mut found_edge = false;
-                for (fi2, face2) in self.faces.iter().enumerate() {
-                    if fi == fi2 {
-                        // Don't look for matching edge in this face.
-                        continue;
-                    }
-                    for i2 in 0..3 {
-                        if self.vertices[face.vertices[i]].approx_eq(
-                            &self.vertices[face2.vertices[(i2 + 1) % 3]],
-                            F32Margin::default(),
-                        ) && self.vertices[face.vertices[(i + 1) % 3]]
-                            .approx_eq(&self.vertices[face2.vertices[i2]], F32Margin::default())
-                        {
-                            found_edge = true;
-                            break;
-                        }
-                    }
-                    if found_edge {
-                        break;
-                    }
-                }
-                if !found_edge {
-                    return Err(::std::io::Error::new(
-                        ::std::io::ErrorKind::InvalidData,
-                        format!(
-                            "did not find facing edge for face #{}, edge #v{} -> #v{}",
-                            fi,
-                            i,
-                            (i + 1) % 3
-                        ),
-                    ));
+
+                if unconnected_edges.contains_key(&(v, u)) {
+                    unconnected_edges.remove(&(v, u));
+                } else {
+                    unconnected_edges.insert((u, v), (fi, i, (i + 1) % 3));
                 }
             }
         }
-        Ok(())
+
+        if let Option::Some((fi, i1, i2)) = unconnected_edges.values().into_iter().next() {
+            Err(::std::io::Error::new(
+                ::std::io::ErrorKind::InvalidData,
+                format!(
+                    "did not find facing edge for face #{}, edge #v{} -> #v{}",
+                    fi,
+                    i1,
+                    i2
+                ),
+            ))
+        } else {
+            Ok(())
+        }
     }
 }
 
