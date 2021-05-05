@@ -128,7 +128,7 @@ impl IndexedMesh {
                 let u = face.vertices[i];
                 let v = face.vertices[(i + 1) % 3];
                 // Verify that all vertices are different.
-                if u != v {
+                if u == v {
                     return Err(::std::io::Error::new(
                         ::std::io::ErrorKind::InvalidData,
                         format!(
