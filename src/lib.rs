@@ -37,7 +37,7 @@
 //extern crate byteorder;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use float_cmp::{ApproxEq};
+use float_cmp::{ApproxEq, F32Margin};
 use std::io::{BufRead, BufReader, BufWriter};
 use std::io::{Read, Result, Write};
 use std::iter::Iterator;
@@ -124,21 +124,27 @@ impl IndexedMesh {
         let mut unconnected_edges: HashMap<(usize, usize), (usize, usize, usize)> = HashMap::new();
 
         for (fi, face) in self.faces.iter().enumerate() {
-            for i in 0..3 {
-                let u = face.vertices[i];
-                let v = face.vertices[(i + 1) % 3];
-                // Verify that all vertices are different.
-                if u == v {
+            {
+                let a = self.vertices[face.vertices[0]];
+                let b = self.vertices[face.vertices[1]];
+                let c = self.vertices[face.vertices[2]];
+
+                let area = tri_area(a, b, c);
+
+                if area < f32::EPSILON {
                     return Err(::std::io::Error::new(
                         ::std::io::ErrorKind::InvalidData,
                         format!(
-                            "face #{} has identical vertices #v{} and #v{}",
-                            fi,
-                            i,
-                            (i + 1) % 3
+                            "face #{} has a zero-area face",
+                            fi
                         ),
                     ));
                 }
+            }
+
+            for i in 0..3 {
+                let u = face.vertices[i];
+                let v = face.vertices[(i + 1) % 3];
 
                 if unconnected_edges.contains_key(&(v, u)) {
                     unconnected_edges.remove(&(v, u));
@@ -514,6 +520,34 @@ impl<'a> AsciiStlReader<'a> {
     }
 }
 
+fn tri_area(a: Vertex, b: Vertex, c: Vertex) -> f32 {
+    macro_rules! cross {
+        ($a:expr, $b:expr) => {
+            {
+                let x = $a[1] * $b[2] - $a[2] * $b[1];
+                let y = $a[2] * $b[0] - $a[0] * $b[2];
+                let z = $a[0] * $b[1] - $a[1] * $b[0];
+                [x, y, z]
+            }
+        };
+    }
+    macro_rules! sub {
+        ($a:expr, $b:expr) => {
+            {
+                let x = $a[0] - $b[0];
+                let y = $a[1] - $b[1];
+                let z = $a[2] - $b[2];
+                [x, y, z]
+            }
+        };
+    }
+    macro_rules! length {
+        ($v:expr) => { ($v[0] * $v[0] + $v[1] * $v[1] + $v[2] * $v[2]).sqrt() };
+    }
+
+    length!(cross!(sub!(c, b), sub!(a, b))) * 0.5
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -783,5 +817,36 @@ mod test {
             .unwrap()
             .as_indexed_triangles();
         assert!(stl.is_ok(), "{:?}", stl);
+    }
+
+    #[test]
+    fn simple_tri_area() {
+        let a = Vector::new([-1.0,  1.0, 0.0]);
+        let b = Vector::new([ 1.0, -1.0, 0.0]);
+        let c = Vector::new([-1.0, -1.0, 0.0]);
+        let area = tri_area(a, b, c);
+        assert_eq!(area, 2.0);
+    }
+
+    #[test]
+    fn bunny_tri_area() {
+        let mut reader = ::std::io::Cursor::new(BUNNY_99);
+        let stl = BinaryStlReader::create_triangle_iterator(&mut reader)
+            .unwrap()
+            .as_indexed_triangles()
+            .unwrap();
+
+        let mut total_area = 0.0;
+        for face in stl.faces.iter() {
+            let a = stl.vertices[face.vertices[0]];
+            let b = stl.vertices[face.vertices[1]];
+            let c = stl.vertices[face.vertices[2]];
+            total_area = total_area + tri_area(a, b, c);
+        }
+
+        // area of bunny model according to blender
+        let blender_area: f32 = 0.04998364;
+
+        assert!(total_area.approx_eq(blender_area, F32Margin::default()));
     }
 }
