@@ -41,6 +41,7 @@ use float_cmp::{ApproxEq, F32Margin};
 use std::io::{BufRead, BufReader, BufWriter};
 use std::io::{Read, Result, Write};
 use std::iter::Iterator;
+use std::collections::HashMap;
 
 /// Float Vector with approx_eq.
 #[derive(Default, Clone, Copy, Debug, PartialEq, PartialOrd)]
@@ -120,58 +121,52 @@ impl IndexedMesh {
     /// Checks that the Mesh has no holes and no zero-area faces.
     /// Also makes sure that all triangles are faced in the same direction.
     pub fn validate(&self) -> Result<()> {
+        let mut unconnected_edges: HashMap<(usize, usize), (usize, usize, usize)> = HashMap::new();
+
         for (fi, face) in self.faces.iter().enumerate() {
-            for i in 0..3 {
-                // Verify that all vertices are different.
-                if self.vertices[face.vertices[i]].approx_eq(
-                    &self.vertices[face.vertices[(i + 1) % 3]],
-                    F32Margin::default(),
-                ) {
+            {
+                let a = self.vertices[face.vertices[0]];
+                let b = self.vertices[face.vertices[1]];
+                let c = self.vertices[face.vertices[2]];
+
+                let area = tri_area(a, b, c);
+
+                if area < f32::EPSILON {
                     return Err(::std::io::Error::new(
                         ::std::io::ErrorKind::InvalidData,
                         format!(
-                            "face #{} has identical vertices #v{} and #v{}",
-                            fi,
-                            i,
-                            (i + 1) % 3
-                        ),
-                    ));
-                }
-                let mut found_edge = false;
-                for (fi2, face2) in self.faces.iter().enumerate() {
-                    if fi == fi2 {
-                        // Don't look for matching edge in this face.
-                        continue;
-                    }
-                    for i2 in 0..3 {
-                        if self.vertices[face.vertices[i]].approx_eq(
-                            &self.vertices[face2.vertices[(i2 + 1) % 3]],
-                            F32Margin::default(),
-                        ) && self.vertices[face.vertices[(i + 1) % 3]]
-                            .approx_eq(&self.vertices[face2.vertices[i2]], F32Margin::default())
-                        {
-                            found_edge = true;
-                            break;
-                        }
-                    }
-                    if found_edge {
-                        break;
-                    }
-                }
-                if !found_edge {
-                    return Err(::std::io::Error::new(
-                        ::std::io::ErrorKind::InvalidData,
-                        format!(
-                            "did not find facing edge for face #{}, edge #v{} -> #v{}",
-                            fi,
-                            i,
-                            (i + 1) % 3
+                            "face #{} has a zero-area face",
+                            fi
                         ),
                     ));
                 }
             }
+
+            for i in 0..3 {
+                let u = face.vertices[i];
+                let v = face.vertices[(i + 1) % 3];
+
+                if unconnected_edges.contains_key(&(v, u)) {
+                    unconnected_edges.remove(&(v, u));
+                } else {
+                    unconnected_edges.insert((u, v), (fi, i, (i + 1) % 3));
+                }
+            }
         }
-        Ok(())
+
+        if let Option::Some((fi, i1, i2)) = unconnected_edges.values().into_iter().next() {
+            Err(::std::io::Error::new(
+                ::std::io::ErrorKind::InvalidData,
+                format!(
+                    "did not find facing edge for face #{}, edge #v{} -> #v{}",
+                    fi,
+                    i1,
+                    i2
+                ),
+            ))
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -525,6 +520,26 @@ impl<'a> AsciiStlReader<'a> {
     }
 }
 
+fn tri_area(a: Vertex, b: Vertex, c: Vertex) -> f32 {
+    fn cross(a: Vertex, b: Vertex) -> Vertex {
+        let x = a[1] * b[2] - a[2] * b[1];
+        let y = a[2] * b[0] - a[0] * b[2];
+        let z = a[0] * b[1] - a[1] * b[0];
+        Vertex::new([x, y, z])
+    }
+    fn sub(a: Vertex, b: Vertex) -> Vertex {
+        let x = a[0] - b[0];
+        let y = a[1] - b[1];
+        let z = a[2] - b[2];
+        Vertex::new([x, y, z])
+    }
+    fn length(v: Vertex) -> f32 {
+        (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt()
+    }
+
+    length(cross(sub(c, b), sub(a, b))) * 0.5
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -794,5 +809,36 @@ mod test {
             .unwrap()
             .as_indexed_triangles();
         assert!(stl.is_ok(), "{:?}", stl);
+    }
+
+    #[test]
+    fn simple_tri_area() {
+        let a = Vector::new([-1.0,  1.0, 0.0]);
+        let b = Vector::new([ 1.0, -1.0, 0.0]);
+        let c = Vector::new([-1.0, -1.0, 0.0]);
+        let area = tri_area(a, b, c);
+        assert_eq!(area, 2.0);
+    }
+
+    #[test]
+    fn bunny_tri_area() {
+        let mut reader = ::std::io::Cursor::new(BUNNY_99);
+        let stl = BinaryStlReader::create_triangle_iterator(&mut reader)
+            .unwrap()
+            .as_indexed_triangles()
+            .unwrap();
+
+        let mut total_area = 0.0;
+        for face in stl.faces.iter() {
+            let a = stl.vertices[face.vertices[0]];
+            let b = stl.vertices[face.vertices[1]];
+            let c = stl.vertices[face.vertices[2]];
+            total_area = total_area + tri_area(a, b, c);
+        }
+
+        // area of bunny model according to blender
+        let blender_area: f32 = 0.04998364;
+
+        assert!(total_area.approx_eq(blender_area, F32Margin::default()));
     }
 }
