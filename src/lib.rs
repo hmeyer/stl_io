@@ -168,6 +168,39 @@ impl IndexedMesh {
             Ok(())
         }
     }
+
+    /// Calculates the volume of the mesh. In order for a correct volume calculation the mesh must
+    /// be valid. Use `validate` to make sure that the mesh doesn't contain any holes before
+    /// calculating the volume.
+    pub fn volume(&self) -> f32 {
+        // based on https://doi.org/10.1109/ICIP.2001.958278
+        let mut volume = 0.0;
+        for face in self.faces.iter() {
+            let a = self.vertices[face.vertices[0]];
+            let b = self.vertices[face.vertices[1]];
+            let c = self.vertices[face.vertices[2]];
+            volume += -c[0] * b[1] * a[2] +
+                       b[0] * c[1] * a[2] +
+                       c[0] * a[1] * b[2] -
+                       a[0] * c[1] * b[2] -
+                       b[0] * a[1] * c[2] +
+                       a[0] * b[1] * c[2];
+        }
+        volume / 6.0
+    }
+
+
+    /// Calculates the surface area of the mesh.
+    pub fn area(&self) -> f32 {
+        let mut area = 0.0;
+        for face in self.faces.iter() {
+            let a = self.vertices[face.vertices[0]];
+            let b = self.vertices[face.vertices[1]];
+            let c = self.vertices[face.vertices[2]];
+            area += tri_area(a, b, c);
+        }
+        area
+    }
 }
 
 /// Write to std::io::Write as documented in
@@ -545,6 +578,7 @@ mod test {
     use super::*;
     const BUNNY_99: &[u8] = include_bytes!("testdata/bunny_99.stl");
     const BUNNY_99_ASCII: &[u8] = include_bytes!("testdata/bunny_99_ascii.stl");
+    const BUNNY_VALID: &[u8] = include_bytes!("testdata/bunny_valid.stl");
 
     // Will sort the vertices of the Mesh and fix the indices in the faces.
     fn sort_vertices(mut mesh: super::IndexedMesh) -> super::IndexedMesh {
@@ -821,24 +855,31 @@ mod test {
     }
 
     #[test]
-    fn bunny_tri_area() {
+    fn bunny_area() {
         let mut reader = ::std::io::Cursor::new(BUNNY_99);
         let stl = BinaryStlReader::create_triangle_iterator(&mut reader)
             .unwrap()
             .as_indexed_triangles()
             .unwrap();
 
-        let mut total_area = 0.0;
-        for face in stl.faces.iter() {
-            let a = stl.vertices[face.vertices[0]];
-            let b = stl.vertices[face.vertices[1]];
-            let c = stl.vertices[face.vertices[2]];
-            total_area = total_area + tri_area(a, b, c);
-        }
-
         // area of bunny model according to blender
         let blender_area: f32 = 0.04998364;
 
-        assert!(total_area.approx_eq(blender_area, F32Margin::default()));
+        assert!(blender_area.approx_eq(stl.area(), F32Margin::default()));
     }
+
+    #[test]
+    fn bunny_volume() {
+        let mut reader = ::std::io::Cursor::new(BUNNY_VALID);
+        let stl = BinaryStlReader::create_triangle_iterator(&mut reader)
+            .unwrap()
+            .as_indexed_triangles()
+            .unwrap();
+
+        // volume of bunny model according to blender
+        let blender_volume: f32 = 690.9882461277;
+
+        assert!(blender_volume.approx_eq(stl.volume(), F32Margin::default()));
+    }
+
 }
