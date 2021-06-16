@@ -209,7 +209,7 @@ where
     writer.flush()
 }
 
-/// Attempts to read either ascci or binary STL from std::io::Read.
+/// Attempts to read either ascii or binary STL from std::io::Read.
 ///
 /// ```
 /// let mut reader = ::std::io::Cursor::new(
