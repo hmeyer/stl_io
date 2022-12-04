@@ -1,2 +1,2 @@
-format_strings = false
+#format_strings = false
 reorder_imports = true

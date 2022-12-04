@@ -37,11 +37,11 @@
 //extern crate byteorder;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use float_cmp::{ApproxEq, F32Margin};
+use float_cmp::ApproxEq;
+use std::collections::HashMap;
 use std::io::{BufRead, BufReader, BufWriter};
 use std::io::{Read, Result, Write};
 use std::iter::Iterator;
-use std::collections::HashMap;
 
 /// Float Vector with approx_eq.
 #[derive(Default, Clone, Copy, Debug, PartialEq, PartialOrd)]
@@ -134,10 +134,7 @@ impl IndexedMesh {
                 if area < f32::EPSILON {
                     return Err(::std::io::Error::new(
                         ::std::io::ErrorKind::InvalidData,
-                        format!(
-                            "face #{} has a zero-area face",
-                            fi
-                        ),
+                        format!("face #{} has a zero-area face", fi),
                     ));
                 }
             }
@@ -159,9 +156,7 @@ impl IndexedMesh {
                 ::std::io::ErrorKind::InvalidData,
                 format!(
                     "did not find facing edge for face #{}, edge #v{} -> #v{}",
-                    fi,
-                    i1,
-                    i2
+                    fi, i1, i2
                 ),
             ))
         } else {
@@ -260,7 +255,7 @@ where
 
 /// Struct for binary STL reader.
 pub struct BinaryStlReader<'a> {
-    reader: Box<dyn::std::io::Read + 'a>,
+    reader: Box<dyn ::std::io::Read + 'a>,
     index: usize,
     size: usize,
 }
@@ -367,7 +362,7 @@ pub trait TriangleIterator: ::std::iter::Iterator<Item = Result<Triangle>> {
 
 /// Struct for ascii STL reader.
 pub struct AsciiStlReader<'a> {
-    lines: Box<dyn::std::iter::Iterator<Item = Result<Vec<String>>> + 'a>,
+    lines: Box<dyn ::std::iter::Iterator<Item = Result<Vec<String>>> + 'a>,
 }
 
 impl<'a> TriangleIterator for BinaryStlReader<'a> {}
@@ -543,6 +538,8 @@ fn tri_area(a: Vertex, b: Vertex, c: Vertex) -> f32 {
 #[cfg(test)]
 mod test {
     use super::*;
+    use float_cmp::F32Margin;
+
     const BUNNY_99: &[u8] = include_bytes!("testdata/bunny_99.stl");
     const BUNNY_99_ASCII: &[u8] = include_bytes!("testdata/bunny_99_ascii.stl");
 
@@ -813,8 +810,8 @@ mod test {
 
     #[test]
     fn simple_tri_area() {
-        let a = Vector::new([-1.0,  1.0, 0.0]);
-        let b = Vector::new([ 1.0, -1.0, 0.0]);
+        let a = Vector::new([-1.0, 1.0, 0.0]);
+        let b = Vector::new([1.0, -1.0, 0.0]);
         let c = Vector::new([-1.0, -1.0, 0.0]);
         let area = tri_area(a, b, c);
         assert_eq!(area, 2.0);

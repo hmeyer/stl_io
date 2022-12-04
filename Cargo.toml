@@ -1,6 +1,6 @@
 [package]
 name = "stl_io"
-version = "0.6.0"
+version = "0.7.0"
 authors = ["Henning Meyer <tutmann@gmail.com>"]
 edition = "2018"
 
@@ -16,7 +16,7 @@ path = "src/lib.rs"
 
 [dependencies]
 byteorder = "1"
-float-cmp = "0.8"
+float-cmp = "0.9"
 
 [badges]
 travis-ci = { repository = "hmeyer/stl_io", branch = "master" }
