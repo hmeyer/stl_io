@@ -39,7 +39,7 @@
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use float_cmp::ApproxEq;
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader, BufWriter};
+use std::io::{BufRead, BufReader, BufWriter, Seek};
 use std::io::{Read, Result, Write};
 use std::iter::Iterator;
 
@@ -185,23 +185,91 @@ where
 {
     let mut writer = BufWriter::new(writer);
 
-    // Write 80 byte header
-    writer.write_all(&[0u8; 80])?;
-    writer.write_u32::<LittleEndian>(mesh.len() as u32)?;
+    write_stl_header(&mut writer, mesh.len() as u32)?;
     for t in mesh {
-        let t = t.borrow();
-        for f in &t.normal.0 {
+        t.borrow().write(&mut writer)?;
+    }
+    writer.flush()
+}
+
+/// Write to std::io::Write as documented in
+/// [Wikipedia](https://en.wikipedia.org/wiki/STL_(file_format)#Binary_STL).
+///
+/// Unlike write_stl this function does not require knowing the number of triangles beforehand
+/// This could avoid storing all triangles in memory or computing two-passes in some situations
+///
+/// ```
+/// use stl_io::{Vertex, Normal};
+/// let mesh = [stl_io::Triangle { normal: Normal::new([1.0, 0.0, 0.0]),
+///                                vertices: [Vertex::new([0.0, -1.0, 0.0]),
+///                                           Vertex::new([0.0, 1.0, 0.0]),
+///                                           Vertex::new([0.0, 0.0, 0.5])]}];
+/// let mut binary_stl = Vec::<u8>::new();
+/// stl_io::try_stream_stl(&mut std::io::Cursor::new(binary_stl), mesh.iter().map(|t| Ok(t))).unwrap();
+/// ```
+pub fn try_stream_stl<T, W, I>(writer: &mut W, mesh: I) -> Result<()>
+where
+    W: ::std::io::Write + std::io::Seek,
+    T: std::borrow::Borrow<Triangle>,
+    I: ::std::iter::Iterator<Item = Result<T>>
+{
+    let mut writer = BufWriter::new(writer);
+
+    // Write dummy length as it is yet unknown
+    write_stl_header(&mut writer, 0)?;
+
+    let mut len = 0;
+    for t in mesh {
+        t?.borrow().write(&mut writer)?;
+        len += 1;
+    }
+
+    let end_pos = writer.stream_position()?;
+    // Fill in length now that it is known
+    writer.rewind()?;
+    write_stl_header(&mut writer, len)?;
+    // Restore position
+    writer.seek(::std::io::SeekFrom::Start(end_pos))?;
+
+    writer.flush()
+}
+
+/// Convert ASCII stl to binary
+/// Streaming triangles from source to destination directly without loading all triangles into memory
+pub fn convert_ascii_to_binary<R, W>(reader: &mut R, writer: &mut W) -> Result<()>
+where
+    R: ::std::io::Read + ::std::io::Seek,
+    W: ::std::io::Write + ::std::io::Seek,
+{
+    try_stream_stl(writer, AsciiStlReader::create_triangle_iterator(reader)?)
+}
+
+fn write_stl_header<W>(writer: &mut BufWriter<W>, len: u32) -> Result<()>
+where
+    W: ::std::io::Write
+{
+    writer.write_all(&[0u8; 80])?;
+    writer.write_u32::<LittleEndian>(len)?;
+    Ok(())
+}
+
+impl Triangle {
+    fn write<W>(&self, writer: &mut BufWriter<W>) -> Result<()>
+    where
+        W: ::std::io::Write
+    {
+        for f in &self.normal.0 {
             writer.write_f32::<LittleEndian>(*f as f32)?;
         }
-        for &p in &t.vertices {
+        for &p in &self.vertices {
             for c in &p.0 {
                 writer.write_f32::<LittleEndian>(*c as f32)?;
             }
         }
         // Attribute byte count
         writer.write_u16::<LittleEndian>(0)?;
+        Ok(())
     }
-    writer.flush()
 }
 
 /// Attempts to read either ascii or binary STL from std::io::Read.
@@ -745,6 +813,15 @@ mod test {
         let bunny_mesh = bunny_mesh.unwrap().map(|t| t.unwrap()).collect::<Vec<_>>();
         let mut binary_bunny_stl = Vec::<u8>::new();
         let write_result = super::write_stl(&mut binary_bunny_stl, bunny_mesh.iter());
+        assert!(write_result.is_ok(), "{:?}", write_result);
+        assert_eq!(BUNNY_99.to_vec(), binary_bunny_stl);
+    }
+
+    #[test]
+    fn read_ascii_stl_bunny_and_stream_binary_stl() {
+        let mut reader = ::std::io::Cursor::new(BUNNY_99_ASCII);
+        let mut binary_bunny_stl = Vec::<u8>::new();
+        let write_result = convert_ascii_to_binary(&mut reader, &mut std::io::Cursor::new(&mut binary_bunny_stl));
         assert!(write_result.is_ok(), "{:?}", write_result);
         assert_eq!(BUNNY_99.to_vec(), binary_bunny_stl);
     }
