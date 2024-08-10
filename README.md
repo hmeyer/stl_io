@@ -2,7 +2,6 @@
 ![test workflow](https://github.com/hmeyer/stl_io/actions/workflows/test.yml/badge.svg?branch=master)
 ![build workflow](https://github.com/hmeyer/stl_io/actions/workflows/build.yml/badge.svg?branch=master)
 [![Cargo](https://img.shields.io/crates/v/stl_io.svg)](https://crates.io/crates/stl_io)
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Downloads](https://img.shields.io/crates/d/stl_io.svg)](#downloads)
 
