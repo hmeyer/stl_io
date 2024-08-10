@@ -1,0 +1,32 @@
+name: Test
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"  # run daily at midnight
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check--and-test:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install stable Toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: stable
+            override: true
+            components: rustfmt, clippy
+
+      - name: check
+        run: cargo check
+      - name: test
+        run: cargo test

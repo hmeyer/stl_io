@@ -1,0 +1,30 @@
+name: Build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"  # run daily at midnight
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install stable Toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: stable
+            override: true
+            components: rustfmt, clippy
+
+      - name: build
+        run: cargo build --release --all-features
