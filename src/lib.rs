@@ -336,8 +336,10 @@ pub trait TriangleIterator: ::std::iter::Iterator<Item = Result<Triangle>> {
         for t in self {
             let t = t?;
             for (i, vertex) in t.vertices.iter().enumerate() {
-                // This is ugly, but f32 has no Eq and no Hash.
-                let bitpattern = unsafe { std::mem::transmute::<[f32; 3], [u32; 3]>(vertex.0) };
+                // f32 has no Eq and no Hash, but comparing the bits will do.
+                // This has the effect that if any coordinate is NaN (which does not make sense
+                // anyway), its NaN payload bits will be used as the identity of the vertex.
+                let bitpattern = vertex.0.map(f32::to_bits);
                 let index = *vertex_to_index
                     .entry(bitpattern)
                     .or_insert_with(|| vertices.len());
