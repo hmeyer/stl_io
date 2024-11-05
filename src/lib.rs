@@ -49,7 +49,7 @@ pub struct Vector<F>([F; 3]);
 
 impl<F> Vector<F> {
     /// Constructor from array.
-    pub fn new(v: [F; 3]) -> Self {
+    pub const fn new(v: [F; 3]) -> Self {
         Self(v)
     }
 }
