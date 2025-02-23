@@ -86,7 +86,7 @@ pub type Normal = Vector<f32>;
 
 /// STL Triangle, consisting of a normal and three vertices.
 /// This is the format Triangles are usually stored in STL files.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Triangle {
     /// Normal vector of the Triangle.
     pub normal: Normal,
@@ -98,7 +98,7 @@ pub struct Triangle {
 /// vertex list.
 /// This format is more compact, since in real world Meshes Triangles usually share vertices with
 /// other Triangles.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct IndexedTriangle {
     /// Normal vector of the Triangle.
     pub normal: Normal,
