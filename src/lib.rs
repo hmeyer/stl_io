@@ -86,7 +86,7 @@ pub type Normal = Vector<f32>;
 
 /// STL Triangle, consisting of a normal and three vertices.
 /// This is the format Triangles are usually stored in STL files.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Triangle {
     /// Normal vector of the Triangle.
     pub normal: Normal,
@@ -94,11 +94,62 @@ pub struct Triangle {
     pub vertices: [Vertex; 3],
 }
 
+impl Triangle{
+    /// Creates a Triangle from three vertices using the cross-product of the vector from vertices\[0]
+    /// to vertices\[1] and from vertices\[0] to vertices\[2]. Performs a check if the cross-product is
+    /// valid, and returns a Triangle only if the Triangle's unit-normal is calculable.
+    ///
+    /// Order of vertices matters. Vertices must be listed in counter-clockwise order when looking
+    /// at the triangle from the **outside** of the body/surface (right-hand rule).
+    ///
+    /// ```rust, no_run
+    /// use stl_io::{Triangle, Vertex};
+    ///
+    /// let a: Vertex = Vertex::new([1.0, 0.0, 0.0]);
+    /// let b: Vertex = Vertex::new([0.0, 1.0, 0.0]);
+    /// let c: Vertex = Vertex::new([-1.0, 0.0, 0.0]);
+    ///
+    /// //Creates a Triangle with normal [0.0, 0.0, 1.0]
+    /// let t1: Triangle = Triangle::from_vertices([a, b, c]).unwrap();
+    ///
+    /// //Creates a Triangle with normal [0.0, 0.0, -1.0]
+    /// let t2: Triangle = Triangle::from_vertices([a, c, b]).unwrap();
+    /// ```
+    pub fn from_vertices(vertices: [Vertex; 3]) -> Result<Triangle> {
+        let u: Vertex = Vertex::new([vertices[1][0] - vertices[0][0],
+            vertices[1][1] - vertices[0][1], vertices[1][2] - vertices[0][2]]);
+        let v: Vertex = Vertex::new([vertices[2][0] - vertices[0][0],
+            vertices[2][1] - vertices[0][1], vertices[2][2] - vertices[0][2]]);
+        let cross: Vector<f32> = Vector::new([
+            u[1] * v[2] - u[2] * v[1],
+            u[2] * v[0] - u[0] * v[2],
+            u[0] * v[1] - u[1] * v[0]]);
+        let mag: f32 = (cross[0]*cross[0] + cross[1]*cross[1] + cross[2]*cross[2]).sqrt();
+        match mag {
+            0.0 => Err(::std::io::Error::new(
+                ::std::io::ErrorKind::InvalidData,
+                "Vertices define degenerate triangle."
+            )),
+            x if x.is_nan() => Err(::std::io::Error::new(
+                ::std::io::ErrorKind::InvalidData,
+                "Cross-product magnitude is NaN."
+            )),
+            f32::INFINITY => Err(::std::io::Error::new(
+                ::std::io::ErrorKind::InvalidData,
+                "Cross-product magnitude is infinite."
+            )),
+            _ => {
+                let normal: Normal = Normal::new([cross[0]/mag, cross[1]/mag, cross[2]/mag]);
+                Ok(Triangle{normal, vertices})}
+        }
+    }
+}
+
 /// STL Triangle in indexed form, consisting of a normal and three indices to vertices in the
 /// vertex list.
 /// This format is more compact, since in real world Meshes Triangles usually share vertices with
 /// other Triangles.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct IndexedTriangle {
     /// Normal vector of the Triangle.
     pub normal: Normal,
@@ -113,7 +164,7 @@ pub struct IndexedTriangle {
 pub struct IndexedMesh {
     /// List of vertices.
     pub vertices: Vec<Vertex>,
-    /// List of triangles..
+    /// List of triangles.
     pub faces: Vec<IndexedTriangle>,
 }
 
@@ -839,5 +890,61 @@ mod test {
         let blender_area: f32 = 0.04998364;
 
         assert!(total_area.approx_eq(blender_area, F32Margin::default()));
+    }
+
+    #[test]
+    fn triangle_from_vertices_simple() {
+        let a: Vertex = Vertex::new([33.0, 1.5, 0.0]);
+        let b: Vertex = Vertex::new([4.7, 6.5, 0.0]);
+        let c: Vertex = Vertex::new([12.4, -15.0, 0.0]);
+        let t1 = Triangle::from_vertices([a, b, c]).unwrap();
+
+        let t2 = Triangle { normal: Vertex::new([0.0, 0.0, 1.0]),
+            vertices: [a, b, c]};
+
+        assert_eq!(t1, t2)
+    }
+
+    #[test]
+    fn triangle_from_vertices_scaled() {
+        // The normals of a triangle and a scaled-up version of the same triangle should be equal.
+        let a: Vertex = Vertex::new([3.0, 8.9, 2.4]);
+        let b: Vertex = Vertex::new([6.5, 3.0, -1.0]);
+        let c: Vertex = Vertex::new([-3.0, 9.0, -15.0]);
+        let t1 = Triangle::from_vertices([a, b, c]).unwrap();
+
+        let scale: f32 = 3.5;
+        let a2: Vertex = Vertex::new([a[0]*scale, a[1]*scale, a[2]*scale]);
+        let b2: Vertex = Vertex::new([b[0]*scale, b[1]*scale, b[2]*scale]);
+        let c2: Vertex = Vertex::new([c[0]*scale, c[1]*scale, c[2]*scale]);
+
+        let t2 = Triangle::from_vertices([a2, b2, c2]).unwrap();
+
+        assert_eq!(t1.normal, t2.normal)
+    }
+
+    #[test]
+    fn triangle_from_vertices_translated() {
+        // The normals of a triangle and a same-oriented triangle elsewhere in space should be equal.
+        let a: Vertex = Vertex::new([3.0, 8.9, 2.4]);
+        let b: Vertex = Vertex::new([6.5, 3.0, -1.0]);
+        let c: Vertex = Vertex::new([-3.0, 9.0, -15.0]);
+        let t1 = Triangle::from_vertices([a, b, c]).unwrap();
+
+        let shift: Vertex = Vertex::new([8.9, -3.5, 2.3]);
+        let a2: Vertex = Vertex::new([a[0]+shift[0], a[1]+shift[1], a[2]+shift[2]]);
+        let b2: Vertex = Vertex::new([b[0]+shift[0], b[1]+shift[1], b[2]+shift[2]]);
+        let c2: Vertex = Vertex::new([c[0]+shift[0], c[1]+shift[1], c[2]+shift[2]]);
+
+        let t2 = Triangle::from_vertices([a2, b2, c2]).unwrap();
+
+        let dist: f32 = ((t1.normal[0] - t2.normal[0]).powf(2.0) +
+            (t1.normal[1] - t2.normal[1]).powf(2.0) +
+            (t1.normal[2] - t2.normal[2]).powf(2.0)).sqrt();
+
+        // Adding different values to each vertex causes some floating-point error in the cross
+        // product, so we cannot use assert_eq! Instead, we find the "distance" between the two
+        // vectors, and consider the test passed if that distance is small enough.
+        assert!(dist < 0.0000001);
     }
 }
