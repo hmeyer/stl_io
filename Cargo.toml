@@ -1,10 +1,10 @@
 [package]
 name = "stl_io"
-version = "0.8.4"
+version = "0.8.5"
 authors = ["Henning Meyer <tutmann@gmail.com>"]
 edition = "2021"
 
-description = "STL input and output."
+description = "STL input and output for reading and writing STL (STereoLithography) files."
 repository = "https://github.com/hmeyer/stl_io"
 readme = "README.md"
 keywords = ["stl", "binary", "ascii", "3d", "mesh"]
