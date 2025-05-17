@@ -8,7 +8,7 @@ pub struct AsciiStlReader<'a> {
     lines: Box<dyn ::std::iter::Iterator<Item = Result<Vec<String>>> + 'a>,
 }
 
-impl<'a> ::std::iter::Iterator for AsciiStlReader<'a> {
+impl ::std::iter::Iterator for AsciiStlReader<'_> {
     type Item = Result<Triangle>;
     fn next(&mut self) -> Option<Self::Item> {
         match self.next_face() {
@@ -161,7 +161,7 @@ impl<'a> AsciiStlReader<'a> {
     }
 }
 
-impl<'a> TriangleIterator for AsciiStlReader<'a> {
+impl TriangleIterator for AsciiStlReader<'_> {
     fn name(&self) -> Option<&String> {
         self.name.as_ref()
     }

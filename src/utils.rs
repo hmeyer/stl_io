@@ -1,4 +1,4 @@
-use crate::types::{Vertex};
+use crate::types::Vertex;
 
 /// Calculate the area of a triangle
 pub fn tri_area(a: Vertex, b: Vertex, c: Vertex) -> f32 {

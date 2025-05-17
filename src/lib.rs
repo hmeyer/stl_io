@@ -471,7 +471,7 @@ mod test {
             let a = stl.vertices[face.vertices[0]];
             let b = stl.vertices[face.vertices[1]];
             let c = stl.vertices[face.vertices[2]];
-            total_area = total_area + utils::tri_area(a, b, c);
+            total_area += utils::tri_area(a, b, c);
         }
 
         // area of bunny model according to blender
