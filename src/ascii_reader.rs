@@ -4,6 +4,7 @@ use std::io::{BufRead, BufReader, Result};
 
 /// Struct for ascii STL reader.
 pub struct AsciiStlReader<'a> {
+    name: Option<String>,
     lines: Box<dyn ::std::iter::Iterator<Item = Result<Vec<String>>> + 'a>,
 }
 
@@ -40,6 +41,7 @@ impl<'a> AsciiStlReader<'a> {
         read: &'a mut dyn (::std::io::Read),
     ) -> Result<Box<dyn TriangleIterator<Item = Result<Triangle>> + 'a>> {
         let mut lines = BufReader::new(read).lines();
+        let mut name: Option<String> = None;
         match lines.next() {
             Some(Err(e)) => return Err(e),
             Some(Ok(ref line)) if !line.starts_with("solid ") => {
@@ -54,7 +56,11 @@ impl<'a> AsciiStlReader<'a> {
                     "empty file?",
                 ))
             }
-            _ => {}
+            Some(Ok(ref line)) => {
+                if line.trim().len() > 5 {
+                    name = Some((line["solid".len()..].trim()).to_string());
+                }
+            }
         }
         let lines = lines
             .map(|result| {
@@ -68,6 +74,7 @@ impl<'a> AsciiStlReader<'a> {
             // filter empty lines.
             .filter(|result| result.is_err() || (!result.as_ref().unwrap().is_empty()));
         Ok(Box::new(AsciiStlReader {
+            name,
             lines: Box::new(lines),
         })
             as Box<dyn TriangleIterator<Item = Result<Triangle>>>)
@@ -154,4 +161,8 @@ impl<'a> AsciiStlReader<'a> {
     }
 }
 
-impl<'a> TriangleIterator for AsciiStlReader<'a> {}
+impl<'a> TriangleIterator for AsciiStlReader<'a> {
+    fn name(&self) -> Option<&String> {
+        self.name.as_ref()
+    }
+}

@@ -70,6 +70,8 @@ pub struct IndexedTriangle {
 /// [indexed Triangles](struct.IndexedTriangle.html).
 #[derive(Clone, Debug, PartialEq)]
 pub struct IndexedMesh {
+    /// Optional name of the mesh (ASCII only).
+    pub name: Option<String>,
     /// List of vertices.
     pub vertices: Vec<Vertex>,
     /// List of triangles..

@@ -40,7 +40,7 @@ mod types;
 mod utils;
 mod writer;
 
-use std::io::{Result};
+use std::io::Result;
 use std::iter::Iterator;
 
 pub use types::{IndexedMesh, IndexedTriangle, Normal, Triangle, Vector, Vertex};
@@ -48,6 +48,26 @@ pub use writer::write_stl;
 
 /// Iterates over all Triangles in a STL.
 pub trait TriangleIterator: ::std::iter::Iterator<Item = Result<Triangle>> {
+    /// Get the optional name of the mesh in this iterator.
+    ///
+    /// ```
+    /// let mut reader = ::std::io::Cursor::new(b"solid foobar
+    /// facet normal 1 2 3
+    ///     outer loop
+    ///         vertex 7 8 9
+    ///         vertex 4 5 6
+    ///         vertex 7 8 9
+    ///     endloop
+    /// endfacet
+    /// endsolid foobar".to_vec());
+    /// let mut stl = stl_io::create_stl_reader(&mut reader).unwrap();
+    ///
+    /// assert_eq!(stl.name(), Some(&"foobar".to_string()));
+    /// ```
+    fn name(&self) -> Option<&String> {
+        None
+    }
+
     /// Consumes this iterator and generates an [indexed Mesh](struct.IndexedMesh.html).
     ///
     /// ```
@@ -70,6 +90,7 @@ pub trait TriangleIterator: ::std::iter::Iterator<Item = Result<Triangle>> {
         // Do not reserve memory in those structures based on size_hint, because we might have just
         // read bogus data.
         let mut vertex_indices = [0; 3];
+        let name = self.name().cloned();
         for t in self {
             let t = t?;
             for (i, vertex) in t.vertices.iter().enumerate() {
@@ -93,6 +114,7 @@ pub trait TriangleIterator: ::std::iter::Iterator<Item = Result<Triangle>> {
         vertices.shrink_to_fit();
         triangles.shrink_to_fit();
         Ok(IndexedMesh {
+            name,
             vertices,
             faces: triangles,
         })
@@ -193,6 +215,7 @@ mod test {
                 .as_indexed_triangles()
                 .unwrap(),
             super::IndexedMesh {
+                name: Some("foobar".to_string()),
                 vertices: vec![
                     Vertex::new([1., 2., 3.]),
                     Vertex::new([4., 5., 6e-15]),
@@ -226,6 +249,7 @@ mod test {
                 .as_indexed_triangles()
                 .unwrap(),
             super::IndexedMesh {
+                name: Some("foo bar".to_string()),
                 vertices: vec![
                     Vertex::new([1., 2., 3.]),
                     Vertex::new([4., 5., 6e-15]),
@@ -260,6 +284,7 @@ mod test {
         assert_eq!(
             sort_vertices(stl),
             super::IndexedMesh {
+                name: Some("foobar".to_string()),
                 vertices: vec![Vertex::new([4., 5., 6.]), Vertex::new([7., 8., 9.])],
                 faces: vec![IndexedTriangle {
                     normal: Normal::new([27., 28., 29.]),
@@ -383,7 +408,8 @@ mod test {
             .unwrap();
         let ascii_mesh = sort_vertices(ascii_mesh);
         let binary_mesh = sort_vertices(binary_mesh);
-        assert_eq!(ascii_mesh, binary_mesh);
+        assert_eq!(ascii_mesh.faces, binary_mesh.faces);
+        assert_eq!(ascii_mesh.vertices, binary_mesh.vertices);
     }
 
     #[test]
@@ -433,7 +459,7 @@ mod test {
     #[test]
     fn bunny_tri_area() {
         use float_cmp::ApproxEq;
-        
+
         let mut reader = ::std::io::Cursor::new(BUNNY_99);
         let stl = binary_reader::BinaryStlReader::create_triangle_iterator(&mut reader)
             .unwrap()
