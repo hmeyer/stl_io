@@ -58,7 +58,7 @@ impl<'a> AsciiStlReader<'a> {
             }
             Some(Ok(ref line)) => {
                 if line.trim().len() > 5 {
-                    name = Some((line["solid".len()..].trim()).to_string());
+                    name = line.strip_prefix("solid ").map(|n| n.to_string());
                 }
             }
         }
