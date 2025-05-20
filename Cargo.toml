@@ -1,6 +1,6 @@
 [package]
 name = "stl_io"
-version = "0.8.5"
+version = "0.9.0"
 authors = ["Henning Meyer <tutmann@gmail.com>"]
 edition = "2021"
 

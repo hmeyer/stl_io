@@ -28,11 +28,11 @@ where
     for t in mesh {
         let t = t.borrow();
         for f in &t.normal.0 {
-            writer.write_f32::<LittleEndian>(*f as f32)?;
+            writer.write_f32::<LittleEndian>(*f)?;
         }
         for &p in &t.vertices {
             for c in &p.0 {
-                writer.write_f32::<LittleEndian>(*c as f32)?;
+                writer.write_f32::<LittleEndian>(*c)?;
             }
         }
         // Attribute byte count

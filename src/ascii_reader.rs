@@ -4,10 +4,11 @@ use std::io::{BufRead, BufReader, Result};
 
 /// Struct for ascii STL reader.
 pub struct AsciiStlReader<'a> {
+    name: String,
     lines: Box<dyn ::std::iter::Iterator<Item = Result<Vec<String>>> + 'a>,
 }
 
-impl<'a> ::std::iter::Iterator for AsciiStlReader<'a> {
+impl ::std::iter::Iterator for AsciiStlReader<'_> {
     type Item = Result<Triangle>;
     fn next(&mut self) -> Option<Self::Item> {
         match self.next_face() {
@@ -35,43 +36,44 @@ impl<'a> AsciiStlReader<'a> {
             Ok(())
         }
     }
+
     /// Factory to create a new ascii STL Reader from read.
     pub fn create_triangle_iterator(
         read: &'a mut dyn (::std::io::Read),
     ) -> Result<Box<dyn TriangleIterator<Item = Result<Triangle>> + 'a>> {
         let mut lines = BufReader::new(read).lines();
-        match lines.next() {
-            Some(Err(e)) => return Err(e),
-            Some(Ok(ref line)) if !line.starts_with("solid ") => {
-                return Err(::std::io::Error::new(
-                    ::std::io::ErrorKind::InvalidData,
+
+        let first = lines
+            .next()
+            .transpose()?
+            .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "empty file?"))?;
+
+        let name = first
+            .strip_prefix("solid ")
+            .map(str::to_string)
+            .ok_or_else(|| {
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
                     "ascii STL does not start with \"solid \"",
-                ))
-            }
-            None => {
-                return Err(::std::io::Error::new(
-                    ::std::io::ErrorKind::UnexpectedEof,
-                    "empty file?",
-                ))
-            }
-            _ => {}
-        }
+                )
+            })?;
+
         let lines = lines
-            .map(|result| {
-                result.map(|l| {
-                    // Make lines into iterator over vectors of tokens
-                    l.split_whitespace()
-                        .map(|t| t.to_string())
+            .map(|res| {
+                res.map(|line| {
+                    line.split_whitespace()
+                        .map(str::to_string)
                         .collect::<Vec<_>>()
                 })
             })
-            // filter empty lines.
-            .filter(|result| result.is_err() || (!result.as_ref().unwrap().is_empty()));
+            .filter(|res| res.as_ref().map_or(true, |v| !v.is_empty()));
+
         Ok(Box::new(AsciiStlReader {
+            name,
             lines: Box::new(lines),
-        })
-            as Box<dyn TriangleIterator<Item = Result<Triangle>>>)
+        }))
     }
+
     // Tries to read a triangle.
     fn next_face(&mut self) -> Result<Option<Triangle>> {
         let face_header: Option<Result<Vec<String>>> = self.lines.next();
@@ -154,4 +156,8 @@ impl<'a> AsciiStlReader<'a> {
     }
 }
 
-impl<'a> TriangleIterator for AsciiStlReader<'a> {}
+impl TriangleIterator for AsciiStlReader<'_> {
+    fn name(&self) -> Option<&String> {
+        Some(&self.name)
+    }
+}

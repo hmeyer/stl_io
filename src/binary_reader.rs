@@ -1,7 +1,7 @@
 use crate::types::{Normal, Triangle, Vertex};
 use crate::TriangleIterator;
 use byteorder::{LittleEndian, ReadBytesExt};
-use std::io::{BufReader, Result, Read};
+use std::io::{BufReader, Read, Result};
 
 /// Struct for binary STL reader.
 pub struct BinaryStlReader<'a> {
@@ -46,7 +46,7 @@ impl<'a> BinaryStlReader<'a> {
     }
 }
 
-impl<'a> ::std::iter::Iterator for BinaryStlReader<'a> {
+impl ::std::iter::Iterator for BinaryStlReader<'_> {
     type Item = Result<Triangle>;
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < self.size {
@@ -60,4 +60,4 @@ impl<'a> ::std::iter::Iterator for BinaryStlReader<'a> {
     }
 }
 
-impl<'a> TriangleIterator for BinaryStlReader<'a> {}
+impl TriangleIterator for BinaryStlReader<'_> {}

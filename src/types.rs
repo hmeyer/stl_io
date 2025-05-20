@@ -27,7 +27,7 @@ impl<F> std::ops::Index<usize> for Vector<F> {
     }
 }
 
-impl<'a, M: Copy + Default, F: Copy + ApproxEq<Margin = M>> ApproxEq for &'a Vector<F> {
+impl<M: Copy + Default, F: Copy + ApproxEq<Margin = M>> ApproxEq for &Vector<F> {
     type Margin = M;
 
     fn approx_eq<T: Into<Self::Margin>>(self, other: Self, margin: T) -> bool {
@@ -70,6 +70,8 @@ pub struct IndexedTriangle {
 /// [indexed Triangles](struct.IndexedTriangle.html).
 #[derive(Clone, Debug, PartialEq)]
 pub struct IndexedMesh {
+    /// Optional name of the mesh (ASCII only).
+    pub name: Option<String>,
     /// List of vertices.
     pub vertices: Vec<Vertex>,
     /// List of triangles..
@@ -110,7 +112,7 @@ impl IndexedMesh {
             }
         }
 
-        if let Option::Some((fi, i1, i2)) = unconnected_edges.values().into_iter().next() {
+        if let Option::Some((fi, i1, i2)) = unconnected_edges.values().next() {
             Err(::std::io::Error::new(
                 ::std::io::ErrorKind::InvalidData,
                 format!(
