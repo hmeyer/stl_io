@@ -27,7 +27,7 @@ impl<F> std::ops::Index<usize> for Vector<F> {
     }
 }
 
-impl<'a, M: Copy + Default, F: Copy + ApproxEq<Margin = M>> ApproxEq for &'a Vector<F> {
+impl<'a, M: Copy + Default + float_cmp::FloatMargin, F: Copy + ApproxEq<Margin = M>> ApproxEq for &'a Vector<F> {
     type Margin = M;
 
     fn approx_eq<T: Into<Self::Margin>>(self, other: Self, margin: T) -> bool {

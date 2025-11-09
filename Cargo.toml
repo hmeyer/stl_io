@@ -1,6 +1,6 @@
 [package]
 name = "stl_io"
-version = "0.9.0"
+version = "0.10.0"
 authors = ["Henning Meyer <tutmann@gmail.com>"]
 edition = "2021"
 
@@ -16,4 +16,4 @@ path = "src/lib.rs"
 
 [dependencies]
 byteorder = "1"
-float-cmp = "0.9"
+float-cmp = "0.10"
