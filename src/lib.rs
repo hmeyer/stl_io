@@ -40,7 +40,7 @@ mod types;
 mod utils;
 mod writer;
 
-use std::io::{Result};
+use std::io::Result;
 use std::iter::Iterator;
 
 pub use types::{IndexedMesh, IndexedTriangle, Normal, Triangle, Vector, Vertex};
@@ -433,7 +433,7 @@ mod test {
     #[test]
     fn bunny_tri_area() {
         use float_cmp::ApproxEq;
-        
+
         let mut reader = ::std::io::Cursor::new(BUNNY_99);
         let stl = binary_reader::BinaryStlReader::create_triangle_iterator(&mut reader)
             .unwrap()
@@ -452,5 +452,23 @@ mod test {
         let blender_area: f32 = 0.04998364;
 
         assert!(total_area.approx_eq(blender_area, F32Margin::default()));
+    }
+
+    #[test]
+    fn roundtrip_transform() {
+        let mut reader = ::std::io::Cursor::new(BUNNY_99_ASCII);
+
+        let triangle_reference_vector =
+            crate::ascii_reader::AsciiStlReader::create_triangle_iterator(&mut reader.clone())
+                .unwrap()
+                .collect::<Result<Vec<_>>>()
+                .unwrap();
+
+        let stl = crate::ascii_reader::AsciiStlReader::create_triangle_iterator(&mut reader)
+            .unwrap()
+            .as_indexed_triangles()
+            .unwrap();
+
+        assert_eq!(stl.into_triangle_vec(), triangle_reference_vector);
     }
 }

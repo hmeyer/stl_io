@@ -122,4 +122,46 @@ impl IndexedMesh {
             Ok(())
         }
     }
+
+    /// Transforms STL Mesh into STL Triangles in order to save them.
+    ///
+    /// ```
+    /// let mut reader = ::std::io::Cursor::new(
+    ///     b"solid ASCII
+    ///             facet normal 8.491608e-001 1.950388e-001 -4.908011e-001
+    ///             outer loop
+    ///             vertex   -8.222098e-001 2.326105e+001 5.724931e-046
+    ///             vertex   -8.811435e-001 2.351764e+001 1.135191e-045
+    ///             vertex   3.688022e+000 2.340444e+001 7.860367e+000
+    ///             endloop
+    ///         endfacet
+    ///     endsolid"
+    ///         .to_vec(),
+    /// );
+    ///
+    /// let triangle_reference_vector =
+    ///     stl_io::create_stl_reader(&mut reader.clone())
+    ///         .unwrap()
+    ///         .collect::<Result<Vec<_>,_>>()
+    ///         .unwrap();
+    ///
+    /// let stl = stl_io::create_stl_reader(&mut reader)
+    ///         .unwrap()
+    ///         .as_indexed_triangles().unwrap();
+    ///
+    /// assert_eq!(stl.into_triangle_vec(), triangle_reference_vector);
+    /// ```
+    pub fn into_triangle_vec(self) -> Vec<Triangle> {
+        self.faces
+            .iter()
+            .map(|a| Triangle {
+                normal: a.normal,
+                vertices: [
+                    self.vertices[a.vertices[0]],
+                    self.vertices[a.vertices[1]],
+                    self.vertices[a.vertices[2]],
+                ],
+            })
+            .collect()
+    }
 }
