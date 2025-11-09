@@ -1,7 +1,7 @@
 use crate::types::{Normal, Triangle, Vertex};
 use crate::TriangleIterator;
 use byteorder::{LittleEndian, ReadBytesExt};
-use std::io::{BufReader, Result, Read};
+use std::io::{BufReader, Read, Result};
 
 /// Struct for binary STL reader.
 pub struct BinaryStlReader<'a> {
@@ -13,7 +13,7 @@ pub struct BinaryStlReader<'a> {
 impl<'a> BinaryStlReader<'a> {
     /// Factory to create a new BinaryStlReader from read.
     pub fn create_triangle_iterator(
-        read: &'a mut dyn (::std::io::Read),
+        read: &'a mut dyn ::std::io::Read,
     ) -> Result<Box<dyn TriangleIterator<Item = Result<Triangle>> + 'a>> {
         let mut reader = Box::new(BufReader::new(read));
         let mut header = [0u8; 80];

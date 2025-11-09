@@ -37,7 +37,7 @@ impl<'a> AsciiStlReader<'a> {
     }
     /// Factory to create a new ascii STL Reader from read.
     pub fn create_triangle_iterator(
-        read: &'a mut dyn (::std::io::Read),
+        read: &'a mut dyn ::std::io::Read,
     ) -> Result<Box<dyn TriangleIterator<Item = Result<Triangle>> + 'a>> {
         let mut lines = BufReader::new(read).lines();
         match lines.next() {
