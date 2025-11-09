@@ -138,17 +138,17 @@ impl IndexedMesh {
     ///     endsolid"
     ///         .to_vec(),
     /// );
-    /// 
+    ///
     /// let triangle_reference_vector =
-    ///     crate::ascii_reader::AsciiStlReader::create_triangle_iterator(&mut reader.clone())
+    ///     stl_io::create_stl_reader(&mut reader.clone())
     ///         .unwrap()
-    ///         .collect::<Result<Vec<_>>>()
+    ///         .collect::<Result<Vec<_>,_>>()
     ///         .unwrap();
-    /// 
-    /// let stl = crate::ascii_reader::AsciiStlReader::create_triangle_iterator(&mut reader)
+    ///
+    /// let stl = stl_io::create_stl_reader(&mut reader)
     ///         .unwrap()
     ///         .as_indexed_triangles().unwrap();
-    /// 
+    ///
     /// assert_eq!(stl.into_triangle_vec(), triangle_reference_vector);
     /// ```
     pub fn into_triangle_vec(self) -> Vec<Triangle> {
