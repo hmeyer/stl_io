@@ -2,7 +2,8 @@
 name = "stl_io"
 version = "0.10.0"
 authors = ["Henning Meyer <tutmann@gmail.com>"]
-edition = "2021"
+edition = "2024"
+rust-version = "1.85"
 
 description = "STL input and output for reading and writing STL (STereoLithography) files."
 repository = "https://github.com/hmeyer/stl_io"
@@ -15,5 +16,3 @@ name = "stl_io"
 path = "src/lib.rs"
 
 [dependencies]
-byteorder = "1"
-float-cmp = "0.10"

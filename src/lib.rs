@@ -41,17 +41,16 @@ mod utils;
 mod writer;
 
 use std::io::Result;
-use std::iter::Iterator;
 
 pub use types::{IndexedMesh, IndexedTriangle, Normal, Triangle, Vector, Vertex};
 pub use writer::write_stl;
 
 /// Iterates over all Triangles in a STL.
-pub trait TriangleIterator: ::std::iter::Iterator<Item = Result<Triangle>> {
+pub trait TriangleIterator: Iterator<Item = Result<Triangle>> {
     /// Consumes this iterator and generates an [indexed Mesh](struct.IndexedMesh.html).
     ///
     /// ```
-    /// let mut reader = ::std::io::Cursor::new(b"solid foobar
+    /// let mut reader = std::io::Cursor::new(b"solid foobar
     /// facet normal 1 2 3
     ///     outer loop
     ///         vertex 7 8 9
@@ -66,7 +65,7 @@ pub trait TriangleIterator: ::std::iter::Iterator<Item = Result<Triangle>> {
     fn as_indexed_triangles(&mut self) -> Result<IndexedMesh> {
         let mut vertices = Vec::new();
         let mut triangles = Vec::new();
-        let mut vertex_to_index = ::std::collections::HashMap::new();
+        let mut vertex_to_index = std::collections::HashMap::new();
         // Do not reserve memory in those structures based on size_hint, because we might have just
         // read bogus data.
         let mut vertex_indices = [0; 3];
@@ -102,7 +101,7 @@ pub trait TriangleIterator: ::std::iter::Iterator<Item = Result<Triangle>> {
 /// Attempts to read either ascii or binary STL from std::io::Read.
 ///
 /// ```
-/// let mut reader = ::std::io::Cursor::new(
+/// let mut reader = std::io::Cursor::new(
 ///     b"solid foobar
 ///       facet normal 0.1 0.2 0.3
 ///           outer loop
@@ -116,7 +115,7 @@ pub trait TriangleIterator: ::std::iter::Iterator<Item = Result<Triangle>> {
 /// ```
 pub fn read_stl<R>(read: &mut R) -> Result<IndexedMesh>
 where
-    R: ::std::io::Read + ::std::io::Seek,
+    R: std::io::Read + std::io::Seek,
 {
     create_stl_reader(read)?.as_indexed_triangles()
 }
@@ -125,7 +124,7 @@ where
 /// STL from std::io::Read.
 ///
 /// ```
-/// let mut reader = ::std::io::Cursor::new(b"solid foobar
+/// let mut reader = std::io::Cursor::new(b"solid foobar
 /// facet normal 1 2 3
 ///     outer loop
 ///         vertex 7 8 9
@@ -140,7 +139,7 @@ pub fn create_stl_reader<'a, R>(
     read: &'a mut R,
 ) -> Result<Box<dyn TriangleIterator<Item = Result<Triangle>> + 'a>>
 where
-    R: ::std::io::Read + ::std::io::Seek,
+    R: std::io::Read + std::io::Seek,
 {
     match ascii_reader::AsciiStlReader::probe(read) {
         Ok(()) => ascii_reader::AsciiStlReader::create_triangle_iterator(read),
@@ -151,7 +150,6 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use float_cmp::F32Margin;
 
     const BUNNY_99: &[u8] = include_bytes!("testdata/bunny_99.stl");
     const BUNNY_99_ASCII: &[u8] = include_bytes!("testdata/bunny_99_ascii.stl");
@@ -175,7 +173,7 @@ mod test {
 
     #[test]
     fn read_ascii_stl_simple_success() {
-        let mut reader = ::std::io::Cursor::new(
+        let mut reader = std::io::Cursor::new(
             b"solid foobar
         facet normal 0.1 0.2 0.3
             outer loop
@@ -208,7 +206,7 @@ mod test {
 
     #[test]
     fn read_ascii_stl_name_with_spaces_success() {
-        let mut reader = ::std::io::Cursor::new(
+        let mut reader = std::io::Cursor::new(
             b"solid foo bar
         facet normal 0.1 0.2 0.3
             outer loop
@@ -241,7 +239,7 @@ mod test {
 
     #[test]
     fn read_ascii_stl_sort_and_depup_vertices() {
-        let mut reader = ::std::io::Cursor::new(
+        let mut reader = std::io::Cursor::new(
             b"solid foobar
         facet normal 27 28 29
             outer loop
@@ -271,7 +269,7 @@ mod test {
 
     #[test]
     fn read_ascii_stl_no_header() {
-        let mut reader = ::std::io::Cursor::new(
+        let mut reader = std::io::Cursor::new(
             b"non-solid foobar
         facet normal 1 2 3
             outer loop
@@ -286,7 +284,7 @@ mod test {
         let stl = ascii_reader::AsciiStlReader::create_triangle_iterator(&mut reader);
         assert_eq!(
             stl.as_ref().err().unwrap().kind(),
-            ::std::io::ErrorKind::InvalidData,
+            std::io::ErrorKind::InvalidData,
             "{:?}",
             stl.err()
         );
@@ -294,7 +292,7 @@ mod test {
 
     #[test]
     fn read_ascii_stl_wrong_number() {
-        let mut reader = ::std::io::Cursor::new(
+        let mut reader = std::io::Cursor::new(
             b"solid foobar
         facet normal 1 2 3
             outer loop
@@ -311,7 +309,7 @@ mod test {
             .as_indexed_triangles();
         assert_eq!(
             stl.as_ref().err().unwrap().kind(),
-            ::std::io::ErrorKind::InvalidData,
+            std::io::ErrorKind::InvalidData,
             "{:?}",
             stl.err()
         );
@@ -319,7 +317,7 @@ mod test {
 
     #[test]
     fn read_ascii_stl_missing_vertex() {
-        let mut reader = ::std::io::Cursor::new(
+        let mut reader = std::io::Cursor::new(
             b"solid foobar
         facet normal 1 2 3
             outer loop
@@ -335,7 +333,7 @@ mod test {
             .as_indexed_triangles();
         assert_eq!(
             stl.as_ref().err().unwrap().kind(),
-            ::std::io::ErrorKind::InvalidData,
+            std::io::ErrorKind::InvalidData,
             "{:?}",
             stl
         );
@@ -343,7 +341,7 @@ mod test {
 
     #[test]
     fn read_ascii_stl_bunny() {
-        let mut reader = ::std::io::Cursor::new(BUNNY_99_ASCII);
+        let mut reader = std::io::Cursor::new(BUNNY_99_ASCII);
         let stl = ascii_reader::AsciiStlReader::create_triangle_iterator(&mut reader)
             .unwrap()
             .as_indexed_triangles();
@@ -353,7 +351,7 @@ mod test {
 
     #[test]
     fn read_ascii_stl_bunny_and_write_binary_stl() {
-        let mut reader = ::std::io::Cursor::new(BUNNY_99_ASCII);
+        let mut reader = std::io::Cursor::new(BUNNY_99_ASCII);
         let bunny_mesh = ascii_reader::AsciiStlReader::create_triangle_iterator(&mut reader);
         let bunny_mesh = bunny_mesh.unwrap().map(|t| t.unwrap()).collect::<Vec<_>>();
         let mut binary_bunny_stl = Vec::<u8>::new();
@@ -364,19 +362,19 @@ mod test {
 
     #[test]
     fn read_binary_stl_bunny() {
-        let mut reader = ::std::io::Cursor::new(BUNNY_99);
+        let mut reader = std::io::Cursor::new(BUNNY_99);
         let stl = binary_reader::BinaryStlReader::create_triangle_iterator(&mut reader);
         assert_eq!(stl.unwrap().as_indexed_triangles().unwrap().faces.len(), 99);
     }
 
     #[test]
     fn read_ascii_and_binary_stl_bunny() {
-        let mut binary_reader = ::std::io::Cursor::new(BUNNY_99);
+        let mut binary_reader = std::io::Cursor::new(BUNNY_99);
         let binary_mesh = create_stl_reader(&mut binary_reader)
             .unwrap()
             .as_indexed_triangles()
             .unwrap();
-        let mut ascii_reader = ::std::io::Cursor::new(BUNNY_99_ASCII);
+        let mut ascii_reader = std::io::Cursor::new(BUNNY_99_ASCII);
         let ascii_mesh = create_stl_reader(&mut ascii_reader)
             .unwrap()
             .as_indexed_triangles()
@@ -388,14 +386,14 @@ mod test {
 
     #[test]
     fn validate_bunny() {
-        let mut reader = ::std::io::Cursor::new(BUNNY_99_ASCII);
+        let mut reader = std::io::Cursor::new(BUNNY_99_ASCII);
         let stl = ascii_reader::AsciiStlReader::create_triangle_iterator(&mut reader)
             .unwrap()
             .as_indexed_triangles()
             .unwrap();
         assert_eq!(
             stl.validate().err().unwrap().kind(),
-            ::std::io::ErrorKind::InvalidData,
+            std::io::ErrorKind::InvalidData,
             "{:?}",
             stl.validate().err()
         );
@@ -403,7 +401,7 @@ mod test {
 
     #[test]
     fn read_ascii_stl_tiny_numbers() {
-        let mut reader = ::std::io::Cursor::new(
+        let mut reader = std::io::Cursor::new(
             b"solid ASCII
                   facet normal 8.491608e-001 1.950388e-001 -4.908011e-001
                     outer loop
@@ -432,31 +430,32 @@ mod test {
 
     #[test]
     fn bunny_tri_area() {
-        use float_cmp::ApproxEq;
-
-        let mut reader = ::std::io::Cursor::new(BUNNY_99);
+        let mut reader = std::io::Cursor::new(BUNNY_99);
         let stl = binary_reader::BinaryStlReader::create_triangle_iterator(&mut reader)
             .unwrap()
             .as_indexed_triangles()
             .unwrap();
 
-        let mut total_area = 0.0;
-        for face in stl.faces.iter() {
+        let mut total_area: f32 = 0.0;
+        for face in &stl.faces {
             let a = stl.vertices[face.vertices[0]];
             let b = stl.vertices[face.vertices[1]];
             let c = stl.vertices[face.vertices[2]];
-            total_area = total_area + utils::tri_area(a, b, c);
+            total_area += utils::tri_area(a, b, c);
         }
 
         // area of bunny model according to blender
         let blender_area: f32 = 0.04998364;
 
-        assert!(total_area.approx_eq(blender_area, F32Margin::default()));
+        assert!(
+            (total_area - blender_area).abs() < f32::EPSILON,
+            "expected {blender_area}, got {total_area}"
+        );
     }
 
     #[test]
     fn roundtrip_transform() {
-        let mut reader = ::std::io::Cursor::new(BUNNY_99_ASCII);
+        let mut reader = std::io::Cursor::new(BUNNY_99_ASCII);
 
         let triangle_reference_vector =
             crate::ascii_reader::AsciiStlReader::create_triangle_iterator(&mut reader.clone())

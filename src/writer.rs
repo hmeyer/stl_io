@@ -1,5 +1,4 @@
 use crate::types::Triangle;
-use byteorder::{LittleEndian, WriteBytesExt};
 use std::io::{BufWriter, Result, Write};
 
 /// Write to std::io::Write as documented in
@@ -16,27 +15,27 @@ use std::io::{BufWriter, Result, Write};
 /// ```
 pub fn write_stl<T, W, I>(writer: &mut W, mesh: I) -> Result<()>
 where
-    W: ::std::io::Write,
-    I: ::std::iter::ExactSizeIterator<Item = T>,
+    W: Write,
+    I: ExactSizeIterator<Item = T>,
     T: std::borrow::Borrow<Triangle>,
 {
     let mut writer = BufWriter::new(writer);
 
     // Write 80 byte header
     writer.write_all(&[0u8; 80])?;
-    writer.write_u32::<LittleEndian>(mesh.len() as u32)?;
+    writer.write_all(&(mesh.len() as u32).to_le_bytes())?;
     for t in mesh {
         let t = t.borrow();
         for f in &t.normal.0 {
-            writer.write_f32::<LittleEndian>(*f as f32)?;
+            writer.write_all(&f.to_le_bytes())?;
         }
-        for &p in &t.vertices {
+        for p in &t.vertices {
             for c in &p.0 {
-                writer.write_f32::<LittleEndian>(*c as f32)?;
+                writer.write_all(&c.to_le_bytes())?;
             }
         }
         // Attribute byte count
-        writer.write_u16::<LittleEndian>(0)?;
+        writer.write_all(&0u16.to_le_bytes())?;
     }
     writer.flush()
 }
