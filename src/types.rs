@@ -1,4 +1,3 @@
-use float_cmp::ApproxEq;
 use std::collections::HashMap;
 use std::io::Result;
 
@@ -24,17 +23,6 @@ impl<F> std::ops::Index<usize> for Vector<F> {
     fn index(&self, i: usize) -> &Self::Output {
         assert!(i < 3);
         &self.0[i]
-    }
-}
-
-impl<'a, M: Copy + Default + float_cmp::FloatMargin, F: Copy + ApproxEq<Margin = M>> ApproxEq for &'a Vector<F> {
-    type Margin = M;
-
-    fn approx_eq<T: Into<Self::Margin>>(self, other: Self, margin: T) -> bool {
-        let margin = margin.into();
-        self[0].approx_eq(other[0], margin)
-            && self[1].approx_eq(other[1], margin)
-            && self[2].approx_eq(other[2], margin)
     }
 }
 
@@ -91,9 +79,9 @@ impl IndexedMesh {
                 let area = super::utils::tri_area(a, b, c);
 
                 if area < f32::EPSILON {
-                    return Err(::std::io::Error::new(
-                        ::std::io::ErrorKind::InvalidData,
-                        format!("face #{} has a zero-area face", fi),
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        format!("face #{fi} has a zero-area face"),
                     ));
                 }
             }
@@ -110,13 +98,10 @@ impl IndexedMesh {
             }
         }
 
-        if let Option::Some((fi, i1, i2)) = unconnected_edges.values().into_iter().next() {
-            Err(::std::io::Error::new(
-                ::std::io::ErrorKind::InvalidData,
-                format!(
-                    "did not find facing edge for face #{}, edge #v{} -> #v{}",
-                    fi, i1, i2
-                ),
+        if let Some((fi, i1, i2)) = unconnected_edges.values().next() {
+            Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("did not find facing edge for face #{fi}, edge #v{i1} -> #v{i2}"),
             ))
         } else {
             Ok(())
@@ -126,7 +111,7 @@ impl IndexedMesh {
     /// Transforms STL Mesh into STL Triangles in order to save them.
     ///
     /// ```
-    /// let mut reader = ::std::io::Cursor::new(
+    /// let mut reader = std::io::Cursor::new(
     ///     b"solid ASCII
     ///             facet normal 8.491608e-001 1.950388e-001 -4.908011e-001
     ///             outer loop
