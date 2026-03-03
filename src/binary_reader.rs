@@ -33,21 +33,11 @@ impl<'a> BinaryStlReader<'a> {
         let mut buf = [0u8; 50];
         self.reader.read_exact(&mut buf)?;
 
-        let f = |offset: usize| -> f32 {
-            f32::from_le_bytes([
-                buf[offset],
-                buf[offset + 1],
-                buf[offset + 2],
-                buf[offset + 3],
-            ])
-        };
+        let f = |o: usize| f32::from_le_bytes(buf[o..o + 4].try_into().unwrap());
+        let v = |base: usize| [f(base), f(base + 4), f(base + 8)];
 
-        let normal = Normal::new([f(0), f(4), f(8)]);
-        let vertices = [
-            Vertex::new([f(12), f(16), f(20)]),
-            Vertex::new([f(24), f(28), f(32)]),
-            Vertex::new([f(36), f(40), f(44)]),
-        ];
+        let normal = Normal::new(v(0));
+        let vertices = [Vertex::new(v(12)), Vertex::new(v(24)), Vertex::new(v(36))];
         // buf[48..50] is the attribute byte count, ignored
 
         Ok(Triangle { normal, vertices })
