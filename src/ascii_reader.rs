@@ -85,7 +85,7 @@ impl<'a> AsciiStlReader<'a> {
         if face_header.len() != 5 || face_header[0] != "facet" || face_header[1] != "normal" {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
-                format!("invalid facet header: {face_header:?}"),
+                format!("invalid facet header"),
             ));
         }
         let mut result_normal = Normal::default();
